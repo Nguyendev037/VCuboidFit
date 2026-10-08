@@ -1,0 +1,30 @@
+# nội bộ chủ dự án (tài liệu, hồ sơ kế hoạch, ghi chú đội agent)
+developer/
+# dữ liệu: KHÔNG commit zip nuScenes (CC BY-NC-SA)
+dataset/**/*.zip
+# môi trường / build
+**/node_modules/
+**/.venv/
+**/.next/
+**/__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+# kết quả chạy, trọng số, bộ nhớ đệm
+model/workspace/
+workspace/
+model/dist/
+*.pth
+*.ckpt
+*.pt
+*.tsbuildinfo
+# secrets
+.env
+.env.*
+!.env.example
+# công cụ
+.playwright-cli/
+.superpowers/
+.DS_Store
+# dấu hiệu bản đóng gói tự sinh
+.vcf-package

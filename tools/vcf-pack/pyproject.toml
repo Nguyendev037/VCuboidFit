@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vcf-pack"
+version = "0.1.0"
+description = "Split a nuScenes folder into ~50 MB zip parts for the VCuboidFIT web uploader"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "numpy>=1.26", "pillow>=10", "pandas>=2.2", "pyinstaller>=6"]
+
+[project.scripts]
+vcf-pack = "vcf_pack.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["vcf_pack*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

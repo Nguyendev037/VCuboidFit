@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <title>VCuboidFIT - Frame Viewer Surround</title>
+    <link rel="stylesheet" href="../tokens.css" />
+  </head>
+  <body>
+    <main class="mockup-frame viewer-frame">
+      <header class="viewer-toolbar">
+        <div class="row">
+          <button class="button ghost">Esc đóng</button>
+          <strong>Frame Viewer · Surround</strong>
+          <span class="chip accent">#01</span>
+          <span class="chip">scene-0061 · frame 37</span>
+        </div>
+        <div class="toolbar">
+          <button class="button primary">0 Surround</button>
+          <button class="button">7 LiDAR</button>
+          <button class="button">B Box</button>
+          <button class="button">P Points</button>
+          <button class="button">I Panel</button>
+        </div>
+      </header>
+
+      <section class="viewer-layout">
+        <div class="surround-grid">
+          <article class="camera-tile">
+            <span class="tile-label">FRONT_LEFT</span>
+            <div class="wire-box"></div>
+          </article>
+          <article class="camera-tile">
+            <span class="tile-label">FRONT</span>
+            <div class="wire-box"></div>
+          </article>
+          <article class="camera-tile">
+            <span class="tile-label">FRONT_RIGHT</span>
+            <div class="wire-box"></div>
+          </article>
+
+          <article class="lidar-tile">
+            <span class="tile-label">LiDAR 3D · 35k điểm · BEV</span>
+            <div class="point-cloud"></div>
+            <div class="wire-box"></div>
+          </article>
+
+          <article class="camera-tile">
+            <span class="tile-label">BACK_LEFT</span>
+            <div class="wire-box"></div>
+          </article>
+          <article class="camera-tile">
+            <span class="tile-label">BACK</span>
+            <div class="wire-box"></div>
+          </article>
+          <article class="camera-tile">
+            <span class="tile-label">BACK_RIGHT</span>
+            <div class="wire-box"></div>
+          </article>
+        </div>
+
+        <aside class="viewer-panel stack">
+          <div>
+            <p class="eyebrow">Thông tin frame</p>
+            <h1 class="section-title">Rank #01 · Giá trị cao</h1>
+            <p class="body-copy">timestamp 1532402927.12 · token 9f7a...31c</p>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card small"><div class="stat-label">S</div><div class="stat-value">0.94</div></div>
+            <div class="stat-card small"><div class="stat-label">rNov</div><div class="stat-value">0.88</div></div>
+            <div class="stat-card small"><div class="stat-label">rUnc</div><div class="stat-value">0.81</div></div>
+            <div class="stat-card small"><div class="stat-label">rQry</div><div class="stat-value">0.76</div></div>
+          </div>
+
+          <div class="chart-bars">
+            <div class="bar-row"><span>Novelty</span><div class="bar"><span class="fill-84"></span></div><strong>0.88</strong></div>
+            <div class="bar-row"><span>Uncertainty</span><div class="bar"><span class="fill-84"></span></div><strong>0.81</strong></div>
+            <div class="bar-row"><span>Query</span><div class="bar"><span class="fill-76"></span></div><strong>0.76</strong></div>
+          </div>
+
+          <div>
+            <p class="eyebrow">Reason</p>
+            <p class="body-copy">Mưa đêm, object nhỏ ở xa, confidence YOLO không ổn định nhưng CLIP khớp query an toàn giao lộ.</p>
+          </div>
+
+          <div class="row">
+            <span class="chip accent">hiếm</span>
+            <span class="chip">mưa</span>
+            <span class="chip">đêm</span>
+          </div>
+
+          <div>
+            <p class="eyebrow">Điểm từng camera</p>
+            <div class="chart-bars">
+              <div class="bar-row"><span>FRONT</span><div class="bar"><span class="fill-90"></span></div><strong>0.91</strong></div>
+              <div class="bar-row"><span>LEFT</span><div class="bar"><span class="fill-72"></span></div><strong>0.72</strong></div>
+              <div class="bar-row"><span>RIGHT</span><div class="bar"><span class="fill-64"></span></div><strong>0.64</strong></div>
+            </div>
+          </div>
+
+          <div class="kbd-row">
+            <span class="kbd">←/→ frame</span>
+            <span class="kbd">0 Surround</span>
+            <span class="kbd">1-6 Camera</span>
+            <span class="kbd">7/L LiDAR</span>
+            <span class="kbd">R Reset</span>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>

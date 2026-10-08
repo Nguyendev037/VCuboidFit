@@ -1,0 +1,258 @@
+{
+ "selectionId": "0a72180c68a2",
+ "params": {
+  "budget": 0.05,
+  "alpha": 0.2,
+  "beta": 0.6,
+  "gamma": 0.2,
+  "lam": 0.7,
+  "m": 3,
+  "min_gap": 4,
+  "cameras": [
+   "CAM_FRONT",
+   "CAM_FRONT_LEFT",
+   "CAM_FRONT_RIGHT",
+   "CAM_BACK",
+   "CAM_BACK_LEFT",
+   "CAM_BACK_RIGHT"
+  ],
+  "min_luma": 0.0,
+  "min_blur_var": 0.0,
+  "budget_max": 0.1,
+  "queries": [
+   {
+    "id": "night_rain",
+    "text": "a driving photo at night in the rain"
+   },
+   {
+    "id": "motorcycle_intersection",
+    "text": "a motorcycle at a busy intersection"
+   },
+   {
+    "id": "crowded_crosswalk",
+    "text": "many pedestrians crossing the street"
+   },
+   {
+    "id": "construction_vehicle",
+    "text": "a construction vehicle on the road"
+   },
+   {
+    "id": "bicycle",
+    "text": "a cyclist riding on the road"
+   },
+   {
+    "id": "occluded_far",
+    "text": "small distant vehicles partly hidden"
+   }
+  ]
+ },
+ "poolSize": 36,
+ "budgetB": 2,
+ "warnings": [],
+ "metrics": {
+  "hybrid": {
+   "recall": 0.0,
+   "uplift": 0.0,
+   "precision": 0.0,
+   "coverage": 0.5,
+   "coverageGain": -0.30000000000000004,
+   "redundancy": 0.0,
+   "byGroup": {
+    "A": 0.0,
+    "B": 0.05555555555555555,
+    "C": 0.0
+   }
+  },
+  "random": {
+   "mean": {
+    "recall": 0.0,
+    "uplift": 0.0,
+    "precision": 0.0,
+    "coverage": 0.8,
+    "coverageGain": -4.4408920985006264e-17,
+    "redundancy": 0.4,
+    "byGroup": {
+     "A": 0.06666666666666667,
+     "B": 0.05555555555555556,
+     "C": 0.0
+    }
+   },
+   "std": {
+    "recall": 0.0,
+    "uplift": 0.0,
+    "precision": 0.0,
+    "coverage": 0.2449489742783178,
+    "coverageGain": 0.24494897427831783,
+    "redundancy": 0.48989794855663565,
+    "byGroup": {
+     "A": 0.06236095644623235,
+     "B": 6.938893903907228e-18,
+     "C": 0.0
+    }
+   }
+  },
+  "ablation": {
+   "novelty": {
+    "recall": 0.0,
+    "uplift": 0.0,
+    "precision": 0.0,
+    "coverage": 0.5,
+    "coverageGain": -0.30000000000000004,
+    "redundancy": 1.0,
+    "byGroup": {
+     "A": 0.0,
+     "B": 0.05555555555555555,
+     "C": 0.0
+    }
+   },
+   "uncertainty": {
+    "recall": 0.0,
+    "uplift": 0.0,
+    "precision": 0.0,
+    "coverage": 1.0,
+    "coverageGain": 0.19999999999999996,
+    "redundancy": 0.0,
+    "byGroup": {
+     "A": 0.08333333333333333,
+     "B": 0.05555555555555555,
+     "C": 0.0
+    }
+   },
+   "query": {
+    "recall": 0.0,
+    "uplift": 0.0,
+    "precision": 0.0,
+    "coverage": 0.5,
+    "coverageGain": -0.30000000000000004,
+    "redundancy": 0.0,
+    "byGroup": {
+     "A": 0.0,
+     "B": 0.05555555555555555,
+     "C": 0.0
+    }
+   },
+   "hybrid_nodiv": {
+    "recall": 0.0,
+    "uplift": 0.0,
+    "precision": 0.0,
+    "coverage": 0.5,
+    "coverageGain": -0.30000000000000004,
+    "redundancy": 1.0,
+    "byGroup": {
+     "A": 0.0,
+     "B": 0.05555555555555555,
+     "C": 0.0
+    }
+   }
+  }
+ },
+ "preview": [
+  {
+   "rank": 1,
+   "sampleToken": "scene1_f5",
+   "sceneName": "scene1",
+   "frameIdx": 5,
+   "bestCam": "CAM_FRONT",
+   "thumbUrl": "/mock-media/6df07dfd8ac0/thumbs/scene1_f5_CAM_FRONT.webp",
+   "S": 0.930392,
+   "rNov": 0.855392,
+   "rUnc": 0.980392,
+   "rQry": 0.855392,
+   "qryBest": "night_rain",
+   "reason": "uncertainty p98 · novelty p85",
+   "tags": [
+    "Hiếm",
+    "Khó",
+    "Kịch bản: night_rain",
+    "Rare GT: B_rare_class"
+   ],
+   "camsAvailable": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+   ]
+  },
+  {
+   "rank": 2,
+   "sampleToken": "scene2_f8",
+   "sceneName": "scene2",
+   "frameIdx": 8,
+   "bestCam": "CAM_FRONT",
+   "thumbUrl": "/mock-media/6df07dfd8ac0/thumbs/scene2_f8_CAM_FRONT.webp",
+   "S": 0.777451,
+   "rNov": 0.355392,
+   "rUnc": 1.0,
+   "rQry": 0.531863,
+   "qryBest": "night_rain",
+   "reason": "uncertainty p100",
+   "tags": [
+    "Khó",
+    "Rare GT: B_rare_class"
+   ],
+   "camsAvailable": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+   ]
+  },
+  {
+   "rank": 3,
+   "sampleToken": "scene0_f9",
+   "sceneName": "scene0",
+   "frameIdx": 9,
+   "bestCam": "CAM_BACK_LEFT",
+   "thumbUrl": "/mock-media/6df07dfd8ac0/thumbs/scene0_f9_CAM_BACK_LEFT.webp",
+   "S": 0.703922,
+   "rNov": 0.355392,
+   "rUnc": 0.995098,
+   "rQry": 0.178922,
+   "qryBest": "night_rain",
+   "reason": "uncertainty p99",
+   "tags": [
+    "Khó",
+    "Rare GT: A_night|B_rare_class"
+   ],
+   "camsAvailable": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+   ]
+  },
+  {
+   "rank": 4,
+   "sampleToken": "scene1_f11",
+   "sceneName": "scene1",
+   "frameIdx": 11,
+   "bestCam": "CAM_BACK_RIGHT",
+   "thumbUrl": "/mock-media/6df07dfd8ac0/thumbs/scene1_f11_CAM_BACK_RIGHT.webp",
+   "S": 0.92451,
+   "rNov": 0.855392,
+   "rUnc": 0.970588,
+   "rQry": 0.855392,
+   "qryBest": "night_rain",
+   "reason": "uncertainty p97 · novelty p85",
+   "tags": [
+    "Hiếm",
+    "Khó",
+    "Kịch bản: night_rain",
+    "Trùng với #1",
+    "Rare GT: B_rare_class"
+   ],
+   "camsAvailable": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+   ]
+  }
+ ]
+}

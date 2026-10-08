@@ -1,0 +1,50 @@
+# Pipeline LiDAR (planning/04, PDF Final §4). Giá trị CỐ ĐỊNH TRƯỚC — không tune (PDF §4.5).
+schema_version: "1.2"
+pcd:
+  remove_close_m: 1.0      # bỏ điểm trên thân xe (|x|,|y| < 1 m), như devkit remove_close
+  crop_m: 50.0             # cắt vùng ±50 m
+  voxel_m: 0.2             # voxel downsample trước phân cụm
+blocks:
+  range_bins_m: [0, 5, 10, 15, 20, 30, 40, 50, 70]
+  z_range_m: [-3.0, 5.0]
+  z_step_m: 0.5
+  bev_cell_m: 2.0          # lưới 50×50 trên ±50 m
+  ransac: {iters: 60, thr_m: 0.25, seed: 0, radius_m: 25.0}
+  dbscan: {eps_m: 0.6, min_samples: 8}
+  cluster_size_bins: [8, 20, 50, 150, 500, 2000]       # cận trên log-size (số điểm)
+  cluster_bev_bins_m2: [0.5, 2, 5, 12, 30, 100]       # cận trên diện tích BEV bbox
+  small_far: {max_pts: 20, min_r_m: 30.0}
+  sensor_radius_m: 3.0
+filter:
+  min_points: 2000         # sau remove_close, trước crop
+pca_dim: 64
+bev_png_px: 256
+defaults:                  # mặc định khi web không gửi tham số nâng cao
+  budget: 0.05
+  k: 10
+  lam: 0.7
+  m: 4
+  alpha: 1.0
+  beta: 0.0
+  gamma: 0.0
+presets:                   # (α Rar, β Nov, γ Unc) cho Tầng 1 — 01-CONTRACTS §3
+  balanced: [0.5, 0.25, 0.25]
+  rare_first: [0.8, 0.1, 0.1]
+  hard_for_model: [0.2, 0.3, 0.5]
+  safety_scenarios: [0.6, 0.0, 0.4]
+diversity: {low: 0.9, medium: 0.7, high: 0.5}
+grid:                      # lưới tune trên V (PDF §4.5)
+  k: [5, 10, 20]
+  lam: [0.5, 0.7, 0.9, 1.0]
+  m: [2, 4, 8, null]
+  weight_step: 0.25
+random_seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+bootstrap: {n: 200, seed: 0}
+t1:
+  score_thr: 0.1
+  match_delta_m: 1.0
+splits:
+  seed: 0
+  S_frac: 0.05
+  V_scenes: 100
+  mini: {T: [scene-0103, scene-0916], S: 2, V: 3}

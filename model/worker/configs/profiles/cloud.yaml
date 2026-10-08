@@ -1,0 +1,13 @@
+workers: 8
+dino:
+  model: dinov2_vitb14
+  batch: 128
+  size_hw: [252, 448]
+det:
+  model: yolo11m.pt
+  batch: 64
+  imgsz: 960
+clip:
+  model: ViT-B-16
+  pretrained: openai
+  batch: 512

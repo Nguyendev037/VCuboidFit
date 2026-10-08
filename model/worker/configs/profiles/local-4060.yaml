@@ -1,0 +1,14 @@
+# RTX 4060 Laptop 8 GB. Fallbacks (config only): det.imgsz 640 + det.model yolo11s.pt; dino.model dinov2_vits14.
+workers: 4
+dino:
+  model: dinov2_vitb14
+  batch: 32
+  size_hw: [252, 448]
+det:
+  model: yolo11m.pt
+  batch: 16
+  imgsz: 960
+clip:
+  model: ViT-B-16
+  pretrained: openai
+  batch: 128

@@ -1,0 +1,113 @@
+{
+ "items": [
+  {
+   "rank": 1,
+   "sampleToken": "scene1_f5",
+   "sceneName": "scene1",
+   "frameIdx": 5,
+   "bestCam": "CAM_FRONT",
+   "thumbUrl": "/mock-media/6df07dfd8ac0/thumbs/scene1_f5_CAM_FRONT.webp",
+   "S": 0.8928920030593872,
+   "rNov": 0.8553919792175293,
+   "rUnc": 0.9803919792175293,
+   "rQry": 0.8553919792175293,
+   "qryBest": "night_rain",
+   "reason": "uncertainty p98 · novelty p85",
+   "tags": [
+    "Hiếm",
+    "Khó",
+    "Kịch bản: night_rain",
+    "Rare GT: B_rare_class"
+   ],
+   "camsAvailable": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+   ]
+  },
+  {
+   "rank": 2,
+   "sampleToken": "scene2_f8",
+   "sceneName": "scene2",
+   "frameIdx": 8,
+   "bestCam": "CAM_FRONT",
+   "thumbUrl": "/mock-media/6df07dfd8ac0/thumbs/scene2_f8_CAM_FRONT.webp",
+   "S": 0.6017159819602966,
+   "rNov": 0.3553920090198517,
+   "rUnc": 1.0,
+   "rQry": 0.5318629741668701,
+   "qryBest": "night_rain",
+   "reason": "uncertainty p100",
+   "tags": [
+    "Khó",
+    "Rare GT: B_rare_class"
+   ],
+   "camsAvailable": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+   ]
+  },
+  {
+   "rank": 3,
+   "sampleToken": "scene0_f9",
+   "sceneName": "scene0",
+   "frameIdx": 9,
+   "bestCam": "CAM_BACK_LEFT",
+   "thumbUrl": "/mock-media/6df07dfd8ac0/thumbs/scene0_f9_CAM_BACK_LEFT.webp",
+   "S": 0.494363009929657,
+   "rNov": 0.3553920090198517,
+   "rUnc": 0.9950979948043823,
+   "rQry": 0.17892199754714966,
+   "qryBest": "night_rain",
+   "reason": "uncertainty p99",
+   "tags": [
+    "Khó",
+    "Rare GT: A_night|B_rare_class"
+   ],
+   "camsAvailable": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+   ]
+  },
+  {
+   "rank": 4,
+   "sampleToken": "scene1_f11",
+   "sceneName": "scene1",
+   "frameIdx": 11,
+   "bestCam": "CAM_BACK_RIGHT",
+   "thumbUrl": "/mock-media/6df07dfd8ac0/thumbs/scene1_f11_CAM_BACK_RIGHT.webp",
+   "S": 0.8899509906768799,
+   "rNov": 0.8553919792175293,
+   "rUnc": 0.9705880284309387,
+   "rQry": 0.8553919792175293,
+   "qryBest": "night_rain",
+   "reason": "uncertainty p97 · novelty p85",
+   "tags": [
+    "Hiếm",
+    "Khó",
+    "Kịch bản: night_rain",
+    "Trùng với #1",
+    "Rare GT: B_rare_class"
+   ],
+   "camsAvailable": [
+    "CAM_FRONT",
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK_LEFT",
+    "CAM_BACK_RIGHT"
+   ]
+  }
+ ],
+ "total": 4,
+ "budgetB": 4
+}

@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "name": "vcf_part_001.zip",
+      "size": 52428800,
+      "received": 52428800
+    },
+    {
+      "name": "vcf_part_002.zip",
+      "size": 52428800,
+      "received": 20971520
+    },
+    {
+      "name": "vcf_part_003.zip",
+      "size": 31457280,
+      "received": 0
+    },
+    {
+      "name": "vcf_manifest.json",
+      "size": 1204,
+      "received": 1204
+    }
+  ]
+}

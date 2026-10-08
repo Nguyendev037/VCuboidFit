@@ -1,0 +1,19 @@
+{
+ "datasetId": "08358b847856",
+ "ok": true,
+ "scenes": 3,
+ "frames": 36,
+ "imagesByCam": {
+  "CAM_FRONT": 36,
+  "CAM_FRONT_LEFT": 36,
+  "CAM_FRONT_RIGHT": 36,
+  "CAM_BACK": 24,
+  "CAM_BACK_LEFT": 36,
+  "CAM_BACK_RIGHT": 36
+ },
+ "hasLidar": true,
+ "hasAnnotations": true,
+ "version": "v1.0-mini",
+ "errors": [],
+ "warnings": []
+}

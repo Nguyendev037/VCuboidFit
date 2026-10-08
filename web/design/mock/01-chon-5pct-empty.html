@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <title>VCuboidFIT - Chọn 5% Empty</title>
+    <link rel="stylesheet" href="../tokens.css" />
+  </head>
+  <body>
+    <main class="mockup-frame">
+      <header class="app-header">
+        <div class="brand">
+          <span class="cube-mark" aria-hidden="true"></span>
+          <span>VCuboidFIT</span>
+        </div>
+        <div class="header-meta">
+          <span class="chip">Dataset: chưa nạp</span>
+          <span class="chip warn">Job: đang chờ dữ liệu</span>
+          <button class="button ghost">Hướng dẫn vcf-pack</button>
+        </div>
+      </header>
+
+      <section class="layout-8-4">
+        <div class="stack">
+          <article class="card card-pad">
+            <p class="eyebrow">Bước 1</p>
+            <h1 class="section-title">Nạp dữ liệu nuScenes</h1>
+            <p class="body-copy">Chọn tất cả file nén của dataset hoặc các phần 50 MB đã chia bằng vcf-pack.</p>
+            <div class="dropzone">
+              <div>
+                <p class="section-title">Kéo thả .zip / .rar / .7z vào đây</p>
+                <p class="body-copy">Hỗ trợ nhiều file cùng lúc. Hệ thống sẽ ghép các part theo tên dataset.</p>
+                <div class="row justify-center mt-4">
+                  <button class="button primary">Chọn file</button>
+                  <button class="button">Kiểm tra cấu trúc</button>
+                </div>
+              </div>
+            </div>
+            <div class="notice">
+              Mỗi file nén phải chứa thư mục <strong>data/</strong> ở gốc, theo cấu trúc nuScenes
+              (<strong>data/v1.0-*/</strong>, <strong>data/samples/CAM_*/</strong>,
+              <strong>data/samples/LIDAR_TOP/</strong>). Dataset lớn: dùng <strong>vcf-pack</strong>
+              để chia thành các phần 50 MB rồi chọn tất cả cùng lúc.
+            </div>
+            <div>
+              <div class="file-row">
+                <strong>nuscenes-mini-part-01.zip</strong>
+                <div class="progress"><span class="fill-0"></span></div>
+                <span class="chip">sẵn sàng</span>
+              </div>
+              <div class="file-row">
+                <strong>nuscenes-mini-part-02.zip</strong>
+                <div class="progress"><span class="fill-0"></span></div>
+                <span class="chip">sẵn sàng</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card card-pad muted-card">
+            <div class="row-between">
+              <div>
+                <p class="eyebrow">Bước 2</p>
+                <h2 class="section-title">Phân tích tín hiệu hiếm</h2>
+              </div>
+              <button class="button primary is-disabled">Chạy phân tích</button>
+            </div>
+            <div class="stepper">
+              <div class="step"><strong>Index</strong><p class="body-copy">Chờ data</p></div>
+              <div class="step"><strong>DINOv2</strong><p class="body-copy">Chờ data</p></div>
+              <div class="step"><strong>YOLO</strong><p class="body-copy">Chờ data</p></div>
+              <div class="step"><strong>CLIP</strong><p class="body-copy">Chờ data</p></div>
+              <div class="step"><strong>Gộp</strong><p class="body-copy">Chờ data</p></div>
+            </div>
+          </article>
+
+          <article class="card card-pad muted-card">
+            <p class="eyebrow">Bước 3</p>
+            <h2 class="section-title">Kết quả 5% sẽ xuất hiện tại đây</h2>
+            <p class="body-copy">Sau khi phân tích xong, màn hình hiện 4 chỉ số, biểu đồ so sánh method và 12 frame đầu tiên.</p>
+          </article>
+        </div>
+
+        <aside class="settings-panel">
+          <article class="card card-pad">
+            <p class="eyebrow">Tinh chỉnh</p>
+            <h2 class="section-title">Chiến lược chọn frame</h2>
+            <div class="field">
+              <label>Ngân sách</label>
+              <div class="row-between"><span>5%</span><span class="num">21 / 404 frame</span></div>
+              <div class="progress"><span style="width: 50%"></span></div>
+            </div>
+            <div class="field">
+              <label>Preset</label>
+              <button class="button is-disabled">Cân bằng</button>
+              <button class="button is-disabled">Ưu tiên hiếm</button>
+              <button class="button is-disabled">Khó với model</button>
+              <button class="button is-disabled">An toàn</button>
+            </div>
+            <div class="field">
+              <label>Mức đa dạng</label>
+              <div class="segmented">
+                <span>Thấp</span><span class="active">Vừa</span><span>Cao</span>
+              </div>
+            </div>
+            <div class="field">
+              <label>Kịch bản quan tâm</label>
+              <div class="row">
+                <span class="chip">dem</span>
+                <span class="chip">mua</span>
+                <span class="chip">vat can</span>
+              </div>
+            </div>
+            <div class="notice warn">Nạp dataset trước để kích hoạt tinh chỉnh và select tại chỗ.</div>
+          </article>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>

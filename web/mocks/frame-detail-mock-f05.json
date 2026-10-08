@@ -1,0 +1,526 @@
+{
+  "rank": 5,
+  "sampleToken": "mock-f05",
+  "sceneName": "scene-0061",
+  "frameIdx": 4,
+  "bestCam": "CAM_FRONT",
+  "thumbUrl": "/mock-media/thumbs/mock-f05.jpg",
+  "S": 0.886,
+  "rNov": 0.47,
+  "rUnc": 0.91,
+  "rQry": 0.46,
+  "qryBest": "mưa lớn",
+  "reason": "Detector kém chắc chắn ở camera này (uncertainty)",
+  "tags": [
+    "Khó",
+    "Rare GT: A_night"
+  ],
+  "camsAvailable": [
+    "CAM_FRONT_LEFT",
+    "CAM_FRONT",
+    "CAM_FRONT_RIGHT",
+    "CAM_BACK_LEFT",
+    "CAM_BACK",
+    "CAM_BACK_RIGHT"
+  ],
+  "timestamp": 1531281442300013,
+  "cams": [
+    {
+      "cam": "CAM_FRONT_LEFT",
+      "imageUrl": "/mock-media/images/mock-f05/CAM_FRONT_LEFT.jpg",
+      "width": 800,
+      "height": 450,
+      "boxes": [
+        {
+          "category": "vehicle.car",
+          "corners": [
+            230,
+            220,
+            370,
+            220,
+            370,
+            300,
+            230,
+            300,
+            265,
+            185,
+            405,
+            185,
+            405,
+            265,
+            265,
+            265
+          ],
+          "visibility": 4
+        },
+        {
+          "category": "human.pedestrian.adult",
+          "corners": [
+            503,
+            205,
+            537,
+            205,
+            537,
+            295,
+            503,
+            295,
+            512,
+            197,
+            546,
+            197,
+            546,
+            287,
+            512,
+            287
+          ],
+          "visibility": 3
+        }
+      ],
+      "score": {
+        "nov": 0.64,
+        "unc": 0.46,
+        "qry": 0.27,
+        "s": 0.57
+      },
+      "qOk": true
+    },
+    {
+      "cam": "CAM_FRONT",
+      "imageUrl": "/mock-media/images/mock-f05/CAM_FRONT.jpg",
+      "width": 800,
+      "height": 450,
+      "boxes": [
+        {
+          "category": "vehicle.car",
+          "corners": [
+            270,
+            220,
+            410,
+            220,
+            410,
+            300,
+            270,
+            300,
+            305,
+            185,
+            445,
+            185,
+            445,
+            265,
+            305,
+            265
+          ],
+          "visibility": 4
+        },
+        {
+          "category": "human.pedestrian.adult",
+          "corners": [
+            503,
+            205,
+            537,
+            205,
+            537,
+            295,
+            503,
+            295,
+            512,
+            197,
+            546,
+            197,
+            546,
+            287,
+            512,
+            287
+          ],
+          "visibility": 3
+        }
+      ],
+      "score": {
+        "nov": 0.68,
+        "unc": 0.3,
+        "qry": 0.01,
+        "s": 0.79
+      },
+      "qOk": true
+    },
+    {
+      "cam": "CAM_FRONT_RIGHT",
+      "imageUrl": "/mock-media/images/mock-f05/CAM_FRONT_RIGHT.jpg",
+      "width": 800,
+      "height": 450,
+      "boxes": [],
+      "score": {
+        "nov": 0.56,
+        "unc": 0.6,
+        "qry": 0.76,
+        "s": 0.67
+      },
+      "qOk": true
+    },
+    {
+      "cam": "CAM_BACK_LEFT",
+      "imageUrl": "/mock-media/images/mock-f05/CAM_BACK_LEFT.jpg",
+      "width": 800,
+      "height": 450,
+      "boxes": [
+        {
+          "category": "vehicle.car",
+          "corners": [
+            350,
+            220,
+            490,
+            220,
+            490,
+            300,
+            350,
+            300,
+            385,
+            185,
+            525,
+            185,
+            525,
+            265,
+            385,
+            265
+          ],
+          "visibility": 4
+        },
+        {
+          "category": "human.pedestrian.adult",
+          "corners": [
+            503,
+            205,
+            537,
+            205,
+            537,
+            295,
+            503,
+            295,
+            512,
+            197,
+            546,
+            197,
+            546,
+            287,
+            512,
+            287
+          ],
+          "visibility": 3
+        }
+      ],
+      "score": {
+        "nov": 0.29,
+        "unc": 0.2,
+        "qry": 0.95,
+        "s": 0.8
+      },
+      "qOk": true
+    },
+    {
+      "cam": "CAM_BACK",
+      "imageUrl": "/mock-media/images/mock-f05/CAM_BACK.jpg",
+      "width": 800,
+      "height": 450,
+      "boxes": [],
+      "score": {
+        "nov": 0.03,
+        "unc": 0.33,
+        "qry": 0.52,
+        "s": 0.43
+      },
+      "qOk": true
+    },
+    {
+      "cam": "CAM_BACK_RIGHT",
+      "imageUrl": "/mock-media/images/mock-f05/CAM_BACK_RIGHT.jpg",
+      "width": 800,
+      "height": 450,
+      "boxes": [],
+      "score": {
+        "nov": 0.52,
+        "unc": 0.91,
+        "qry": 0.43,
+        "s": 0.86
+      },
+      "qOk": true
+    }
+  ],
+  "lidar": null,
+  "boxes3d": [
+    {
+      "category": "vehicle.car",
+      "corners": [
+        14.65,
+        4.05,
+        0,
+        14.65,
+        2.15,
+        0,
+        10.15,
+        2.15,
+        0,
+        10.15,
+        4.05,
+        0,
+        14.65,
+        4.05,
+        1.6,
+        14.65,
+        2.15,
+        1.6,
+        10.15,
+        2.15,
+        1.6,
+        10.15,
+        4.05,
+        1.6
+      ]
+    },
+    {
+      "category": "human.pedestrian.adult",
+      "corners": [
+        8.55,
+        -2.05,
+        0,
+        8.55,
+        -2.75,
+        0,
+        7.85,
+        -2.75,
+        0,
+        7.85,
+        -2.05,
+        0,
+        8.55,
+        -2.05,
+        1.8,
+        8.55,
+        -2.75,
+        1.8,
+        7.85,
+        -2.75,
+        1.8,
+        7.85,
+        -2.05,
+        1.8
+      ]
+    },
+    {
+      "category": "vehicle.motorcycle",
+      "corners": [
+        18.7,
+        1.6,
+        0.05,
+        18.7,
+        0.8,
+        0.05,
+        16.5,
+        0.8,
+        0.05,
+        16.5,
+        1.6,
+        0.05,
+        18.7,
+        1.6,
+        1.55,
+        18.7,
+        0.8,
+        1.55,
+        16.5,
+        0.8,
+        1.55,
+        16.5,
+        1.6,
+        1.55
+      ]
+    }
+  ],
+  "camPoses": [
+    {
+      "cam": "CAM_FRONT_LEFT",
+      "translation": [
+        1.5,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0.674,
+        -0.674,
+        0.213,
+        -0.213
+      ],
+      "intrinsic": [
+        [
+          633.2,
+          0,
+          408.2
+        ],
+        [
+          0,
+          633.2,
+          245.7
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "cam": "CAM_FRONT",
+      "translation": [
+        1.5,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0.5,
+        -0.5,
+        0.5,
+        -0.5
+      ],
+      "intrinsic": [
+        [
+          633.2,
+          0,
+          408.2
+        ],
+        [
+          0,
+          633.2,
+          245.7
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "cam": "CAM_FRONT_RIGHT",
+      "translation": [
+        1.5,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0.213,
+        -0.213,
+        0.674,
+        -0.674
+      ],
+      "intrinsic": [
+        [
+          633.2,
+          0,
+          408.2
+        ],
+        [
+          0,
+          633.2,
+          245.7
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "cam": "CAM_BACK_LEFT",
+      "translation": [
+        1.5,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0.696,
+        -0.696,
+        -0.123,
+        0.123
+      ],
+      "intrinsic": [
+        [
+          633.2,
+          0,
+          408.2
+        ],
+        [
+          0,
+          633.2,
+          245.7
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "cam": "CAM_BACK",
+      "translation": [
+        1.5,
+        0,
+        1.5
+      ],
+      "rotation": [
+        0.5,
+        -0.5,
+        -0.5,
+        0.5
+      ],
+      "intrinsic": [
+        [
+          633.2,
+          0,
+          408.2
+        ],
+        [
+          0,
+          633.2,
+          245.7
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "cam": "CAM_BACK_RIGHT",
+      "translation": [
+        1.5,
+        0,
+        1.5
+      ],
+      "rotation": [
+        -0.123,
+        0.123,
+        0.696,
+        -0.696
+      ],
+      "intrinsic": [
+        [
+          633.2,
+          0,
+          408.2
+        ],
+        [
+          0,
+          633.2,
+          245.7
+        ],
+        [
+          0,
+          0,
+          1
+        ]
+      ]
+    }
+  ]
+}

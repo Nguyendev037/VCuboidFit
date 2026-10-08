@@ -1,0 +1,7 @@
+queries:
+  - {id: night_rain, text: "a driving photo at night in the rain"}
+  - {id: motorcycle_intersection, text: "a motorcycle at a busy intersection"}
+  - {id: crowded_crosswalk, text: "many pedestrians crossing the street"}
+  - {id: construction_vehicle, text: "a construction vehicle on the road"}
+  - {id: bicycle, text: "a cyclist riding on the road"}
+  - {id: occluded_far, text: "small distant vehicles partly hidden"}

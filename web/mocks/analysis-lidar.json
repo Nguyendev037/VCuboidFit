@@ -1,0 +1,81 @@
+{
+  "pool": {
+    "scenes": 3,
+    "frames": 36,
+    "images": 204,
+    "imagesByCam": {
+      "CAM_BACK": 24,
+      "CAM_BACK_LEFT": 36,
+      "CAM_BACK_RIGHT": 36,
+      "CAM_FRONT": 36,
+      "CAM_FRONT_LEFT": 36,
+      "CAM_FRONT_RIGHT": 36
+    },
+    "hasLidar": true,
+    "hasAnnotations": true,
+    "duplicates": { "frames": { "count": 7, "pct": 0.194444 }, "groups": 2 },
+    "tooSafe": { "count": 4, "pct": 0.111111 },
+    "easyForModel": { "count": 8, "pct": 0.222222 },
+    "unlabelable": { "total": { "count": 1, "pct": 0.027778 }, "dark": 0, "blurry": 0, "noObjects": 1 },
+    "excludedByCamera": { "count": 0, "pct": 0 },
+    "highValue": { "count": 4, "pct": 0.111111 },
+    "rareGt": {
+      "total": { "count": 14, "pct": 0.388889 },
+      "A": { "count": 3, "pct": 0.083333 },
+      "B": { "count": 5, "pct": 0.138889 },
+      "Bp": { "count": 4, "pct": 0.111111 },
+      "C": { "count": 2, "pct": 0.055556 }
+    }
+  },
+  "selected": {
+    "metrics": {
+      "recall": 0.42,
+      "nRecall": 0.58,
+      "sceneRecall": 0.67,
+      "nBoxes": 94,
+      "uplift": 3.4,
+      "precision": 0.31,
+      "coverage": 0.74,
+      "coverageGain": 0.18,
+      "redundancy": 0.08,
+      "ci95": { "low": 0.34, "high": 0.51 },
+      "byGroup": { "A": 0.62, "B": 0.48, "Bp": 0.38, "C": 0.29 }
+    },
+    "random": {
+      "mean": {
+        "recall": 0.13,
+        "nRecall": 0.18,
+        "sceneRecall": 0.22,
+        "nBoxes": 31,
+        "uplift": 1,
+        "precision": 0.11,
+        "coverage": 0.46,
+        "coverageGain": 0,
+        "redundancy": 0.27,
+        "byGroup": { "A": 0.14, "B": 0.13, "Bp": 0.12, "C": 0.1 }
+      },
+      "std": {
+        "recall": 0.03,
+        "nRecall": 0.04,
+        "sceneRecall": 0.05,
+        "nBoxes": 5,
+        "uplift": 0.05,
+        "precision": 0.02,
+        "coverage": 0.07,
+        "coverageGain": 0,
+        "redundancy": 0.06,
+        "byGroup": { "A": 0.03, "B": 0.02, "Bp": 0.02, "C": 0.02 }
+      }
+    },
+    "ablation": null,
+    "recallByGroup": { "A": 0.62, "B": 0.48, "Bp": 0.38, "C": 0.29 },
+    "reasons": { "rarity": 2, "novelty": 1, "uncertainty": 1 },
+    "scenesCovered": 2,
+    "duplicatesInSelection": 0
+  },
+  "histogram": {
+    "bins": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+    "counts": [0, 1, 2, 4, 7, 8, 6, 4, 2, 2],
+    "budgetThreshold": 0.76
+  }
+}

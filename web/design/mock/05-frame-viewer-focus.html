@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1440, initial-scale=1" />
+    <title>VCuboidFIT - Frame Viewer Focus</title>
+    <link rel="stylesheet" href="../tokens.css" />
+  </head>
+  <body>
+    <main class="mockup-frame viewer-frame">
+      <header class="viewer-toolbar">
+        <div class="row">
+          <button class="button ghost">Esc đóng</button>
+          <strong>Frame Viewer · Focus FRONT</strong>
+          <span class="chip accent">#01</span>
+          <span class="chip">Zoom 126%</span>
+        </div>
+        <div class="toolbar">
+          <button class="button">0 Surround</button>
+          <button class="button primary">2 FRONT</button>
+          <button class="button">7 LiDAR</button>
+          <button class="button">B Box</button>
+          <button class="button">P Points</button>
+          <button class="button">R Reset</button>
+        </div>
+      </header>
+
+      <section class="focus-layout">
+        <div class="focus-stage">
+          <span class="tile-label">FRONT · ảnh gốc 1600×900 · point projection bật</span>
+          <div class="point-cloud"></div>
+          <div class="wire-box"></div>
+          <aside class="viewer-panel">
+            <p class="eyebrow">Panel thông tin</p>
+            <h1 class="section-title">scene-0061 · frame 37</h1>
+            <p class="body-copy">Rank #01 · S=0.94 · mưa đêm, object nhỏ ở xa, cần gán nhãn sớm.</p>
+            <div class="row mt-4">
+              <span class="chip accent">hiếm</span>
+              <span class="chip">khó</span>
+              <span class="chip">6 camera</span>
+            </div>
+            <div class="chart-bars mt-4">
+              <div class="bar-row"><span>S</span><div class="bar"><span class="fill-90"></span></div><strong>0.94</strong></div>
+              <div class="bar-row"><span>rNov</span><div class="bar"><span class="fill-84"></span></div><strong>0.88</strong></div>
+              <div class="bar-row"><span>rUnc</span><div class="bar"><span class="fill-76"></span></div><strong>0.81</strong></div>
+            </div>
+            <div class="kbd-row mt-4">
+              <span class="kbd">cuộn zoom</span>
+              <span class="kbd">kéo pan</span>
+              <span class="kbd">I ẩn panel</span>
+            </div>
+          </aside>
+        </div>
+
+        <div class="source-strip">
+          <div class="mini-source">FRONT_LEFT</div>
+          <div class="mini-source active">FRONT</div>
+          <div class="mini-source">FRONT_RIGHT</div>
+          <div class="mini-source">BACK_LEFT</div>
+          <div class="mini-source">BACK</div>
+          <div class="mini-source">BACK_RIGHT</div>
+          <div class="mini-source">LiDAR</div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

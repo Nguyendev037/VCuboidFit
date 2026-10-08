@@ -1,0 +1,36 @@
+# Gói GPU thuê (SPEC-P04 §C). Một máy Ubuntu + NVIDIA driver + Docker + nvidia-container-toolkit.
+#   NUSC=/data/nuscenes EXP=/data/exp/trainval docker compose -f docker/cloud/docker-compose.yml run --rm tier0
+#   ... run --rm tier1        (train seed + infer; cần GPU)
+#   ... run --rm experiment   (tune trên V + báo cáo; CPU)
+x-common: &common
+  image: ${VCF_TIER1_IMAGE:-vcf-tier1:0.1}
+  shm_size: 16g
+  working_dir: /work/worker
+  volumes:
+    - ${NUSC:?đặt NUSC=<thư mục nuScenes>}:/nusc:ro
+    - ${EXP:?đặt EXP=<thư mục thí nghiệm>}:/exp
+    - ../../worker:/work/worker
+  environment:
+    PYTHONPATH: /work/worker:/opt/OpenPCDet
+
+services:
+  tier0:          # chỉ mục + descriptor + GT + run Tầng 0 trên V (CPU, song song mọi lõi)
+    <<: *common
+    command: python -m c4.cli.lidar_experiment --data-root /nusc --out /exp --split V --tune --bootstrap 200
+  tier1:          # PointPillars seed (GPU) → t1/
+    <<: *common
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+    command: bash -c "python -m c4.lidar.tier1.train_seed --exp /exp --nusc /nusc --sweeps ${SWEEPS:-10} --epochs ${EPOCHS:-20} --batch ${BATCH:-8} --workers 8 && python -m c4.lidar.tier1.infer_t1 --exp /exp --batch ${BATCH:-8}"
+  downstream:     # M9 (stretch): PointPillars S∪A vs S∪A_random trên T — chạy SAU khi chấm P (split P)
+    <<: *common
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+    command: bash -c "for t in ${DS_RUNS:-hybrid_mmr random_0}; do python -m c4.lidar.tier1.downstream --exp /exp --nusc /nusc --selected /exp/${DS_SPLIT:-P}/$$t/selected_5pct.csv --tag $$t --batch ${BATCH:-8} || exit $$?; done"
+  experiment:     # ma trận đầy đủ Tầng 0 + Tầng 1 trên V sau khi có t1/
+    <<: *common
+    command: python -m c4.cli.lidar_experiment --data-root /nusc --out /exp --split V --tune --bootstrap 200

@@ -1,0 +1,124 @@
+{
+ "fields": [
+  {
+   "key": "tier",
+   "label": "Cách đánh giá frame",
+   "type": "int",
+   "min": 0,
+   "max": 1,
+   "step": 1,
+   "default": 1,
+   "display": "choice",
+   "help": "Cơ bản chỉ nhìn hình dạng point cloud, chạy nhanh, không cần model. Nâng cao dùng thêm model AI đã học để tìm frame model còn lạ hoặc chưa chắc chắn.",
+   "options": [
+    {
+     "value": 0,
+     "label": "Cơ bản",
+     "hint": "Hình dạng point cloud"
+    },
+    {
+     "value": 1,
+     "label": "Nâng cao",
+     "hint": "Có thêm model AI",
+     "disabledReason": null
+    }
+   ]
+  },
+  {
+   "key": "k",
+   "label": "Số frame giống nhất để so sánh độ hiếm",
+   "type": "int",
+   "min": 3,
+   "max": 50,
+   "step": 1,
+   "default": 10,
+   "display": "count",
+   "unit": "frame",
+   "minLabel": "So sát (nhạy với khác biệt nhỏ)",
+   "maxLabel": "So rộng (ổn định hơn)",
+   "help": "Một frame được coi là hiếm khi nó khác xa những frame giống nó nhất ở các cảnh khác. Con số này là số frame giống nhất được dùng để so sánh."
+  },
+  {
+   "key": "lam",
+   "label": "Ưu tiên khi chọn",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05,
+   "default": 0.7,
+   "display": "percent",
+   "minLabel": "Đa dạng nhất",
+   "maxLabel": "Hiếm nhất",
+   "help": "Kéo về phía Hiếm nhất để lấy những frame hiếm nhất dù có thể giống nhau; kéo về phía Đa dạng nhất để tránh chọn nhiều frame na ná nhau."
+  },
+  {
+   "key": "maxPerScene",
+   "label": "Tối đa số frame lấy từ mỗi cảnh",
+   "type": "int",
+   "min": 1,
+   "max": 50,
+   "step": 1,
+   "default": 4,
+   "display": "count",
+   "unit": "frame",
+   "help": "Giới hạn để tập chọn không dồn quá nhiều frame vào một đoạn đường."
+  },
+  {
+   "key": "quotaOff",
+   "label": "Không giới hạn số frame mỗi cảnh",
+   "type": "bool",
+   "min": null,
+   "max": null,
+   "step": null,
+   "default": false,
+   "display": "toggle"
+  },
+  {
+   "key": "alpha",
+   "label": "Hiếm trong dữ liệu",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05,
+   "default": 1.0,
+   "display": "percent",
+   "group": "weights",
+   "help": "Frame có hình dạng ít gặp so với phần còn lại của bộ dữ liệu."
+  },
+  {
+   "key": "beta",
+   "label": "Lạ với model",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05,
+   "default": 0.0,
+   "display": "percent",
+   "group": "weights",
+   "help": "Frame khác với những gì model đã được học (cần chế độ Nâng cao)."
+  },
+  {
+   "key": "gamma",
+   "label": "Model chưa chắc chắn",
+   "type": "float",
+   "min": 0,
+   "max": 1,
+   "step": 0.05,
+   "default": 0.0,
+   "display": "percent",
+   "group": "weights",
+   "help": "Frame mà model đoán dao động hoặc thiếu tự tin (cần chế độ Nâng cao)."
+  }
+ ],
+ "groups": {
+  "weights": {
+   "label": "Mức quan trọng của từng tiêu chí",
+   "help": "Tự quy đổi để tổng luôn là 100%.",
+   "basicNote": "Chế độ Cơ bản chỉ dùng tiêu chí Hiếm trong dữ liệu."
+  }
+ },
+ "tierAvailable": [
+  0,
+  1
+ ]
+}

@@ -1,0 +1,8 @@
+night_keywords: [night]
+rain_keywords: [rain]
+rare_classes: [vehicle.motorcycle, vehicle.bicycle, vehicle.construction, vehicle.trailer,
+               vehicle.emergency.ambulance, vehicle.emergency.police, animal, movable_object.debris]
+crowd_min_peds: 8          # human.pedestrian.* boxes in the frame
+low_vis_level: "1"         # visibility token 1 = 0–40 %
+far_max_lidar_pts: 5       # box with 1..5 LiDAR points
+rare_max_freq: 0.10        # a group counts toward is_rare only if its pool frequency <= this

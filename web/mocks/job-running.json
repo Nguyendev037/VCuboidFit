@@ -1,0 +1,41 @@
+{
+ "jobId": "6df07dfd8ac0",
+ "state": "running",
+ "stage": "det",
+ "done": 18,
+ "total": 36,
+ "etaSec": 40.0,
+ "stages": [
+  {
+   "name": "index",
+   "state": "done",
+   "durationSec": 2.016,
+   "peakVramMb": 0
+  },
+  {
+   "name": "dino",
+   "state": "done",
+   "durationSec": 5.078,
+   "peakVramMb": 0
+  },
+  {
+   "name": "det",
+   "state": "running",
+   "durationSec": 0.0,
+   "peakVramMb": 0
+  },
+  {
+   "name": "clip",
+   "state": "queued",
+   "durationSec": 0.0,
+   "peakVramMb": 0
+  },
+  {
+   "name": "merge",
+   "state": "queued",
+   "durationSec": 0.0,
+   "peakVramMb": 0
+  }
+ ],
+ "error": null
+}

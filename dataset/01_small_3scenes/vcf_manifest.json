@@ -1,0 +1,109 @@
+{
+  "version": "v1.0-mini",
+  "parts": [
+    {
+      "name": "vcf_part_001.zip",
+      "size": 41532432,
+      "sha256": "82bb5781634b40a6bf113cd709ca78e723b1cf59823230c3385e934eac98d830"
+    },
+    {
+      "name": "vcf_part_002.zip",
+      "size": 47326595,
+      "sha256": "819b2e490ad6794f9347228128e7922227be112e53a21a5d3ffd9af59403fba5"
+    },
+    {
+      "name": "vcf_part_003.zip",
+      "size": 47670108,
+      "sha256": "a92b62e50f946a0641ef17655ae47ad5a758cb9314a56e68e0c2e4de7979750a"
+    },
+    {
+      "name": "vcf_part_004.zip",
+      "size": 46810958,
+      "sha256": "e5dd9eca0c06180a2e95c6afb4cdb75ed59b0e7d9388b56e714f66b5c4b9c820"
+    },
+    {
+      "name": "vcf_part_005.zip",
+      "size": 48223311,
+      "sha256": "332b0cfba2488886aa6a34e796eb5c7b14c347be474692da2f8f1bd8082668e6"
+    },
+    {
+      "name": "vcf_part_006.zip",
+      "size": 47448307,
+      "sha256": "4692a7a3cf3ac73cbb5aa58480bb1924b1559f50c619cc0bc2a137db11dbc37c"
+    },
+    {
+      "name": "vcf_part_007.zip",
+      "size": 47915256,
+      "sha256": "a3c3c83c2ffc8c2f4c8596810a54b781cd3231f2a45bcd015560a3a858b5d12f"
+    },
+    {
+      "name": "vcf_part_008.zip",
+      "size": 47159294,
+      "sha256": "4d03c27727f317e0086712f5d08b7489f812548354f60aa8906ef0708bb47ee6"
+    },
+    {
+      "name": "vcf_part_009.zip",
+      "size": 47399693,
+      "sha256": "5e7e4573c7231d17586a5d13f7f504e7bcae270e5caf2b6f54eabf6a8beac419"
+    },
+    {
+      "name": "vcf_part_010.zip",
+      "size": 47529358,
+      "sha256": "23e269f34d315ced6c2e1fede5f2cd2a791300c538fdee28169a47decf5965a1"
+    },
+    {
+      "name": "vcf_part_011.zip",
+      "size": 47755164,
+      "sha256": "9e86546aab304869d72614bf159c62d3fb30d9c152ee112ef1332e0efa15cfa3"
+    },
+    {
+      "name": "vcf_part_012.zip",
+      "size": 47402584,
+      "sha256": "3eb9179791b69a77d49930ddaa8ff317bda874021ef1468319a38b3ee7d63658"
+    },
+    {
+      "name": "vcf_part_013.zip",
+      "size": 47389374,
+      "sha256": "ec956449cb140571fe6a5e82f934dbe7db91d73f591c26a5d7125a0d2305047e"
+    },
+    {
+      "name": "vcf_part_014.zip",
+      "size": 52132202,
+      "sha256": "9ba2fe4bf19227b6eb83b7e9b0aee243e26f5611703edff1b1fa4a52424487a1"
+    },
+    {
+      "name": "vcf_part_015.zip",
+      "size": 50147046,
+      "sha256": "e35b89b54095a02d8f06c35bb6e003d6eeff72685625146493bd9640e810d6cf"
+    },
+    {
+      "name": "vcf_part_016.zip",
+      "size": 50215446,
+      "sha256": "2fc469fe7362d5a761be3efd0d3a1731b3a8eea5e825ca7f71c7e75c91b19227"
+    },
+    {
+      "name": "vcf_part_017.zip",
+      "size": 49241647,
+      "sha256": "7c2f141acee279f8ea333a65b003e60aa11dbea62a39bdb038b9b28814d87ebe"
+    },
+    {
+      "name": "vcf_part_018.zip",
+      "size": 50197741,
+      "sha256": "a48836958ac185a9b76b8badf8f54652a0facca1c5620c4020e358f888305178"
+    },
+    {
+      "name": "vcf_part_019.zip",
+      "size": 51435420,
+      "sha256": "cf508ee7f4551ef164c0e9234ef76ff60c1967091591ad181ef5fdd35b4b26d3"
+    },
+    {
+      "name": "vcf_part_020.zip",
+      "size": 41191888,
+      "sha256": "ce624f41e6c5a881cd5b2aa2b5bebcaf135531ba35b94e95b855357466ff33cf"
+    }
+  ],
+  "frames": 121,
+  "scenes": 3,
+  "createdAt": "2026-10-08T02:58:37+00:00",
+  "tool": "vcf-pack 0.1"
+}

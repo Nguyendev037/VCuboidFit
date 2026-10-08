@@ -1,0 +1,34 @@
+# Định nghĩa rare cho M2/M8 (PDF §5.1). GỢI Ý — chốt ở cổng G1 từ bảng đếm thật, sau đó CẤM sửa
+# khi đã có kết quả method (mỗi lần sửa = một quyết định có mốc trong planning/04 plan.md).
+tau: 0.02                       # cell hiếm nếu freq(frame chứa cell) < tau
+distance_bins_m: [0, 20, 40, 1000]
+points_bins: [0, 5, 20, 100000] # num_lidar_pts: [0,5], (5,20], (20,∞)
+class_map:                      # category nuScenes -> lớp LT3D (category không có ở đây bị bỏ)
+  vehicle.car: car
+  vehicle.truck: truck
+  vehicle.bus.bendy: bus
+  vehicle.bus.rigid: bus
+  vehicle.trailer: trailer
+  vehicle.construction: construction_vehicle
+  vehicle.motorcycle: motorcycle
+  vehicle.bicycle: bicycle
+  vehicle.emergency.ambulance: emergency_vehicle
+  vehicle.emergency.police: emergency_vehicle
+  human.pedestrian.adult: adult
+  human.pedestrian.child: child
+  human.pedestrian.stroller: stroller
+  human.pedestrian.wheelchair: wheelchair
+  human.pedestrian.personal_mobility: personal_mobility
+  human.pedestrian.police_officer: police_officer
+  human.pedestrian.construction_worker: construction_worker
+  animal: animal
+  movable_object.barrier: barrier
+  movable_object.trafficcone: traffic_cone
+  movable_object.pushable_pullable: pushable_pullable
+  movable_object.debris: debris
+few: [child, stroller, wheelchair, personal_mobility, police_officer, construction_worker,
+      emergency_vehicle, animal, pushable_pullable, debris]
+medium: [motorcycle, bicycle, construction_vehicle, trailer, bus]
+C: {max_pts: 5, min_dist_m: 40.0, low_vis: "1"}
+A_keywords: [rain, night]
+delta_t_s: 2.0

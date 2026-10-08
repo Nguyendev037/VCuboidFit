@@ -1,0 +1,21 @@
+schema_version: "1.1"
+budget: 0.05
+budget_max: 0.10
+novelty:
+  k: 10
+quality:
+  min_luma: 8
+  min_blur_var: 15
+score:
+  alpha: 0.4
+  beta: 0.3
+  gamma: 0.3
+mmr:
+  lambda: 0.7
+  max_per_scene: 3
+  min_gap: 4
+eval:
+  random_seeds: [1, 2, 3, 4, 5]
+  dup_theta: 0.9
+analysis:
+  dup_theta: 0.95
