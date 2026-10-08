@@ -91,6 +91,7 @@ Chi tiết từng bước và xử lý lỗi: [docs/run-local.md](docs/run-local
 * [docs/colab-dev-setup.md](docs/colab-dev-setup.md) - dev mới: môi trường chạy được trên Colab (không GPU, không Docker)
 * [docs/model-workflow.md](docs/model-workflow.md) - model chọn 5% frame chạy như thế nào (từng bước)
 * [docs/glossary.md](docs/glossary.md) - "hiếm" là gì, ý nghĩa từng chỉ số và tham số
+* [docs/project-status.md](docs/project-status.md) - tình trạng dự án, số đo hiện có và kế hoạch còn lại theo phase
 
 ## Biến môi trường
 
