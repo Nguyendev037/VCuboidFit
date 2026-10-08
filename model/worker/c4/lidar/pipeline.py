@@ -89,7 +89,8 @@ def run_selection_lidar(job_dir, params: LidarParams, cfg=None) -> dict:
     sc = combine(index, keep, rar, nov, unc, *w)
     N = len(index)
     B = budget(N, r.budget)
-    hybrid, w2 = select_mmr(sc, z, B, r.lam, r.m, w, method="hybrid")
+    hybrid, w2 = select_mmr(sc, z, B, r.lam, r.m, w, method="hybrid",
+                            score_norm=cfg.get("mmr_score", "rank"))
     warnings += w2
     runs = {"hybrid": hybrid,
             "t0_rar_topk": select_topk(combine(index, keep, rar, None, None, 1, 0, 0), B,

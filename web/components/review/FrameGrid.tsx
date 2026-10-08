@@ -16,6 +16,7 @@ export interface FrameGridProps {
   onOpenViewer?: (frame: FrameSummary) => void;
   viewMode?: "grid" | "list";
   pipeline?: "camera" | "lidar";
+  showLidarModelMetrics?: boolean;
   className?: string;
 }
 
@@ -26,6 +27,7 @@ export function FrameGrid({
   onOpenViewer,
   viewMode = "grid",
   pipeline = "camera",
+  showLidarModelMetrics,
   className = "",
 }: FrameGridProps) {
   // Quản lý index được chọn để hỗ trợ bàn phím
@@ -120,7 +122,7 @@ export function FrameGrid({
         onDoubleClick={() => onOpenViewer?.(frame)}
         className={`group relative flex flex-col rounded-xl border bg-card text-card-foreground overflow-hidden cursor-pointer transition-all duration-150 select-none ${
           isSelected
-            ? "ring-2 ring-blue-600 border-blue-600 shadow-md scale-[1.01]"
+            ? "ring-2 ring-inset ring-blue-600 border-blue-600 shadow-md"
             : "border-border hover:border-slate-300 hover:shadow-sm"
         }`}
         data-testid="frame-cell"
@@ -190,7 +192,9 @@ export function FrameGrid({
               ))}
             </div>
             <span className="text-[10px] text-slate-400 font-mono">
-              {frame.bestCam.replace("CAM_", "")}
+              {pipeline === "lidar" && frame.bestCam === "LIDAR_TOP"
+                ? "Ảnh camera trước (minh hoạ)"
+                : frame.bestCam.replace("CAM_", "")}
             </span>
           </div>
         </div>
@@ -200,6 +204,7 @@ export function FrameGrid({
 
   if (viewMode === "list") {
     const isLidar = pipeline === "lidar";
+    const showModelMetrics = !isLidar || (showLidarModelMetrics ?? frames.some((f) => f.rNov !== 0 || f.rUnc !== 0));
     return (
       <div
         className={`w-full overflow-x-auto rounded-xl border border-border bg-card outline-none ${className}`}
@@ -214,8 +219,8 @@ export function FrameGrid({
               <th className="p-3 w-16">Frame</th>
               <th className="p-3 w-16">S</th>
               <th className="p-3 w-16">{isLidar ? "Hiếm" : "rNov"}</th>
-              <th className="p-3 w-20">{isLidar ? "Lạ với model" : "rUnc"}</th>
-              <th className="p-3 w-20">{isLidar ? "Không chắc" : "rQry"}</th>
+              {showModelMetrics && <th className="p-3 w-20">{isLidar ? "Lạ với model" : "rUnc"}</th>}
+              {showModelMetrics && <th className="p-3 w-20">{isLidar ? "Không chắc" : "rQry"}</th>}
               <th className="p-3">Lý do chọn</th>
               <th className="p-3">Tag</th>
             </tr>
@@ -242,9 +247,10 @@ export function FrameGrid({
                   <td className="p-3 font-mono">{f.frameIdx}</td>
                   <td className="p-3 font-mono text-emerald-600 font-bold">{f.S.toFixed(2)}</td>
                   <td className="p-3 font-mono text-slate-500">{(isLidar ? f.rRar ?? f.rNov : f.rNov).toFixed(2)}</td>
-                  <td className="p-3 font-mono text-slate-500">{(isLidar ? f.rNov : f.rUnc).toFixed(2)}</td>
-                  {!isLidar && <td className="p-3 font-mono text-slate-500">{f.rQry.toFixed(2)}</td>}
-                  {isLidar && <td className="p-3 font-mono text-slate-500">{f.rUnc.toFixed(2)}</td>}
+                  {showModelMetrics && <td className="p-3 font-mono text-slate-500">{(isLidar ? f.rNov : f.rUnc).toFixed(2)}</td>}
+                  {showModelMetrics && (isLidar
+                    ? <td className="p-3 font-mono text-slate-500">{f.rUnc.toFixed(2)}</td>
+                    : <td className="p-3 font-mono text-slate-500">{f.rQry.toFixed(2)}</td>)}
                   <td className="p-3 truncate max-w-xs">{reasonText(f.reason)} <Tooltip label={FRAME_SCORES.reason.label} content={FRAME_SCORES.reason.tooltip} /></td>
                   <td className="p-3">
                     {f.tags.map((t) => (

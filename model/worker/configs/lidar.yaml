@@ -19,6 +19,10 @@ filter:
   min_points: 2000         # sau remove_close, trước crop
 pca_dim: 64
 bev_png_px: 256
+# Q4 (CHỐT Đ14, 2026-10-08, trước khi chấm V/P trainval): điểm đưa vào MMR.
+# "minmax" = giữ biên độ Rar (cắt phân vị 1/99); "rank" = hạng phần trăm (cũ, nén biên độ ⇒
+# MMR loại frame hiếm cùng kiểu). Experiment luôn báo cáo thêm run t0_rar_mmr_rank (đối chứng).
+mmr_score: minmax
 defaults:                  # mặc định khi web không gửi tham số nâng cao
   budget: 0.05
   k: 10

@@ -6,7 +6,7 @@ describe("glossary", () => {
     expect(reasonText("rarity p97")).toBe("Hiếm trong dữ liệu — top 3%");
     expect(reasonText("novelty p90")).toBe("Lạ với model — top 10%");
     expect(reasonText("uncertainty p95")).toBe("Model chưa chắc chắn — top 5%");
-    expect(reasonText("rarity p100")).toBe("Hiếm trong dữ liệu — top 0%");
+    expect(reasonText("rarity p100")).toBe("Hiếm trong dữ liệu — top 1%");
   });
 
   it("gtTagLabel converts correctly", () => {
@@ -40,5 +40,12 @@ describe("glossary", () => {
       checkNoMath(setting.tooltip);
       checkNoMath(setting.detail);
     });
+  });
+});
+
+describe("reasonText top percent", () => {
+  it("never shows top 0% (p100 is the top 1%)", () => {
+    expect(reasonText("rarity p100")).toContain("top 1%");
+    expect(reasonText("novelty p97")).toContain("top 3%");
   });
 });

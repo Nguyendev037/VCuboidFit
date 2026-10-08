@@ -185,3 +185,23 @@ def test_gt_config_groups_disjoint():
     g = load_gt_config()
     assert not set(g["few"]) & set(g["medium"])
     assert set(g["few"]) | set(g["medium"]) <= set(g["class_map"].values())
+
+
+def test_q4_minmax_score_keeps_magnitude_and_default_is_minmax():
+    """Q4 (Đ14): min-max giữ biên độ Rar, hạng % thì nén; mặc định = minmax."""
+    from c4.lidar.select import minmax_score
+
+    idx = pd.DataFrame(dict(sample_token=list("abcd"), scene_token=["s0", "s0", "s1", "s1"],
+                            split="V", frame_idx=[0, 1, 0, 1]))
+    rar = np.array([1.0, 1.1, 1.2, 4.0], np.float32)
+    sc = combine(idx, np.ones(4, bool), rar, None, None, 1, 0, 0)
+    mm = minmax_score(sc)
+    assert mm[3] == pytest.approx(1.0) and mm[2] < 0.1  # khe 1.0 → 0.07 (min-max)
+    assert sc["s"].iloc[3] - sc["s"].iloc[2] == pytest.approx(0.25)  # hạng %: khe chỉ 0.25
+    assert load_lidar_config()["mmr_score"] == "minmax"
+    z = np.eye(4, dtype=np.float32)
+    a, _ = select_mmr(sc, z, 2, 0.7, None, score_norm="rank")
+    b, _ = select_mmr(sc, z, 2, 0.7, None, score_norm="minmax")
+    assert len(a) == len(b) == 2 and "d" in set(b["sample_token"])
+    with pytest.raises(ValueError):
+        select_mmr(sc, z, 2, 0.7, None, score_norm="zscore")

@@ -86,6 +86,8 @@ def g1_table(t: NuscTables, index: pd.DataFrame, gcfg: dict, taus=(0.005, 0.01, 
         "pts<=5&dist>40": lambda b, c: b["pts"] <= 5 and b["dist"] > 40,
         "pts<=2&dist>30": lambda b, c: b["pts"] <= 2 and b["dist"] > 30,
         "vis1": lambda b, c: b["vis"] == "1"}
+    far = lambda b: b["pts"] <= 5 and b["dist"] > 40  # noqa: E731 — box khó nhìn bằng LiDAR
+    count_rules = {f"far_low_pts>={n}": n for n in (3, 5, 10)}  # nhóm C theo SỐ LƯỢNG box khó
     rows = []
     for split, part in index.groupby("split", sort=True):
         toks = part["sample_token"].tolist()
@@ -100,6 +102,10 @@ def g1_table(t: NuscTables, index: pd.DataFrame, gcfg: dict, taus=(0.005, 0.01, 
                              pct=round(rare / n, 4), B=max(1, int(np.ceil(0.05 * n)))))
         for name, fn in variants.items():
             hit = sum(any(fn(b, gcfg["C"]) for b in boxes[tok]) for tok in toks)
+            rows.append(dict(split=split, kind="C", value=name, frames=n, hit=hit,
+                             pct=round(hit / n, 4), B=max(1, int(np.ceil(0.05 * n)))))
+        for name, k in count_rules.items():
+            hit = sum(sum(far(b) for b in boxes[tok]) >= k for tok in toks)
             rows.append(dict(split=split, kind="C", value=name, frames=n, hit=hit,
                              pct=round(hit / n, 4), B=max(1, int(np.ceil(0.05 * n)))))
     return pd.DataFrame(rows)

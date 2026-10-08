@@ -123,11 +123,11 @@ export function AdvancedParamsPanel({
                       })
                     }
                     className={`flex flex-col items-center rounded-md px-2 py-1.5 transition-colors ${
-                      selected ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 disabled:opacity-45 disabled:hover:bg-transparent"
+                      selected ? "bg-blue-600 text-white" : "text-slate-700 hover:bg-slate-100 disabled:hover:bg-transparent"
                     }`}
                   >
                     <span className="font-semibold">{opt.label}</span>
-                    {opt.hint && <span className={`text-[10px] ${selected ? "text-blue-100" : "text-slate-400"}`}>{opt.hint}</span>}
+                    {opt.hint && <span className={`text-[10px] ${selected ? "text-blue-100" : "text-slate-600"}`}>{opt.hint}</span>}
                     {reason && <span className="text-[10px] text-slate-500">{reason}</span>}
                   </button>
                 );

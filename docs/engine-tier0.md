@@ -154,3 +154,75 @@ shortcut để xem kết quả sớm.
 Theo glossary, **Độ hiếm (ước lượng)** là tín hiệu để chọn; **Hiếm thật (theo
 nhãn)** chỉ dùng để chấm. Nhầm hai khái niệm này sẽ làm sai cả báo cáo lẫn kết
 luận khoa học.
+
+## 8. Câu hỏi mở Q4 — điểm MMR `rank` hay `minmax`
+
+Q4 nằm trong [`configs/lidar.yaml`](../model/worker/configs/lidar.yaml), tại khóa
+`mmr_score`. Hai lựa chọn hiện có:
+
+| Giá trị | Cách tính điểm đưa vào MMR | Đặc tính |
+|---|---|---|
+| `rank` (mặc định hiện tại) | Dùng điểm đã đổi sang hạng phần trăm trong cột `s` | Ổn định theo thứ hạng, nhưng làm mất biên độ khác biệt giữa các frame |
+| `minmax` | [`minmax_score`](../model/worker/c4/lidar/select.py) chuẩn hóa `rar`, `nov`, `unc` trên frame hợp lệ về `[0,1]` | Giữ biên độ tín hiệu; nếu tín hiệu hằng thì thành phần đó bằng 0 |
+
+[`select_mmr`](../model/worker/c4/lidar/select.py) truyền điểm đã chọn vào
+`mmr_select` qua `score_norm`. Với `rank`, nhiều frame có độ hiếm gốc rất khác
+nhau có thể chỉ còn khoảng cách hạng nhỏ (hoặc cùng hạng do ties). Khi đó phần
+thưởng điểm của MMR không đủ thắng phần phạt tương đồng cosine, nên MMR có thể
+loại một frame **hiếm nhưng gần giống** frame đã chọn. `minmax` là phương án
+Q4 để kiểm tra xem giữ biên độ hiếm có thay đổi kết quả hay không; không mặc
+định rằng phương án nào tốt hơn.
+
+| Quy tắc quyết định | Thực hiện |
+|---|---|
+| Không đổi sau khi đã bắt đầu chấm | Chỉ đổi `mmr_score: rank` thành `minmax` trước khi chạy/tune V hoặc chấm P |
+| So sánh công bằng | Giữ nguyên `k`, `lam`, quota, split và seed khi so hai cách |
+| Báo cáo phương án thay thế | `experiment.py` luôn tạo run đối chiếu; với mặc định `rank`, run thay thế là `t0_rar_mmr_minmax` |
+| P không dùng để thử tham số | Chốt lựa chọn từ V; P chỉ chạy một lần sau `final.yaml` và `freeze-v1` |
+
+Ví dụ đổi sang min-max **trước** khi chạy V:
+
+```yaml
+mmr_score: minmax
+```
+
+Trong mọi trường hợp, đây vẫn là tín hiệu **Độ hiếm (ước lượng)**; không được
+dùng `gt_rare_lidar` để chọn hoặc chọn phương án bằng cách nhìn P.
+
+## 9. Cổng G1 — đọc bảng `lidar_g1`
+
+Công cụ [`c4/cli/lidar_g1.py`](../model/worker/c4/cli/lidar_g1.py) gọi
+[`g1_table`](../model/worker/c4/lidar/gt.py), chỉ đọc annotation để tạo bảng đếm
+cho người chốt `tau` và định nghĩa nhóm C. Điều kiện đầu vào là
+`<out>/index.parquet`, thường đã có sau khi chạy Tầng 0:
+
+```powershell
+cd vcuboidfit\worker
+.venv\Scripts\python -m c4.cli.lidar_g1 `
+  --data-root H:\ `
+  --out ..\workspace\experiments\mini
+```
+
+Lệnh mặc định khảo sát `tau=0.005,0.01,0.02,0.05`, in bảng ra terminal và ghi
+`<out>/gt/g1_table.csv`. Dataset không có annotation hoặc thiếu `index.parquet`
+thì thoát mã 4; có thể truyền danh sách khác bằng `--taus`, ví dụ
+`--taus 0.01,0.02,0.05`.
+
+| Cột | Cách đọc |
+|---|---|
+| `split` | Tập được chấm; không gộp T/V/P khi suy luận |
+| `kind=tau` | Kiểm tra bao nhiêu frame có ít nhất một cell có tần suất `< tau` |
+| `kind=C` | So sánh từng định nghĩa C trên cùng split |
+| `value` | Giá trị tau hoặc tên biến thể C |
+| `frames` | Tổng frame của split |
+| `hit` | Số frame thỏa điều kiện |
+| `pct` | `hit / frames`, làm tròn 4 chữ số |
+| `B` | Ngân sách 5% tối thiểu 1 frame, dùng để đặt quy mô chọn |
+
+Đọc `tau` cùng với `hit/pct`: tau quá thấp có thể không tạo đủ frame rare để
+đánh giá; tau quá cao làm rare phủ quá rộng. Chọn ngưỡng có ý nghĩa trên bảng
+đếm thật rồi ghi quyết định G1, sau đó giữ cố định trong `gt.yaml` và không
+tune lại theo metrics. Với nhóm C, so từng dòng `kind=C`; trên mini hiện các
+định nghĩa kiểu “có ít nhất một box thỏa điều kiện” phủ khoảng **86–100% frame**,
+cho thấy nhóm đang quá rộng/bão hòa. Không chọn biến thể chỉ vì nó làm Recall
+đẹp hơn; cần chốt lại bằng bảng trainval ở cổng G1.

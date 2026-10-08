@@ -8,6 +8,7 @@ export interface CameraImageProps {
   camDetail: CamDetail;
   showBoxes?: boolean;
   showLidarOverlay?: boolean;
+  hideCameraScore?: boolean;
   isFocus?: boolean;
   onClick?: () => void;
   className?: string;
@@ -47,6 +48,7 @@ export function CameraImage({
   camDetail,
   showBoxes = true,
   showLidarOverlay = false,
+  hideCameraScore = false,
   isFocus = false,
   onClick,
   className = "",
@@ -229,9 +231,9 @@ export function CameraImage({
       </div>
 
       {/* Điểm của camera */}
-      <div aria-label={`Điểm camera ${camDetail.score.s.toFixed(2)}`} className="absolute top-1 right-1 z-10 flex items-center gap-1 bg-black/75 backdrop-blur-md px-1 py-0.5 rounded-md text-[9px] text-white/80 border border-white/10 font-mono sm:top-2 sm:right-2 sm:px-2 sm:py-1 sm:text-[11px]">
+      {!hideCameraScore && <div aria-label={`Điểm camera ${camDetail.score.s.toFixed(2)}`} className="absolute top-1 right-1 z-10 flex items-center gap-1 bg-black/75 backdrop-blur-md px-1 py-0.5 rounded-md text-[9px] text-white/80 border border-white/10 font-mono sm:top-2 sm:right-2 sm:px-2 sm:py-1 sm:text-[11px]">
         <span>S: {camDetail.score.s.toFixed(2)}</span>
-      </div>
+      </div>}
 
       {/* Nút điều khiển Zoom khi ở chế độ Focus */}
       {isFocus && (

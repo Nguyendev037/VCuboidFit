@@ -133,7 +133,12 @@ def run_matrix(pool: Pool, params: dict, cfg: dict, truth: ev.Truth | None) -> d
     z = pool.z0()
     runs["coreset_z0"] = select_coreset(t0, z, B)
     runs["t0_rar_topk"] = select_topk(t0, B, method="t0_rar_topk")
-    runs["t0_rar_mmr"], _ = select_mmr(t0, z, B, lam, m, method="t0_rar_mmr")
+    norm = cfg.get("mmr_score", "rank")
+    runs["t0_rar_mmr"], _ = select_mmr(t0, z, B, lam, m, method="t0_rar_mmr", score_norm=norm)
+    # Q4: luôn báo cáo phương án còn lại để nhóm chốt bằng số (không thay kết quả chính)
+    alt = "minmax" if norm == "rank" else "rank"
+    runs[f"t0_rar_mmr_{alt}"], _ = select_mmr(t0, z, B, lam, m, method=f"t0_rar_mmr_{alt}",
+                                              score_norm=alt)
     if pool.sig is not None:
         if pool.z1 is not None:
             r1 = scores_for(pool, k, (1, 0, 0), rar_space="z1")

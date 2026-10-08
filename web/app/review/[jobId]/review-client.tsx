@@ -106,6 +106,10 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
     () => rawList.some((f) => f.bestCam === "LIDAR_TOP" || !!f.bevUrl || typeof f.rRar === "number"),
     [rawList],
   );
+  const showLidarModelMetrics = useMemo(
+    () => rawList.some((f) => f.rNov !== 0 || f.rUnc !== 0),
+    [rawList],
+  );
 
   // Lọc theo từ khoá tìm kiếm và tag được chọn
   const filteredList = useMemo(() => {
@@ -380,6 +384,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
               onOpenViewer={(f: FrameSummary) => setFrame(f.sampleToken, "push")}
               viewMode={viewMode}
               pipeline={isLidar ? "lidar" : "camera"}
+              showLidarModelMetrics={showLidarModelMetrics}
             />
           )}
         </section>
@@ -418,6 +423,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
           jobId={jobId}
           token={token}
           sid={sel}
+          showLidarModelMetrics={showLidarModelMetrics}
           onPrev={
             activeIdx > 0
               ? () => setFrame(filteredList[activeIdx - 1].sampleToken, "replace")

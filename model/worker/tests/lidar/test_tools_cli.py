@@ -21,7 +21,7 @@ from tests.fixtures.make_nuscenes import make_nuscenes
 N_SCENES, FRAMES = 3, 5
 N = N_SCENES * FRAMES
 # g1_table mặc định có 4 định nghĩa nhóm C (variants) ngoài các dòng tau.
-N_C_VARIANTS = 4
+N_C_VARIANTS = 7  # 4 định nghĩa "có ≥1 box" + 3 theo số lượng box khó (≥3, ≥5, ≥10)
 
 
 def _write_index(out, root):

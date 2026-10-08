@@ -295,20 +295,21 @@ export function AnalysisPanel({
               const rar = reasons.rarity ?? reasons.novelty ?? 0;
               const nov = reasons.novelty ?? 0;
               const unc = reasons.uncertainty ?? 0;
+              const showModelReasons = nov !== 0 || unc !== 0;
               const tot = Math.max(1, rar + nov + unc);
               return (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs text-slate-600">
                     <span className="font-medium">Phân bố lý do tuyển chọn:</span>
-                    <span className="text-[11px] text-slate-400">Hiếm: {rar} · Lạ với model: {nov} · Chưa chắc: {unc}</span>
+                    <span className="text-[11px] text-slate-400">Hiếm: {rar}{showModelReasons ? ` · Lạ với model: ${nov} · Chưa chắc: ${unc}` : ""}</span>
                   </div>
                   <div className="h-3 w-full bg-slate-100 rounded-full flex overflow-hidden">
                     <div style={{ width: `${(rar / tot) * 100}%` }} className="bg-vcf-accent h-full" title="Hiếm" />
-                    <div style={{ width: `${(nov / tot) * 100}%` }} className="bg-vcf-accent-soft h-full" title="Lạ với model" />
-                    <div style={{ width: `${(unc / tot) * 100}%` }} className="bg-vcf-accent-ink h-full" title="Không chắc" />
+                    {showModelReasons && <div style={{ width: `${(nov / tot) * 100}%` }} className="bg-vcf-accent-soft h-full" title="Lạ với model" />}
+                    {showModelReasons && <div style={{ width: `${(unc / tot) * 100}%` }} className="bg-vcf-accent-ink h-full" title="Không chắc" />}
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-slate-500">
-                    <span>Hiếm</span><span>Lạ với model</span><span>Không chắc</span>
+                    <span>Hiếm</span>{showModelReasons && <><span>Lạ với model</span><span>Không chắc</span></>}
                   </div>
                 </div>
               );

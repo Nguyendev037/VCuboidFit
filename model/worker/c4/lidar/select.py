@@ -50,8 +50,26 @@ def _scene_codes(sc):
     return sc["scene_token"].astype("category").cat.codes.to_numpy()
 
 
+def minmax_score(sc: pd.DataFrame, weights=(1.0, 0.0, 0.0)) -> np.ndarray:
+    """Q4 (chốt Đ14, planning/04 plan.md): điểm cho MMR từ giá trị thô chuẩn hoá min-max trên
+    frame hợp lệ, cắt ngoại lai ở phân vị 1/99 (một frame lỗi không nén cả pool) — giữ biên độ
+    Rar mà hạng phần trăm làm mất. Tín hiệu hằng ⇒ 0."""
+    keep = sc["keep"].to_numpy(bool)
+    out = np.zeros(len(sc))
+    for col, w in zip(("rar", "nov", "unc"), weights):
+        if w <= 0:
+            continue
+        x = sc[col].to_numpy(np.float64)
+        v = x[keep]
+        lo, hi = (np.percentile(v, [1, 99]) if v.size else (0.0, 0.0))
+        if hi > lo:
+            out += w * np.where(keep, np.clip((x - lo) / (hi - lo), 0.0, 1.0), 0.0)
+    return np.round(np.clip(out, 0.0, 1.0), 6)
+
+
 def select_mmr(sc: pd.DataFrame, z: np.ndarray, B: int, lam: float, m: int | None,
-               weights=(1.0, 0.0, 0.0), method="mmr", col="s") -> tuple[pd.DataFrame, list[str]]:
+               weights=(1.0, 0.0, 0.0), method="mmr", col="s",
+               score_norm: str = "rank") -> tuple[pd.DataFrame, list[str]]:
     """MMR tham lam: f* = argmax λ·s(f) − (1−λ)·max_g cos(z(f), z(g)), quota m frame/scene.
     Quota không đủ chỗ cho B frame ⇒ tự nâng m (cảnh báo)."""
     keep = sc["keep"].to_numpy(bool)
@@ -67,6 +85,10 @@ def select_mmr(sc: pd.DataFrame, z: np.ndarray, B: int, lam: float, m: int | Non
     if m is not None and m_eff != m:
         warnings.append(f"Quota/scene tự nâng từ {m} lên {m_eff} để đủ {B} frame "
                         f"({len(per_scene[per_scene > 0])} scene hợp lệ)")
+    if score_norm == "minmax":
+        sc = sc.assign(**{col: minmax_score(sc, weights)})
+    elif score_norm != "rank":
+        raise ValueError(f"score_norm không hợp lệ: {score_norm}")
     picks = mmr_select(sc[col].to_numpy(np.float32), l2n(z), scene,
                        sc["frame_idx"].to_numpy(), keep, B, B, lam=lam, m=m_eff, min_gap=1)
     if len(picks) < B:

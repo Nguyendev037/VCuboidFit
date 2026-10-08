@@ -174,15 +174,15 @@ export const SETTINGS: Record<string, Omit<GlossaryItem, "howToRead">> = {
 export function reasonText(reason: string): string {
   if (reason.startsWith("rarity p")) {
     const p = parseInt(reason.replace("rarity p", ""), 10);
-    return `Hiếm trong dữ liệu — top ${100 - p}%`;
+    return `Hiếm trong dữ liệu — top ${Math.max(1, 100 - p)}%`;
   }
   if (reason.startsWith("novelty p")) {
     const p = parseInt(reason.replace("novelty p", ""), 10);
-    return `Lạ với model — top ${100 - p}%`;
+    return `Lạ với model — top ${Math.max(1, 100 - p)}%`;
   }
   if (reason.startsWith("uncertainty p")) {
     const p = parseInt(reason.replace("uncertainty p", ""), 10);
-    return `Model chưa chắc chắn — top ${100 - p}%`;
+    return `Model chưa chắc chắn — top ${Math.max(1, 100 - p)}%`;
   }
   return reason;
 }

@@ -17,6 +17,7 @@ export interface FrameViewerProps {
   jobId: string;
   token: string;
   sid?: string;
+  showLidarModelMetrics?: boolean;
   onPrev?: () => void;
   onNext?: () => void;
   onClose: () => void;
@@ -33,6 +34,7 @@ export function FrameViewer({
   jobId,
   token,
   sid,
+  showLidarModelMetrics: showLidarModelMetricsProp,
   onPrev,
   onNext,
   onClose,
@@ -127,6 +129,7 @@ export function FrameViewer({
     return frame.cams.find((c) => c.cam === focusTarget) || null;
   }, [frame, focusTarget]);
   const isLidarFrame = !!frame && (frame.bestCam === "LIDAR_TOP" || !!frame.bevUrl || typeof frame.rRar === "number");
+  const showLidarModelMetrics = !isLidarFrame || (showLidarModelMetricsProp ?? (!!frame && (frame.rNov !== 0 || frame.rUnc !== 0)));
 
   return (
     <div
@@ -288,6 +291,7 @@ export function FrameViewer({
                       camDetail={cam}
                       showBoxes={showBoxes}
                       showLidarOverlay={showLidarOverlay}
+                      hideCameraScore={isLidarFrame}
                       onClick={() => {
                         setMode("focus");
                         setFocusTarget(cam.cam);
@@ -326,6 +330,7 @@ export function FrameViewer({
                       camDetail={cam}
                       showBoxes={showBoxes}
                       showLidarOverlay={showLidarOverlay}
+                      hideCameraScore={isLidarFrame}
                       onClick={() => {
                         setMode("focus");
                         setFocusTarget(cam.cam);
@@ -362,6 +367,7 @@ export function FrameViewer({
                     camDetail={focusedCamDetail}
                     showBoxes={showBoxes}
                     showLidarOverlay={showLidarOverlay}
+                    hideCameraScore={isLidarFrame}
                     isFocus
                   />
                 ) : (
@@ -467,7 +473,7 @@ export function FrameViewer({
                       />
                     </div>
                   </div>
-                  {isLidarFrame && (
+                  {isLidarFrame && showLidarModelMetrics && (
                     <div>
                       <div className="flex justify-between text-[11px] text-slate-300">
                         <span className="inline-flex items-center gap-1">{FRAME_SCORES.rNov.label}<Tooltip label={FRAME_SCORES.rNov.label} content={FRAME_SCORES.rNov.tooltip} dark /></span>
@@ -478,7 +484,7 @@ export function FrameViewer({
                       </div>
                     </div>
                   )}
-                  <div>
+                  {showLidarModelMetrics && <div>
                     <div className="flex justify-between text-[11px] text-slate-300">
                       <span className="inline-flex items-center gap-1">{isLidarFrame ? "Không chắc:" : "Độ khó:"}<Tooltip label={FRAME_SCORES.rUnc.label} content={FRAME_SCORES.rUnc.tooltip} dark /></span>
                       <span className="font-mono">{frame.rUnc.toFixed(2)}</span>
@@ -489,7 +495,7 @@ export function FrameViewer({
                         style={{ width: `${Math.round(frame.rUnc * 100)}%` }}
                       />
                     </div>
-                  </div>
+                  </div>}
                   {!isLidarFrame && <div>
                     <div className="flex justify-between text-[11px] text-slate-300">
                       <span>Khớp kịch bản:</span>
@@ -527,6 +533,7 @@ export function FrameViewer({
               <h4 className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">
                 Chất lượng Camera ({frame.cams.length}/6)
               </h4>
+              {isLidarFrame && <p className="mb-2 text-[11px] text-slate-400">Điểm tổng đã hiển thị ở trên.</p>}
               <div className="space-y-1.5">
                 {frame.cams.map((c) => (
                   <div
@@ -545,7 +552,7 @@ export function FrameViewer({
                     </div>
                     <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
                       <span>{c.boxes.length} box</span>
-                      <span className="text-slate-200">S:{c.score.s.toFixed(2)}</span>
+                      {!isLidarFrame && <span className="text-slate-200">S:{c.score.s.toFixed(2)}</span>}
                     </div>
                   </div>
                 ))}
