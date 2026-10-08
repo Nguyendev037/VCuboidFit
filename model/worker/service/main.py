@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from service import datasets, frames, jobs, selection
+from service import datasets, frames, jobs, remote, selection
 from service.errors import install_handlers
 from service.settings import Settings
 
@@ -33,11 +33,13 @@ def create_app(settings: Settings | None = None, runner=None, encoder_factory=No
     app.state.queue = queue
     app.state.encoders = selection.EncoderHolder(encoder_factory)
     app.state.job_locks = selection.JobLocks()
+    app.state.remote = remote.RemoteQueue(settings)
     install_handlers(app)
     app.include_router(datasets.router)
     app.include_router(jobs.router)
     app.include_router(selection.router)
     app.include_router(frames.router)
+    app.include_router(remote.router)
 
     @app.get("/health")
     def health():

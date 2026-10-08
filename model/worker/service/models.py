@@ -248,3 +248,32 @@ class Analysis(ApiModel):
     pool: dict
     selected: dict
     histogram: Histogram
+
+
+class RemoteParams(ApiModel):
+    """Tham số train Tầng 1 từ xa (01-CONTRACTS §2.1)."""
+    epochs: int = Field(default=20, ge=1, le=200)
+    sweeps: Literal[1, 10] = 1
+    batch: int = Field(default=4, ge=1, le=16)
+
+
+class RemoteTask(ApiModel):
+    task_id: str
+    job_id: str
+    dataset_id: str
+    state: Literal["queued", "leased", "done", "failed", "cancelled"]
+    params: RemoteParams
+    created_at: str
+    leased_at: str | None = None
+    lease_until: str | None = None
+    attempts: int = 0
+    error: str | None = None
+
+
+class HeartbeatIn(ApiModel):
+    stage: Literal["train", "infer"]
+    progress: float = Field(ge=0, le=1)
+
+
+class FailIn(ApiModel):
+    error: str

@@ -13,6 +13,11 @@ class Settings:
     workspace: Path = field(default_factory=_env_workspace)
     sevenzip: str = field(default_factory=lambda: os.environ.get("SEVENZIP_PATH", "7z"))
     profile: str = field(default_factory=lambda: os.environ.get("C4_PROFILE", "local-4060"))
+    remote_token: str = field(default_factory=lambda: os.environ.get("VCF_REMOTE_TOKEN", ""))
+    remote_lease_sec: int = field(
+        default_factory=lambda: int(os.environ.get("VCF_REMOTE_LEASE_SEC", "5400")))
+    remote_max_result_mb: int = field(
+        default_factory=lambda: int(os.environ.get("VCF_REMOTE_MAX_RESULT_MB", "200")))
 
     def __post_init__(self):
         self.workspace = Path(self.workspace)
@@ -28,3 +33,7 @@ class Settings:
     @property
     def jobs(self) -> Path:
         return self.workspace / "jobs"
+
+    @property
+    def remote(self) -> Path:
+        return self.workspace / "remote"
