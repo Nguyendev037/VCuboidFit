@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/client";
 
-import { uploadFiles } from "./upload";
+import { formatEta, summarizeUploads, uploadFiles } from "./upload";
 
 const CS = 1000; // chunkSize nhỏ cho test
 const mkFile = (name: string, size: number, seed = 1) =>
@@ -234,5 +234,20 @@ describe("uploadFiles", () => {
     expect(progress.at(-1)).toBe(2500);
     expect(progress.length).toBeGreaterThan(2);
     expect(srv.fn).not.toHaveBeenCalled();
+  });
+});
+
+describe("summarizeUploads / formatEta", () => {
+  it("tổng hợp danh sách upload", () => {
+    const r = summarizeUploads([
+      { name: "a.zip", received: 50, total: 100 },
+      { name: "b.zip", received: 0, total: 100, failed: true },
+    ]);
+    expect(r).toEqual({ count: 2, totalBytes: 200, receivedBytes: 50, pct: 25, failed: 1 });
+    expect(summarizeUploads([]).pct).toBe(0);
+  });
+  it("định dạng ETA mm:ss", () => {
+    expect(formatEta(75)).toBe("01:15");
+    expect(formatEta(null)).toBe("đang ước tính…");
   });
 });

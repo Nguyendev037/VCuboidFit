@@ -254,3 +254,18 @@ def test_post_unknown_upload_and_unknown_dataset(client):
     r = client.post("/datasets", json={"uploadId": "nope"})
     assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
     assert client.get("/datasets/zzz").status_code == 404
+
+
+# ---------- GET /datasets/progress/{uploadId} (SPEC-P05) ----------
+
+def test_progress_done_after_create_and_unknown_404(client, settings, tmp_path):
+    data = make_nuscenes(tmp_path / "src")
+    up = make_upload(settings)
+    zip_dir(data, up / "all.zip")
+    assert client.post("/datasets", json={"uploadId": "u1"}).json()["ok"]
+    assert json.loads((up / "progress.json").read_text(encoding="utf-8"))["phase"] == "done"
+    r = client.get("/datasets/progress/u1")
+    assert r.status_code == 200
+    assert r.json()["phase"] == "done" and r.json()["uploadId"] == "u1"
+    bad = client.get("/datasets/progress/khong-co")
+    assert bad.status_code == 404 and bad.json()["error"]["code"] == "not_found"

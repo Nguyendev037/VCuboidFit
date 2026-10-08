@@ -18,10 +18,12 @@ import {
   select,
   exportUrl,
   finalizeUpload,
+  getDatasetProgress,
   DEMO_KEY,
 } from "@/lib/api/client";
-import { uploadFiles } from "@/lib/upload";
+import { checkProgressPct, formatEta, PHASE_LABELS, summarizeUploads, uploadFiles, type UploadItemState } from "@/lib/upload";
 import type {
+  DatasetProgress,
   DatasetReport,
   Preset,
   SelectParams,
@@ -95,6 +97,16 @@ function setDemoFlag(on: boolean) {
   demoListeners.forEach((f) => f());
 }
 
+const UPLOAD_COLLAPSED_KEY = "vcf.uploadListCollapsed";
+const readUploadCollapsed = (): boolean | null => {
+  try {
+    const v = window.localStorage.getItem(UPLOAD_COLLAPSED_KEY);
+    return v === "1" ? true : v === "0" ? false : null;
+  } catch {
+    return null;
+  }
+};
+
 const ADVANCED_PANEL_KEY = "vcf-advanced-open";
 const ADVANCED_PANEL_CHANGE = "vcf-advanced-panel-change";
 let advancedPanelFallback = false;
@@ -137,8 +149,23 @@ export default function Home() {
   const [error, setError] = useState("");
 
   // ---- Bước 1: Nạp dữ liệu ----
-  const [items, setItems] = useState<Array<{ name: string; received: number; total: number }>>([]);
+  const [items, setItems] = useState<UploadItemState[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [collapsedPref, setCollapsedPref] = useState<boolean | null>(() =>
+    typeof window === "undefined" ? null : readUploadCollapsed());
+  const collapsed = collapsedPref ?? items.length > 3; // C2: > 3 tệp tự rút gọn
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsedPref(next);
+    try {
+      window.localStorage.setItem(UPLOAD_COLLAPSED_KEY, next ? "1" : "0");
+    } catch {
+      // storage không dùng được: giữ trạng thái trong tab
+    }
+  }
+  const [checking, setChecking] = useState(false);
+  const [checkProgress, setCheckProgress] = useState<DatasetProgress | null>(null);
+  const uploadSummary = summarizeUploads(items);
   const [paused, setPaused] = useState(false);
   const [dataset, setDataset] = useState<DatasetReport | null>(null);
   const [pipeline, setPipeline] = useState<Pipeline>("lidar");
@@ -198,7 +225,19 @@ export default function Home() {
           });
         },
       });
-      const report = await finalizeUpload(uploadRes.uploadId);
+      setChecking(true);
+      setCheckProgress(null);
+      const poll = setInterval(() => {
+        void getDatasetProgress(uploadRes.uploadId).then(setCheckProgress);
+      }, 1000);
+      let report: DatasetReport;
+      try {
+        report = await finalizeUpload(uploadRes.uploadId);
+      } finally {
+        clearInterval(poll);
+        setChecking(false);
+        setCheckProgress(null);
+      }
       setDataset(report);
       if (isDatasetUsable(report)) {
         setPipeline(report.hasLidar ? "lidar" : "camera");
@@ -211,6 +250,7 @@ export default function Home() {
       if (e instanceof DOMException && e.name === "AbortError") {
         setPaused(true);
       } else {
+        setItems((prev) => prev.map((i) => (i.received < i.total ? { ...i, failed: true } : i)));
         setError(e instanceof Error ? e.message : "Lỗi tải tệp lên");
       }
     } finally {
@@ -700,28 +740,66 @@ export default function Home() {
 
                 {/* Danh sách file upload */}
                 {items.length > 0 && (
-                  <ul className="space-y-2 mt-2">
-                    {items.map((i) => (
-                      <li
-                        key={i.name}
-                        data-testid="upload-item"
-                        className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs flex flex-col gap-1.5"
-                      >
-                        <div className="flex justify-between font-medium text-slate-700">
-                          <span>{i.name}</span>
-                          <span className="font-mono text-slate-500">
-                            {i.received} / {i.total} B ({pct(i.total ? i.received / i.total : 0)})
-                          </span>
-                        </div>
-                        <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-600 rounded-full transition-all duration-200"
-                            style={{ width: `${pct(i.total ? i.received / i.total : 0)}` }}
-                          />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {items.length >= 2 && (
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="font-semibold text-slate-700">Danh sách tệp</span>
+                        <button
+                          type="button"
+                          aria-expanded={!collapsed}
+                          onClick={toggleCollapsed}
+                          className="min-h-8 rounded-md border border-slate-300 bg-white px-3 font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          {collapsed ? "Mở rộng" : "Rút gọn"}
+                        </button>
+                      </div>
+                    )}
+                    {items.length >= 2 && collapsed ? (
+                      <div data-testid="upload-summary" className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+                        {uploadSummary.count} tệp · {formatBytes(uploadSummary.totalBytes)} · {uploadSummary.pct}% đã tải
+                        {uploadSummary.failed > 0 && <span className="text-rose-700"> · {uploadSummary.failed} tệp lỗi</span>}
+                      </div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {items.map((i) => (
+                          <li
+                            key={i.name}
+                            data-testid="upload-item"
+                            className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs flex flex-col gap-1.5"
+                          >
+                            <div className="flex justify-between font-medium text-slate-700">
+                              <span>{i.name}</span>
+                              <span className="font-mono text-slate-500">
+                                {i.received} / {i.total} B ({pct(i.total ? i.received / i.total : 0)})
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-600 rounded-full transition-all duration-200"
+                                style={{ width: `${pct(i.total ? i.received / i.total : 0)}` }}
+                              />
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {/* Thanh thời gian dự đoán xét tệp (SPEC-P05) */}
+                {checking && (
+                  <div data-testid="check-eta" className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-950 flex flex-col gap-1.5">
+                    <span className="font-medium">
+                      {checkProgress
+                        ? `Đang xét tệp đầu vào · ${PHASE_LABELS[checkProgress.phase] ?? checkProgress.phase} · còn khoảng ${formatEta(checkProgress.etaSec)}`
+                        : "Đang xét tệp đầu vào…"}
+                    </span>
+                    {checkProgress ? (
+                      <progress aria-label="Tiến độ xét tệp" className="w-full h-2" max={100} value={checkProgressPct(checkProgress)} />
+                    ) : (
+                      <progress aria-label="Tiến độ xét tệp" className="w-full h-2" />
+                    )}
+                  </div>
                 )}
 
                 {/* Hộp lưu ý data/ nguyên văn spec §5.2 */}

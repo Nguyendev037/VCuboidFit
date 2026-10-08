@@ -143,3 +143,45 @@ export async function uploadFiles(files: File[], opts: UploadOptions): Promise<{
   }
   return { uploadId };
 }
+
+// ---- Danh sách upload rút gọn + thanh thời gian dự đoán xét tệp (SPEC-P05) ----
+export interface UploadItemState {
+  name: string;
+  received: number;
+  total: number;
+  failed?: boolean;
+}
+
+export function summarizeUploads(items: UploadItemState[]) {
+  const totalBytes = items.reduce((s, i) => s + i.total, 0);
+  const receivedBytes = items.reduce((s, i) => s + Math.min(i.received, i.total), 0);
+  return {
+    count: items.length,
+    totalBytes,
+    receivedBytes,
+    pct: totalBytes ? Math.round((receivedBytes / totalBytes) * 100) : 0,
+    failed: items.filter((i) => i.failed).length,
+  };
+}
+
+/** `mm:ss`; null/NaN/âm ⇒ "đang ước tính…". */
+export function formatEta(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec) || sec < 0) return "đang ước tính…";
+  const t = Math.round(sec);
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+export const PHASE_LABELS: Record<string, string> = {
+  extract: "Giải nén",
+  merge: "Gộp dữ liệu",
+  validate: "Kiểm tra cấu trúc nuScenes",
+};
+
+/** % tổng 0..100: extract 80% + merge 5% + validate 15%. */
+export function checkProgressPct(p: { phase: string; done: number; total: number }): number {
+  const f = p.total > 0 ? Math.min(Math.max(p.done / p.total, 0), 1) : 0;
+  if (p.phase === "extract") return Math.round(80 * f);
+  if (p.phase === "merge") return Math.round(80 + 5 * f);
+  if (p.phase === "validate") return Math.round(85 + 15 * f);
+  return p.phase === "done" ? 100 : 0;
+}

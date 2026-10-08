@@ -47,6 +47,17 @@ export interface DatasetReport {
   warnings: string[];
 }
 
+export interface DatasetProgress {
+  uploadId: string;
+  phase: "extract" | "merge" | "validate" | "done" | "error";
+  done: number;
+  total: number;
+  unit: "bytes" | "files" | "steps";
+  elapsedSec: number;
+  etaSec: number | null;
+  updatedAt: string;
+}
+
 // ---- Job ----
 export type JobState = "queued" | "running" | "done" | "failed" | "cancelled";
 export type JobStage = "index" | "dino" | "det" | "clip" | "merge" | "lidar_index" | "t0" | "t1";

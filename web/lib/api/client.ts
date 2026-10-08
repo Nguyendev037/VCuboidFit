@@ -4,6 +4,7 @@ import { ApiError, toApiError } from "./errors";
 import { mockApi } from "./mock";
 import type {
   Analysis,
+  DatasetProgress,
   DatasetReport,
   FrameDetail,
   FrameQuery,
@@ -66,6 +67,16 @@ export function uploadStatus(id: string): Promise<UploadStatus> {
 
 export function finalizeUpload(id: string): Promise<DatasetReport> {
   return isMock() ? mockApi.finalizeUpload(id) : request("POST", `/api/uploads/${seg(id)}/finalize`);
+}
+
+/** Tiến độ xét tệp; chưa có (404), chế độ mẫu hoặc lỗi mạng ⇒ null (thanh không xác định, không báo lỗi). */
+export async function getDatasetProgress(uploadId: string): Promise<DatasetProgress | null> {
+  if (isMock()) return null;
+  try {
+    return await request<DatasetProgress>("GET", `/api/datasets/progress/${seg(uploadId)}`);
+  } catch {
+    return null;
+  }
 }
 
 export function getDataset(id: string): Promise<DatasetReport> {
