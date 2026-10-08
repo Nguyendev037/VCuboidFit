@@ -191,3 +191,26 @@ describe("mock mode (NEXT_PUBLIC_MOCK=1)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("delete history", () => {
+  it("deleteJob sends DELETE and returns deleted ids", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ deleted: ["j1"] }));
+    expect(await api.deleteJob("j1")).toEqual({ deleted: ["j1"], skipped: [] });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/jobs/j1");
+    expect(fetchMock.mock.calls[0][1].method).toBe("DELETE");
+  });
+
+  it("deleteJob maps 409 job_active to ApiError", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ error: { code: "job_active", message: "Lần chạy đang chạy, hãy huỷ trước khi xoá." } }, 409),
+    );
+    await expect(api.deleteJob("j1")).rejects.toMatchObject({ code: "job_active", status: 409 });
+  });
+
+  it("deleteAllJobs returns deleted and skipped", async () => {
+    const body = { deleted: ["a"], skipped: [{ jobId: "b", reason: "active" }] };
+    fetchMock.mockResolvedValueOnce(jsonResponse(body));
+    expect(await api.deleteAllJobs()).toEqual(body);
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/jobs");
+  });
+});

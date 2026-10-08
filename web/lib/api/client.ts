@@ -86,6 +86,21 @@ export function listJobs(): Promise<JobSummary[]> {
   return isMock() ? mockApi.listJobs() : request<{ items: JobSummary[] }>("GET", "/api/jobs").then((r) => r.items);
 }
 
+export interface DeleteJobsResult {
+  deleted: string[];
+  skipped: { jobId: string; reason: string }[];
+}
+
+export function deleteJob(jobId: string): Promise<DeleteJobsResult> {
+  return isMock()
+    ? Promise.resolve({ deleted: [jobId], skipped: [] })
+    : request<{ deleted: string[] }>("DELETE", `/api/jobs/${seg(jobId)}`).then((r) => ({ deleted: r.deleted, skipped: [] }));
+}
+
+export function deleteAllJobs(): Promise<DeleteJobsResult> {
+  return isMock() ? Promise.resolve({ deleted: [], skipped: [] }) : request("DELETE", "/api/jobs");
+}
+
 export function listSelections(jobId: string): Promise<SelectionInfo[]> {
   return isMock() ? mockApi.listSelections(jobId) : request<{ items: SelectionInfo[] }>("GET", `/api/jobs/${seg(jobId)}/selections`).then((r) => r.items);
 }

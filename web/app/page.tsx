@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { FolderOpen, RefreshCw, RotateCcw } from "lucide-react";
+import { FolderOpen, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
   createJob,
@@ -13,6 +13,8 @@ import {
   getSelection,
   getParamsSchema,
   cancelJob,
+  deleteJob,
+  deleteAllJobs,
   select,
   exportUrl,
   finalizeUpload,
@@ -33,6 +35,7 @@ import { AdvancedParamsPanel } from "@/components/AdvancedParamsPanel";
 import { clearRunBookmark, readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "@/lib/runRecovery";
 import { METRICS, RARITY_COMPARISON, SETTINGS, gtTagLabel, reasonText } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   draftFromSchema,
   isAdvancedPanelInitiallyOpen,
@@ -405,6 +408,10 @@ export default function Home() {
 
   const handleStartNew = () => {
     if (!window.confirm("Nhập dữ liệu mới? Job cũ vẫn còn trong Lần chạy gần đây.")) return;
+    resetWorkspace();
+  };
+
+  const resetWorkspace = () => {
     invalidateRecovery(recoveryRequest);
     abortRef.current?.abort();
     abortRef.current = null;
@@ -437,6 +444,27 @@ export default function Home() {
     setDebounced({ budget: 0.05, pipeline: "lidar", preset: "balanced", diversity: 0.5 });
     void recentJobs.refetch();
   };
+
+  // ---- Xoá lịch sử (SPEC-P04) ----
+  const [deleteTarget, setDeleteTarget] = useState<{ kind: "one"; jobId: string } | { kind: "all" } | null>(null);
+  const [historyError, setHistoryError] = useState("");
+  const [historyNote, setHistoryNote] = useState("");
+
+  async function confirmDelete() {
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    if (!target) return;
+    setHistoryError("");
+    setHistoryNote("");
+    try {
+      const res = target.kind === "one" ? await deleteJob(target.jobId) : await deleteAllJobs();
+      if (res.skipped.length > 0) setHistoryNote(`Bỏ qua ${res.skipped.length} lần chạy đang chạy`);
+      if (jobId && res.deleted.includes(jobId)) resetWorkspace();
+      await recentJobs.refetch();
+    } catch (e) {
+      setHistoryError(e instanceof Error ? e.message : "Không xoá được lịch sử.");
+    }
+  }
 
   const handleApplyAdvanced = () => {
     setAdvancedParams(normalizeAdvancedParams(currentAdvancedDraft));
@@ -550,6 +578,7 @@ export default function Home() {
           <section aria-label="Lần chạy gần đây" className="border-b border-slate-200 pb-4">
             <div className="flex items-center justify-between gap-3 mb-2">
               <h2 className="text-sm font-semibold">Lần chạy gần đây</h2>
+              {(recentJobs.data?.length ?? 0) > 0 && <button type="button" onClick={() => setDeleteTarget({ kind: "all" })} className="ml-auto px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 rounded">Xoá tất cả</button>}
               <button type="button" title="Làm mới lịch sử" aria-label="Làm mới lịch sử" onClick={() => void recentJobs.refetch()} className="p-2 hover:bg-slate-200 rounded"><RefreshCw size={16} /></button>
             </div>
             {recentJobs.isPending && <p className="text-xs text-slate-500">Đang tải lịch sử…</p>}
@@ -558,11 +587,24 @@ export default function Home() {
             <div className="max-h-48 overflow-auto divide-y divide-slate-200">
               {recentJobs.data?.map((item) => <div key={item.jobId} className="flex items-center justify-between gap-3 py-2 text-xs">
                 <div className="min-w-0"><p className="font-medium break-all">{item.version || item.datasetId} · {item.frames} frame · {item.pipeline === "lidar" ? "LiDAR" : "Camera"}{item.createdAt && item.finishedAt ? ` · ${formatDuration(Math.max(0, (new Date(item.finishedAt).getTime() - new Date(item.createdAt).getTime()) / 1000))}` : ""}</p><p className="text-slate-500 break-all">{item.jobId} · {item.state === "done" ? "Hoàn tất" : item.state === "running" ? "Đang chạy" : item.state === "queued" ? "Đang chờ" : item.state === "failed" ? "Lỗi" : "Đã huỷ"}{item.createdAt ? ` · ${new Date(item.createdAt).toLocaleString("vi-VN")}` : ""}</p></div>
-                <button type="button" disabled={restoring || uploading} onClick={() => void openRun(item)} className="flex items-center gap-1 px-2 py-2 text-blue-700 hover:bg-blue-50 rounded disabled:opacity-50 shrink-0"><FolderOpen size={16} />Mở</button>
+                <div className="flex items-center shrink-0">
+                <button type="button" disabled={restoring || uploading} onClick={() => void openRun(item)} className="flex items-center gap-1 px-2 py-2 text-blue-700 hover:bg-blue-50 rounded disabled:opacity-50"><FolderOpen size={16} />Mở</button>
+                <button type="button" aria-label="Xoá lần chạy" title={item.state === "queued" || item.state === "running" ? "Đang chạy" : "Xoá lần chạy"} disabled={item.state === "queued" || item.state === "running"} onClick={() => setDeleteTarget({ kind: "one", jobId: item.jobId })} className="p-2 text-rose-700 hover:bg-rose-50 rounded disabled:opacity-40"><Trash2 size={16} /></button>
+                </div>
               </div>)}
             </div>
             {(recentJobs.data?.length ?? 0) > 4 && <p className="mt-1 text-[11px] text-slate-600">Cuộn trong danh sách để xem đủ {recentJobs.data?.length} lần chạy</p>}
             {restoring && <p role="status" className="text-xs text-slate-500 mt-2">Đang mở lần chạy…</p>}
+            {historyError && <p role="alert" className="text-xs text-rose-700 mt-2">{historyError}</p>}
+            {historyNote && <p role="status" className="text-xs text-slate-600 mt-2">{historyNote}</p>}
+            <ConfirmDialog
+              open={deleteTarget !== null}
+              title={deleteTarget?.kind === "all" ? "Xoá tất cả lần chạy?" : "Xoá lần chạy này?"}
+              message="Xoá kết quả chọn 5% và ảnh xem trước của lần chạy; dữ liệu đã tải lên vẫn giữ."
+              confirmLabel="Xoá"
+              onConfirm={() => void confirmDelete()}
+              onCancel={() => setDeleteTarget(null)}
+            />
           </section>
           {!done ? (
             // ============ GIAO DIỆN CHƯA CÓ KẾT QUẢ (FIGMA 01) ============

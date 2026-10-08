@@ -1,6 +1,8 @@
 """Hàng đợi job: một thread nền chạy run_job lần lượt (một GPU), phục hồi sau restart, huỷ."""
 import json
 import os
+import re
+import shutil
 import threading
 import time
 import uuid
@@ -17,6 +19,7 @@ from service.models import DatasetReport, JobList, JobStatus, JobSummary
 from service.settings import Settings
 
 ACTIVE = ("queued", "running")
+_JOB_ID = re.compile(r"[0-9a-f]{12}")
 
 
 def _now() -> str:
@@ -106,6 +109,46 @@ class JobQueue:
             elif job_id in self._cancels:
                 self._cancels[job_id].set()
         return self.status(job_id)
+
+    def _delete_locked(self, job_id: str) -> None:
+        """Gọi khi đang giữ `self._cv`: kiểm active rồi xoá thư mục job (chỉ `jobs/<id>`)."""
+        meta = self._meta(job_id)
+        if meta is None:
+            raise ApiError(404, "not_found", "Không tìm thấy job.")
+        if meta.get("state") in ACTIVE or job_id in self._cancels:
+            raise ApiError(409, "job_active", "Lần chạy đang chạy, hãy huỷ trước khi xoá.")
+        if job_id in self._queue:
+            self._queue.remove(job_id)
+        shutil.rmtree(self._dir(job_id))
+
+    def delete(self, job_id: str, on_deleted=None) -> None:
+        """Xoá một job không active. 404 nếu id sai dạng/không có; 409 `job_active` nếu đang chạy."""
+        if not _JOB_ID.fullmatch(job_id):
+            raise ApiError(404, "not_found", "Không tìm thấy job.")
+        with self._cv:
+            self._delete_locked(job_id)
+        if on_deleted:
+            on_deleted(job_id)
+
+    def delete_all(self, on_deleted=None) -> dict:
+        """Xoá mọi job không active; job active được liệt kê trong `skipped`."""
+        deleted: list[str] = []
+        skipped: list[dict] = []
+        for meta_file in sorted(self.settings.jobs.glob("*/job.json")):
+            job_id = meta_file.parent.name
+            if not _JOB_ID.fullmatch(job_id):
+                continue
+            try:
+                with self._cv:
+                    self._delete_locked(job_id)
+            except ApiError as e:
+                if e.code == "job_active":
+                    skipped.append(dict(jobId=job_id, reason="active"))
+                continue
+            deleted.append(job_id)
+            if on_deleted:
+                on_deleted(job_id)
+        return dict(deleted=deleted, skipped=skipped)
 
     def recover(self) -> None:
         """Job `queued`/`running` còn sót sau restart được xếp lại theo createdAt."""
@@ -242,3 +285,29 @@ def get_job(job_id: str, request: Request):
 @router.post("/jobs/{job_id}/cancel", response_model=JobStatus, response_model_by_alias=True)
 def cancel_job(job_id: str, request: Request):
     return request.app.state.queue.cancel(job_id)
+
+
+def _cancel_remote(request: Request):
+    """Đánh dấu task remote của job là cancelled; bỏ qua nếu WP2 (`app.state.remote`) chưa có."""
+    remote = getattr(request.app.state, "remote", None)
+    cancel = getattr(remote, "cancel", None)
+    if cancel is None:
+        return None
+
+    def _call(job_id: str) -> None:
+        try:
+            cancel(job_id)
+        except Exception:  # noqa: BLE001 — job đã xoá xong; lỗi remote không được làm hỏng phản hồi
+            pass
+    return _call
+
+
+@router.delete("/jobs/{job_id}")
+def delete_job(job_id: str, request: Request):
+    request.app.state.queue.delete(job_id, _cancel_remote(request))
+    return {"deleted": [job_id]}
+
+
+@router.delete("/jobs")
+def delete_jobs(request: Request):
+    return request.app.state.queue.delete_all(_cancel_remote(request))
