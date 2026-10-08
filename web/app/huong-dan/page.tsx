@@ -116,7 +116,6 @@ export default function GuidePage() {
                     <tr key={key} className="hover:bg-slate-50/50">
                       <td className="px-5 py-4 font-semibold text-slate-800 align-top">
                         {item.label}
-                        <div className="font-mono text-xs text-slate-400 mt-1 font-normal">{key}</div>
                       </td>
                       <td className="px-5 py-4 text-slate-600 leading-relaxed">
                         {item.tooltip}
@@ -159,7 +158,7 @@ export default function GuidePage() {
             </div>
             <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-900">
               <strong>Ví dụ thực tế:</strong> Nếu bộ dữ liệu có 10,000 frame, budget 5% nghĩa là chọn 500 frame. 
-              Nếu trong 10,000 frame đó có tổng cộng 1,000 frame hiếm thật (is_rare=True), và trong 500 frame bạn chọn được 200 frame hiếm:
+              Nếu trong 10,000 frame đó có tổng cộng 1,000 frame hiếm thật, và trong 500 frame bạn chọn được 200 frame hiếm:
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li><strong>Recall</strong> = 200 / 1,000 = 20%</li>
                 <li><strong>Ngẫu nhiên kỳ vọng</strong> = 5% (hoặc ~50 frame)</li>
@@ -175,7 +174,6 @@ export default function GuidePage() {
               {Object.entries(SETTINGS).map(([key, item]) => (
                 <div key={key} className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
                   <h3 className="font-bold text-slate-800 mb-1">{item.label}</h3>
-                  <div className="font-mono text-xs text-slate-400 mb-2">{key}</div>
                   <p className="text-sm text-slate-600 leading-relaxed">{item.tooltip}</p>
                 </div>
               ))}
@@ -187,7 +185,7 @@ export default function GuidePage() {
             <div className="space-y-4">
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
                 <h3 className="font-bold text-slate-800 mb-2">Vì sao Recall lại bằng 0% dù có frame hiếm?</h3>
-                <p className="text-sm text-slate-600">Nếu Recall = 0%, có nghĩa là tập 5% frame bạn trích xuất được hoàn toàn không &quot;trúng&quot; frame nào chứa vật thể hiếm theo nhãn. Điều này thường do chiến lược chọn quá tập trung vào các đặc trưng hình học khác, hoặc frame hiếm quá ít. Lời khuyên: Hãy thử đổi tham số <strong className="font-medium text-slate-900">Ưu tiên khi chọn (lam)</strong> thiên về &quot;Đa dạng nhất&quot;.</p>
+                <p className="text-sm text-slate-600">Nếu Recall = 0%, có nghĩa là tập 5% frame bạn trích xuất được hoàn toàn không &quot;trúng&quot; frame nào chứa vật thể hiếm theo nhãn. Điều này có thể xảy ra khi ưu tiên đa dạng quá cao, các frame hiếm giống nhau bị coi là trùng và loại bớt. Lời khuyên: Hãy thử kéo <strong className="font-medium text-slate-900">Ưu tiên khi chọn</strong> về phía &quot;Hiếm nhất&quot;, hoặc tăng ngân sách. Lưu ý: với bộ dữ liệu nhỏ (chỉ có vài chục frame hiếm), Recall dao động rất mạnh nên chưa thể kết luận chắc chắn.</p>
               </div>
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
                 <h3 className="font-bold text-slate-800 mb-2">Vì sao Nhóm C (Khó nhìn bằng cảm biến) lại rất rộng?</h3>

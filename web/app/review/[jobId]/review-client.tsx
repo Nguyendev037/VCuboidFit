@@ -71,6 +71,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
   const searchParams = useSearchParams();
 
   const sel = searchParams.get("sel");
+  const datasetId = searchParams.get("dataset");
   const budget = Number(searchParams.get("budget") ?? DEFAULT_BUDGET);
   const token = searchParams.get("frame");
 
@@ -180,7 +181,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
             Vui lòng thực hiện phân tích từ trang chủ để xem Deep Review.
           </p>
           <Link
-            href="/"
+            href={`/?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`}
             className="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors inline-block"
           >
             ← Quay lại trang chủ
@@ -197,7 +198,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
       {/* 1. Top Header theo Figma (Screens 03) */}
       <header className="w-full bg-white border-b border-[#E2E8F0] px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs sticky top-0 z-30">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2.5 font-bold text-lg text-slate-900 tracking-tight">
+          <Link href={`/?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`} className="flex items-center gap-2.5 font-bold text-lg text-slate-900 tracking-tight">
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -227,7 +228,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
       <div className="bg-white border-b border-[#E2E8F0] px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Link
-            href="/"
+            href={`/?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`}
             className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors"
           >
             ← Quay lại

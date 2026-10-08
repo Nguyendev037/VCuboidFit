@@ -1,16 +1,14 @@
 import type { SelectParams, Pipeline } from "./api/types";
 
 export const LAST_RUN_KEY = "vcf-last-run";
+const LEGACY_LAST_JOB_KEY = "vcf:lastJob";
 export interface RunBookmark { jobId: string; selectionId?: string; datasetId?: string; demo: boolean }
 
-export function readRunBookmark(search: string, storage?: Pick<Storage, "getItem">): RunBookmark | null {
+export function readRunBookmark(search: string): RunBookmark | null {
   const query = new URLSearchParams(search);
-  if (query.has("job")) return { jobId: query.get("job")!, selectionId: query.get("sel") || undefined, ...(query.get("dataset") ? { datasetId: query.get("dataset")! } : {}), demo: query.get("demo") === "1" };
-  try {
-    const value = JSON.parse(storage?.getItem(LAST_RUN_KEY) ?? "null");
-    return value && typeof value.jobId === "string" && typeof value.demo === "boolean"
-      ? { jobId: value.jobId, selectionId: typeof value.selectionId === "string" ? value.selectionId : undefined, ...(typeof value.datasetId === "string" ? { datasetId: value.datasetId } : {}), demo: value.demo } : null;
-  } catch { return null; }
+  const jobId = query.get("job");
+  if (!jobId) return null;
+  return { jobId, selectionId: query.get("sel") || undefined, ...(query.get("dataset") ? { datasetId: query.get("dataset")! } : {}), demo: query.get("demo") === "1" };
 }
 
 export function saveRunBookmark(bookmark: RunBookmark, url: URL, storage?: Pick<Storage, "setItem">): string {
@@ -22,6 +20,20 @@ export function saveRunBookmark(bookmark: RunBookmark, url: URL, storage?: Pick<
   if (bookmark.demo) url.searchParams.set("demo", "1");
   else url.searchParams.delete("demo");
   try { storage?.setItem(LAST_RUN_KEY, JSON.stringify(bookmark)); } catch { /* URL works without storage. */ }
+  return url.pathname + url.search + url.hash;
+}
+
+export function clearRunBookmark(url: URL, storage?: Pick<Storage, "removeItem">): string {
+  url.searchParams.delete("job");
+  url.searchParams.delete("sel");
+  url.searchParams.delete("dataset");
+  url.searchParams.delete("demo");
+  try {
+    storage?.removeItem(LAST_RUN_KEY);
+    storage?.removeItem(LEGACY_LAST_JOB_KEY);
+  } catch {
+    // The URL still clears when storage is unavailable.
+  }
   return url.pathname + url.search + url.hash;
 }
 

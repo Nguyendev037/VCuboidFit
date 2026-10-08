@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "./runRecovery";
+import { clearRunBookmark, LAST_RUN_KEY, readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "./runRecovery";
 
 describe("run recovery", () => {
   it("releases explicit restored weights/lambda when basic controls change", () => {
@@ -18,12 +18,12 @@ describe("run recovery", () => {
     const url = saveRunBookmark({ jobId: "old", datasetId: "dataset-old", selectionId: "saved", demo: false }, new URL("https://local/"));
     expect(readRunBookmark(url.split("?")[1])).toEqual({ jobId: "old", datasetId: "dataset-old", selectionId: "saved", demo: false });
   });
-  it("URL takes precedence over local demo bookmark", () => {
-    expect(readRunBookmark("?job=real&sel=stored", { getItem: () => JSON.stringify({ jobId: "mock-job", demo: true }) })).toEqual({ jobId: "real", selectionId: "stored", demo: false });
+  it("restores only the explicitly named URL bookmark", () => {
+    expect(readRunBookmark("?job=real&sel=stored")).toEqual({ jobId: "real", selectionId: "stored", demo: false });
   });
-  it("survives blocked and malformed storage", () => {
-    expect(readRunBookmark("", { getItem: () => { throw new Error(); } })).toBeNull();
-    expect(readRunBookmark("", { getItem: () => "{" })).toBeNull();
+  it("does not restore a saved job unless the URL explicitly names it", () => {
+    expect(readRunBookmark("")).toBeNull();
+    expect(readRunBookmark("?job=")).toBeNull();
     expect(saveRunBookmark({ jobId: "real", demo: false }, new URL("https://local/?demo=1&sel=old"), { setItem: () => { throw new Error(); } })).toBe("/?job=real");
   });
   it("preserves selection and unrelated URL fields", () => {
@@ -31,7 +31,14 @@ describe("run recovery", () => {
     const url = saveRunBookmark({ jobId: "j1", selectionId: "s1", demo: true }, new URL("https://local/?other=1"), { setItem: (_key, v) => { value = v; } });
     expect(readRunBookmark(url.split("?")[1])).toEqual({ jobId: "j1", selectionId: "s1", demo: true });
     expect(url).toContain("other=1");
-    expect(readRunBookmark("", { getItem: () => value })).toEqual({ jobId: "j1", selectionId: "s1", demo: true });
+    expect(readRunBookmark("")).toBeNull();
+    expect(JSON.parse(value)).toEqual({ jobId: "j1", selectionId: "s1", demo: true });
+  });
+  it("clears the URL and both current and legacy storage bookmarks without deleting jobs", () => {
+    const removed: string[] = [];
+    const url = clearRunBookmark(new URL("https://local/?job=j1&sel=s1&dataset=d1&demo=1&keep=yes#top"), { removeItem: (key) => removed.push(key) });
+    expect(url).toBe("/?keep=yes#top");
+    expect(removed).toEqual([LAST_RUN_KEY, "vcf:lastJob"]);
   });
   it("restores resolved LiDAR quota and explicit weights without changing the score", () => {
     const p = recoveryParams({ budget: 0.08, m: 7, lam: 0.83, tier: 1, alpha: 0.4, beta: 0.3, gamma: 0.3 } as never, "lidar");

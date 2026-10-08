@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { FolderOpen, RefreshCw } from "lucide-react";
+import { FolderOpen, RefreshCw, RotateCcw } from "lucide-react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
   createJob,
@@ -30,7 +30,9 @@ import { PRESETS } from "@/lib/api/types";
 import { recallRows, stageLabel } from "@/lib/constants";
 import { isDatasetUsable, datasetValidationMessage } from "@/lib/datasetValidation";
 import { AdvancedParamsPanel } from "@/components/AdvancedParamsPanel";
-import { readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "@/lib/runRecovery";
+import { clearRunBookmark, readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "@/lib/runRecovery";
+import { METRICS, RARITY_COMPARISON, SETTINGS, gtTagLabel, reasonText } from "@/lib/glossary";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   draftFromSchema,
   isAdvancedPanelInitiallyOpen,
@@ -123,6 +125,10 @@ const DEFAULT_QUERIES = [
   "xe đạp ban đêm",
   "mưa lớn",
 ];
+
+function invalidateRecovery(request: { current: number }) {
+  request.current += 1;
+}
 
 export default function Home() {
   const [error, setError] = useState("");
@@ -321,9 +327,7 @@ export default function Home() {
   useEffect(() => {
     if (recoveryStarted.current) return;
     recoveryStarted.current = true;
-    let storage: Storage | undefined;
-    try { storage = window.localStorage; } catch { /* Restore from URL. */ }
-    const bookmark = readRunBookmark(window.location.search, storage);
+    const bookmark = readRunBookmark(window.location.search);
     if (!bookmark) return;
     const initialRequest = recoveryRequest.current;
     setDemoFlag(bookmark.demo);
@@ -399,6 +403,41 @@ export default function Home() {
     setAdvancedDraft(null);
   };
 
+  const handleStartNew = () => {
+    if (!window.confirm("Nhập dữ liệu mới? Job cũ vẫn còn trong Lần chạy gần đây.")) return;
+    invalidateRecovery(recoveryRequest);
+    abortRef.current?.abort();
+    abortRef.current = null;
+    uploadIdRef.current = undefined;
+    filesRef.current = [];
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    let storage: Storage | undefined;
+    try { storage = window.localStorage; } catch { /* URL still resets. */ }
+    window.history.replaceState(null, "", clearRunBookmark(new URL(window.location.href), storage));
+
+    setDemoFlag(false);
+    setError("");
+    setItems([]);
+    setUploading(false);
+    setPaused(false);
+    setDataset(null);
+    setPipeline("lidar");
+    setJobId(null);
+    setRestoring(false);
+    setRestored(null);
+    setBasicOverrides({ preset: false, diversity: false });
+    setBudget(0.05);
+    setPreset("balanced");
+    setDiversity(0.5);
+    setQueryTags(DEFAULT_QUERIES);
+    setNewTagInput("");
+    setAdvancedDraft(null);
+    setAdvancedParams(null);
+    setDebounced({ budget: 0.05, pipeline: "lidar", preset: "balanced", diversity: 0.5 });
+    void recentJobs.refetch();
+  };
+
   const handleApplyAdvanced = () => {
     setAdvancedParams(normalizeAdvancedParams(currentAdvancedDraft));
   };
@@ -461,6 +500,13 @@ export default function Home() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
+          <Link href="/huong-dan" className="text-xs font-medium text-slate-600 hover:text-blue-700">Hướng dẫn</Link>
+          {(jobId || dataset || items.length > 0) && (
+            <button type="button" onClick={handleStartNew} className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              Nhập dữ liệu mới
+            </button>
+          )}
           {demo && (
             <span className="px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
               Dữ liệu mẫu
@@ -859,6 +905,10 @@ export default function Home() {
                   </div>
 
                   <div className="flex items-center gap-2.5">
+                    <button type="button" onClick={handleStartNew} className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                      Nhập dữ liệu mới
+                    </button>
                     {result && (
                       <a
                         href={exportUrl(jobId!, result.selectionId, debounced.budget)}
@@ -872,7 +922,7 @@ export default function Home() {
                     )}
                     {result && (
                       <Link
-                        href={`/review/${jobId}?sel=${result.selectionId}&budget=${debounced.budget}`}
+                        href={`/review/${jobId}?sel=${result.selectionId}&budget=${debounced.budget}&dataset=${dataset?.datasetId ?? ""}`}
                         className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors flex items-center gap-1.5"
                       >
                         Deep Review
@@ -888,6 +938,7 @@ export default function Home() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
                     <span className="text-xs text-slate-500 font-medium">Đã chọn</span>
+                    <Tooltip label={SETTINGS.budget.label} content={SETTINGS.budget.tooltip} />
                     <p className="text-2xl font-bold font-mono text-slate-900 mt-1" data-testid="metric-selected">
                       {result ? `${result.budgetB} / ${result.poolSize}` : "21 / 404"}
                     </p>
@@ -898,16 +949,22 @@ export default function Home() {
 
                   <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
                     <span className="text-xs text-slate-500 font-medium">Recall@{pct(budget)}</span>
+                    <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} />
                     <p className="text-2xl font-bold font-mono text-emerald-600 mt-1" data-testid="metric-recall">
                       {m ? pct(m.hybrid.recall) : "38 %"}
                     </p>
                     <span className="text-[11px] text-slate-400 mt-1 block">
                       {m?.random ? `Random ${pct(m.random.mean.recall)} ± ${pct(m.random.std.recall)}` : "Random 5 % ± 2"}
                     </span>
+                    <span className="mt-1 flex items-start gap-1 text-[10px] leading-snug text-slate-500">
+                      {dataset?.hasAnnotations ? RARITY_COMPARISON.tooltip : RARITY_COMPARISON.noLabels}
+                      <Tooltip label={RARITY_COMPARISON.label} content={dataset?.hasAnnotations ? RARITY_COMPARISON.tooltip : RARITY_COMPARISON.noLabels} />
+                    </span>
                   </div>
 
                   <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
                     <span className="text-xs text-slate-500 font-medium">{activePipeline === "lidar" ? "nRecall" : "Uplift"}</span>
+                    <Tooltip label={activePipeline === "lidar" ? METRICS.nRecall.label : METRICS.uplift.label} content={activePipeline === "lidar" ? METRICS.nRecall.tooltip : METRICS.uplift.tooltip} />
                     <p className="text-2xl font-bold font-mono text-emerald-600 mt-1" data-testid="metric-uplift">
                       {m ? (activePipeline === "lidar" ? pct(m.hybrid.nRecall ?? m.hybrid.recall) : `${m.hybrid.uplift.toFixed(1)}×`) : "7,6×"}
                     </p>
@@ -916,6 +973,7 @@ export default function Home() {
 
                   <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
                     <span className="text-xs text-slate-500 font-medium">{activePipeline === "lidar" ? "Scene-Recall" : "Redundancy"}</span>
+                    <Tooltip label={activePipeline === "lidar" ? METRICS.sceneRecall.label : METRICS.redundancy.label} content={activePipeline === "lidar" ? METRICS.sceneRecall.tooltip : METRICS.redundancy.tooltip} />
                     <p className="text-2xl font-bold font-mono text-slate-900 mt-1" data-testid="metric-redundancy">
                       {m ? (activePipeline === "lidar" ? pct(m.hybrid.sceneRecall ?? m.hybrid.coverage) : m.hybrid.redundancy.toFixed(2).replace(".", ",")) : "0,12"}
                     </p>
@@ -935,7 +993,7 @@ export default function Home() {
                     </div>
                   )}
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-800">
-                    <span>Recall@5 % theo method</span>
+                    <span className="inline-flex items-center gap-1">Recall@5 % theo method <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} /></span>
                     <span className="text-slate-400 font-normal">Random trung bình 5 % ± 2</span>
                   </div>
                   <div className="space-y-2 text-xs">
@@ -969,7 +1027,7 @@ export default function Home() {
                     {(result?.preview ?? []).slice(0, 12).map((f) => (
                       <Link
                         key={f.sampleToken}
-                        href={`/review/${jobId}?sel=${result?.selectionId}&budget=${debounced.budget}&frame=${f.sampleToken}`}
+                        href={`/review/${jobId}?sel=${result?.selectionId}&budget=${debounced.budget}&frame=${f.sampleToken}&dataset=${dataset?.datasetId ?? ""}`}
                         data-testid="thumb"
                         className="group bg-white border border-slate-200 hover:border-blue-500 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col"
                       >
@@ -986,17 +1044,14 @@ export default function Home() {
                         </div>
                         <div className="p-2 flex flex-col gap-1 justify-between flex-1">
                           <p className="text-[11px] font-medium text-slate-800 line-clamp-1">
-                            {f.reason}
+                            {reasonText(f.reason)}
                           </p>
                           <div className="flex items-center gap-1 flex-wrap">
-                            <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">
-                              Hiếm
-                            </span>
-                            {(f.tags?.includes("Khó") || (typeof f.rUnc === "number" && f.rUnc >= 0.8)) && (
-                              <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded font-medium">
-                                Khó
+                            {(activePipeline === "lidar" ? f.tags ?? [] : ["Hiếm", ...((f.tags?.includes("Khó") || (typeof f.rUnc === "number" && f.rUnc >= 0.8)) ? ["Khó"] : [])]).map((tag) => (
+                              <span key={tag} className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">
+                                {activePipeline === "lidar" ? gtTagLabel(tag) : tag}
                               </span>
-                            )}
+                            ))}
                           </div>
                         </div>
                       </Link>

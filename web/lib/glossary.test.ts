@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { reasonText, gtTagLabel, METRICS, SETTINGS } from "./glossary";
+import { reasonText, gtTagLabel, METRICS, RARITY_COMPARISON, SETTINGS } from "./glossary";
 
 describe("glossary", () => {
   it("reasonText converts correctly", () => {
@@ -13,6 +13,10 @@ describe("glossary", () => {
     expect(gtTagLabel("Rare GT A")).toBe("Môi trường khó");
     expect(gtTagLabel("Rare GT B")).toBe("Vật thể rất hiếm");
     expect(gtTagLabel("Unknown")).toBe("Unknown");
+  });
+
+  it("explains estimated rarity when labels are unavailable", () => {
+    expect(RARITY_COMPARISON.noLabels).toBe("Không có nhãn nên không chấm được — chỉ có độ hiếm ước lượng.");
   });
 
   it("METRICS and SETTINGS have valid non-empty labels and tooltips, without math symbols", () => {

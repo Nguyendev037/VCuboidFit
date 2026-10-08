@@ -5,6 +5,8 @@ import type { Cam, FrameDetail } from "@/lib/api/types";
 import { getFrame } from "@/lib/api/client";
 import { LidarScene } from "./LidarScene";
 import { CameraImage, getCamFriendlyName } from "./CameraImage";
+import { FRAME_SCORES, GT_GROUPS, gtTagLabel, reasonText } from "@/lib/glossary";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   groupCamerasByPosition,
   handleViewerKeyDown,
@@ -441,12 +443,12 @@ export function FrameViewer({
                   Chỉ số tổng hợp
                 </h3>
                 <span className="text-xs font-mono text-blue-400">
-                  {frame.tags.join(" · ")}
+                  {frame.tags.map((tag) => <span key={tag} className="ml-1 inline-flex items-center gap-1">{gtTagLabel(tag)}{GT_GROUPS[tag] && <Tooltip label={GT_GROUPS[tag].label} content={GT_GROUPS[tag].tooltip} dark />}</span>)}
                 </span>
               </div>
               <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/10">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-slate-400">Điểm tổng S:</span>
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-400">{FRAME_SCORES.S.label}<Tooltip label={FRAME_SCORES.S.label} content={FRAME_SCORES.S.tooltip} dark /></span>
                   <span className="text-xl font-bold font-mono text-emerald-400">
                     {frame.S.toFixed(2)}
                   </span>
@@ -455,7 +457,7 @@ export function FrameViewer({
                 <div className="mt-3 space-y-2 text-xs">
                   <div>
                     <div className="flex justify-between text-[11px] text-slate-300">
-                      <span>{isLidarFrame ? "Hiếm:" : "Độ hiếm:"}</span>
+                      <span className="inline-flex items-center gap-1">{isLidarFrame ? "Hiếm:" : "Độ hiếm:"}<Tooltip label={FRAME_SCORES.rRar.label} content={FRAME_SCORES.rRar.tooltip} dark /></span>
                       <span className="font-mono">{(isLidarFrame ? frame.rRar ?? frame.rNov : frame.rNov).toFixed(2)}</span>
                     </div>
                     <div className="w-full h-1.5 bg-white/10 rounded-full mt-1 overflow-hidden">
@@ -468,7 +470,7 @@ export function FrameViewer({
                   {isLidarFrame && (
                     <div>
                       <div className="flex justify-between text-[11px] text-slate-300">
-                        <span>Lạ với model:</span>
+                        <span className="inline-flex items-center gap-1">{FRAME_SCORES.rNov.label}<Tooltip label={FRAME_SCORES.rNov.label} content={FRAME_SCORES.rNov.tooltip} dark /></span>
                         <span className="font-mono">{frame.rNov.toFixed(2)}</span>
                       </div>
                       <div className="w-full h-1.5 bg-white/10 rounded-full mt-1 overflow-hidden">
@@ -478,7 +480,7 @@ export function FrameViewer({
                   )}
                   <div>
                     <div className="flex justify-between text-[11px] text-slate-300">
-                      <span>{isLidarFrame ? "Không chắc:" : "Độ khó:"}</span>
+                      <span className="inline-flex items-center gap-1">{isLidarFrame ? "Không chắc:" : "Độ khó:"}<Tooltip label={FRAME_SCORES.rUnc.label} content={FRAME_SCORES.rUnc.tooltip} dark /></span>
                       <span className="font-mono">{frame.rUnc.toFixed(2)}</span>
                     </div>
                     <div className="w-full h-1.5 bg-white/10 rounded-full mt-1 overflow-hidden">
@@ -510,7 +512,7 @@ export function FrameViewer({
                 Lý do chọn
               </h4>
               <p className="text-xs text-slate-200 bg-white/5 p-2.5 rounded-lg border border-white/10 leading-relaxed">
-                {frame.reason}
+                {reasonText(frame.reason)} <Tooltip label={FRAME_SCORES.reason.label} content={FRAME_SCORES.reason.tooltip} dark />
               </p>
               {!isLidarFrame && frame.qryBest && (
                 <div className="mt-2 text-[11px] text-slate-400">

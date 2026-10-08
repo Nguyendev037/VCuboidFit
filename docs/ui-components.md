@@ -1,9 +1,9 @@
 # UI/UX components — VCuboidFIT Web
 
 Tài liệu này mô tả **code đang chạy thực tế** trong
-[`vcuboidfit-ui/web`](../../../vcuboidfit-ui/web). Tên hiển thị và ý nghĩa chỉ số
+[`vcuboidfit-ui/web`](../../../../vcuboidfit-ui/web). Tên hiển thị và ý nghĩa chỉ số
 theo [glossary](glossary.md); kiểu dữ liệu theo
-[`web/lib/api/types.ts`](../../../vcuboidfit-ui/web/lib/api/types.ts). Đây là
+[`web/lib/api/types.ts`](../../../../vcuboidfit-ui/web/lib/api/types.ts). Đây là
 as-built guide, không phải bản thiết kế thay thế code.
 
 ## 0. Sơ đồ component và luồng dữ liệu
@@ -401,4 +401,3 @@ Frame Viewer có cùng trạng thái rỗng/đang tải/lỗi/xong như chế đ
 | Deep Review | `components/review/review.test.ts` |
 | Viewer/decoder/frustum | `components/viewer/viewer.test.ts` |
 | Worker proxy/media/upload routes | `app/api/proxy.test.ts`, `app/api/media.test.ts`, `app/api/uploads/uploads.test.ts` |
-

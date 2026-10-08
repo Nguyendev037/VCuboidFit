@@ -6,6 +6,8 @@ import type { FrameSummary, Cam } from "@/lib/api/types";
 import { CAMS } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
 import { LIDAR_TAG_LABELS } from "@/lib/constants";
+import { FRAME_SCORES, GT_GROUPS, gtTagLabel, reasonText } from "@/lib/glossary";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 export interface FrameGridProps {
   frames: FrameSummary[];
@@ -143,7 +145,8 @@ export function FrameGrid({
           {/* Điểm S góc trên bên phải */}
           <div className="absolute top-2 right-2">
             <span className="bg-emerald-600/90 backdrop-blur-md text-white font-mono text-xs font-bold px-2 py-0.5 rounded-md shadow">
-              S: {frame.S.toFixed(2)}
+              <span>S: {frame.S.toFixed(2)}</span>
+              <Tooltip label={FRAME_SCORES.S.label} content={FRAME_SCORES.S.tooltip} dark />
             </span>
           </div>
 
@@ -173,7 +176,7 @@ export function FrameGrid({
             </div>
 
             <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-              {frame.reason}
+              {reasonText(frame.reason)} <Tooltip label={FRAME_SCORES.reason.label} content={FRAME_SCORES.reason.tooltip} />
             </p>
           </div>
 
@@ -181,7 +184,8 @@ export function FrameGrid({
             <div className="flex items-center gap-1 flex-wrap">
               {frame.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-[10px] py-0 px-1.5">
-                  {pipeline === "lidar" ? LIDAR_TAG_LABELS[tag] ?? tag : tag}
+                  {pipeline === "lidar" ? gtTagLabel(tag) : LIDAR_TAG_LABELS[tag] ?? tag}
+                  {pipeline === "lidar" && GT_GROUPS[tag] && <Tooltip label={GT_GROUPS[tag].label} content={GT_GROUPS[tag].tooltip} />}
                 </Badge>
               ))}
             </div>
@@ -241,14 +245,15 @@ export function FrameGrid({
                   <td className="p-3 font-mono text-slate-500">{(isLidar ? f.rNov : f.rUnc).toFixed(2)}</td>
                   {!isLidar && <td className="p-3 font-mono text-slate-500">{f.rQry.toFixed(2)}</td>}
                   {isLidar && <td className="p-3 font-mono text-slate-500">{f.rUnc.toFixed(2)}</td>}
-                  <td className="p-3 truncate max-w-xs">{f.reason}</td>
+                  <td className="p-3 truncate max-w-xs">{reasonText(f.reason)} <Tooltip label={FRAME_SCORES.reason.label} content={FRAME_SCORES.reason.tooltip} /></td>
                   <td className="p-3">
                     {f.tags.map((t) => (
                       <span
                         key={t}
                         className="inline-block bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded mr-1"
                       >
-                        {isLidar ? LIDAR_TAG_LABELS[t] ?? t : t}
+                        {isLidar ? gtTagLabel(t) : LIDAR_TAG_LABELS[t] ?? t}
+                        {isLidar && GT_GROUPS[t] && <Tooltip label={GT_GROUPS[t].label} content={GT_GROUPS[t].tooltip} />}
                       </span>
                     ))}
                   </td>

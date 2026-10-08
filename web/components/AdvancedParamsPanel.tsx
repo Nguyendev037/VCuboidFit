@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
 import { Settings } from "lucide-react";
 import type { ParamsSchema, ParamsSchemaOption } from "@/lib/api/types";
 import { weightPercents, type AdvancedDraft } from "@/lib/advancedParams";
+import { SETTINGS } from "@/lib/glossary";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 interface AdvancedParamsPanelProps {
   open: boolean;
@@ -14,26 +15,6 @@ interface AdvancedParamsPanelProps {
   onDraftChange: (next: AdvancedDraft) => void;
   onApply: () => void;
   onReset: () => void;
-}
-
-function HelpTip({ text }: { text?: string }) {
-  const [shown, setShown] = React.useState(false);
-  if (!text) return null;
-  return (
-    <>
-      <button
-        type="button"
-        title={text}
-        aria-label="Giải thích"
-        aria-expanded={shown}
-        onClick={() => setShown(!shown)}
-        className="ml-1 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-slate-300 text-[9px] font-bold leading-none text-slate-500 hover:bg-slate-100"
-      >
-        ?
-      </button>
-      {shown && <span className="mt-1 block w-full basis-full text-[10px] font-normal leading-snug text-slate-500">{text}</span>}
-    </>
-  );
 }
 
 function RangeEnds({ min, max }: { min?: string; max?: string }) {
@@ -76,6 +57,7 @@ export function AdvancedParamsPanel({
     gamma: numberField("gamma", { min: 0, max: 1, step: 0.05 }),
   };
   const labelOf = (key: string, fallback: string) => field(key)?.label ?? fallback;
+  const helpOf = (key: string, schemaHelp?: string) => [SETTINGS[key]?.tooltip, schemaHelp].filter(Boolean).join("\n\n");
   const tierField = field("tier");
   const tierOptions: ParamsSchemaOption[] = tierField?.options?.length
     ? tierField.options
@@ -120,7 +102,7 @@ export function AdvancedParamsPanel({
           <div className="flex flex-col gap-1.5">
             <span className="flex flex-wrap items-center font-semibold text-slate-700">
               {labelOf("tier", "Tầng chọn")}
-              <HelpTip text={tierField?.help} />
+              <Tooltip label={labelOf("tier", "tier")} content={helpOf("tier", tierField?.help)} />
             </span>
             <div className="grid grid-cols-2 p-1 bg-white rounded-lg border border-slate-200 gap-1">
               {tierOptions.map((opt) => {
@@ -157,7 +139,7 @@ export function AdvancedParamsPanel({
             <span className="flex flex-wrap items-center justify-between font-semibold">
               <span className="flex flex-wrap items-center">
                 {labelOf("k", "Số láng giềng")}
-                <HelpTip text={kField?.help} />
+                <Tooltip label={labelOf("k", "k")} content={helpOf("k", kField?.help)} />
               </span>
               <span className="font-mono">{kField?.unit ? `${draft.k} ${kField.unit}` : draft.k}</span>
             </span>
@@ -169,7 +151,7 @@ export function AdvancedParamsPanel({
             <span className="flex flex-wrap items-center justify-between font-semibold">
               <span className="flex flex-wrap items-center">
                 {labelOf("lam", "Ưu tiên khi chọn")}
-                <HelpTip text={lamField?.help} />
+                <Tooltip label={labelOf("lam", "lam")} content={helpOf("lam", lamField?.help)} />
               </span>
               <span className="text-right">{lamValue}</span>
             </span>
@@ -180,7 +162,7 @@ export function AdvancedParamsPanel({
           <div className="flex flex-col gap-1">
             <span className="flex flex-wrap items-center font-semibold">
               {labelOf("maxPerScene", labelOf("m", "Tối đa mỗi cảnh"))}
-              <HelpTip text={maxField?.help} />
+              <Tooltip label={labelOf("maxPerScene", "maxPerScene")} content={helpOf("maxPerScene", maxField?.help)} />
             </span>
             <div className="grid grid-cols-[1fr_auto] items-center gap-2">
               <span className="flex items-center gap-1.5">
@@ -199,7 +181,7 @@ export function AdvancedParamsPanel({
               </span>
               <label className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 font-semibold">
                 <input type="checkbox" checked={draft.quotaOff} onChange={(e) => set({ quotaOff: e.target.checked })} className="accent-blue-600" />
-                <span className="max-w-[9rem] leading-tight">{labelOf("quotaOff", "Không giới hạn")}</span>
+                <span className="inline-flex max-w-[9rem] items-center gap-1 leading-tight">{labelOf("quotaOff", "Không giới hạn")}<Tooltip label={labelOf("quotaOff", "quotaOff")} content={helpOf("maxPerScene", maxField?.help)} /></span>
               </label>
             </div>
           </div>
@@ -218,7 +200,7 @@ export function AdvancedParamsPanel({
                   <span className="flex flex-wrap items-center justify-between font-semibold">
                     <span className="flex flex-wrap items-center">
                       {f?.label ?? fallbackLabel}
-                      <HelpTip text={f?.help} />
+                      <Tooltip label={f?.label ?? key} content={helpOf(key, f?.help)} />
                     </span>
                     <span className="font-mono">{pcts[key]}%</span>
                   </span>

@@ -18,6 +18,12 @@ export const RARITY_CONCEPTS: Record<string, GlossaryItem> = {
   },
 };
 
+export const RARITY_COMPARISON = {
+  label: "Độ hiếm ước lượng và hiếm thật",
+  tooltip: "Model chọn bằng độ hiếm ước lượng; chúng tôi kiểm tra bằng hiếm thật theo nhãn.",
+  noLabels: "Không có nhãn nên không chấm được — chỉ có độ hiếm ước lượng.",
+};
+
 export const GT_GROUPS: Record<string, GlossaryItem> = {
   "Rare GT A": {
     label: "Môi trường khó",
