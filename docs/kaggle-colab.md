@@ -37,3 +37,32 @@ Lưu `$EXP` (nhất là `t1/ckpt`, `t1/*.pkl`, `features/`) ra Drive / Kaggle Ou
 **Thứ tự ưu tiên khi tài nguyên ít:** (1) Tầng 0 trainval trên CPU (Kaggle CPU cũng chạy được) →
 (2) Tầng 1 với `--sweeps 1` → (3) downstream (stretch).
 
+Dev mới chỉ muốn một môi trường chạy được (không GPU, không Docker): xem
+[colab-dev-setup.md](colab-dev-setup.md) và [`notebooks/vcf_dev_setup_colab.ipynb`](../model/notebooks/vcf_dev_setup_colab.ipynb).
+
+## 5. Agent Colab - nhận việc Tầng 1 từ worker máy yếu
+
+Thay vì tự chuẩn bị dữ liệu, Colab có thể đóng vai **agent**: kéo việc Tầng 1 từ worker của máy yếu qua tunnel,
+train + suy luận, rồi đẩy `signals.parquet` về job. Worker là server, Colab là client (Colab không mở cổng vào được).
+
+Máy yếu bật `VCF_REMOTE_TOKEN` và mở tunnel — các bước ở [run-local.md](run-local.md) mục 5c.
+
+**Notebook làm sẵn:** [`notebooks/vcf_colab_agent.ipynb`](../model/notebooks/vcf_colab_agent.ipynb) (4 ô: cài môi
+trường → clone repo → nhập URL tunnel + token bằng `getpass` → chạy agent). Chạy ô 1 của notebook này tương đương
+"ô lệnh chung" ở mục 4 (đã gồm `requests`).
+
+**Chạy trực tiếp bằng CLI** (sau khi đã clone repo + có môi trường ở mục 4):
+```bash
+export VCF_REMOTE_TOKEN="<token của worker>"     # hoặc truyền --token
+python model/scripts/colab_agent.py --server https://<x>.trycloudflare.com --work /content/vcf
+# thêm --once để xử lý tối đa 1 việc rồi thoát; --dry-run để thử không cần GPU
+```
+Cách hoạt động: `GET /remote/t1/next` (hàng đợi rỗng ⇒ ngủ 60 s) → tải bundle vào `<work>/<taskId>/exp`
+(`data/` cache theo datasetId ở `<work>/cache/`, phiên sau chỉ tải `index.parquet`) → chạy
+`python -m c4.lidar.tier1.train_seed` rồi `python -m c4.lidar.tier1.infer_t1` → heartbeat mỗi 60 s trong lúc
+chạy → `POST /remote/t1/{taskId}/result`. Lỗi train/infer ⇒ `POST .../fail` (kèm 2000 ký tự cuối stderr).
+
+Xử lý lỗi phía agent: `401` (sai token) dừng ngay không retry; `404 remote_disabled` (worker chưa bật
+`VCF_REMOTE_TOKEN`) dừng; `409 not_leased` bỏ task và quay lại hàng đợi; lỗi mạng/5xx thử lại 3 lần (5/15/45 s).
+Token không bao giờ bị in ra log. Trên web, task do nút **"Chạy Tầng 1 trên Colab"** tạo ra (panel tham số).
+

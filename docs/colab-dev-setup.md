@@ -21,9 +21,12 @@ Chạy script riêng (ngoài notebook): `bash model/scripts/colab_setup.sh [--cp
 OpenPCDet, dùng cho máy không GPU chỉ chạy Tầng 0. Script idempotent: chạy lại in dòng `cache` và kết thúc bằng `SETUP OK`.
 
 ## Chế độ agent
-Worker máy yếu bật `VCF_REMOTE_TOKEN`, mở tunnel (cloudflared) tới worker. Trên Colab, ô 8 hỏi URL tunnel + token
+Worker máy yếu bật `VCF_REMOTE_TOKEN`, mở tunnel (cloudflared) tới worker — các bước đầy đủ ở
+[run-local.md](run-local.md) mục 5c. Trên Colab, ô 8 hỏi URL tunnel + token
 (`getpass`, không hiển thị) rồi chạy `model/scripts/colab_agent.py`: kéo việc, train + suy luận, đẩy `signals.parquet` về.
 Thử không GPU: thêm `--dry-run`. Notebook chuyên cho agent: `model/notebooks/vcf_colab_agent.ipynb` (4 ô).
+Hạn giữ việc và giới hạn kết quả do worker quyết: `VCF_REMOTE_LEASE_SEC` (mặc định 5400 s),
+`VCF_REMOTE_MAX_RESULT_MB` (200).
 
 ## Lỗi hay gặp
 - **Hết quota GPU / không cấp được GPU**: đổi runtime sang CPU (chỉ chạy được Tầng 0, ô 1-6) hoặc thử lại sau vài giờ.

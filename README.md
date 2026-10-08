@@ -16,7 +16,14 @@ tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tha
 
 * **Tầng 0** (bắt buộc, CPU): descriptor hình học -> PCA 64 -> Rarity k-NN khác scene -> MMR + quota.
 * **Tầng 1** (tuỳ chọn, GPU): PointPillars train từ đầu trên seed -> novelty/uncertainty -> hybrid.
-  Thiếu Tầng 1 thì mọi thứ vẫn chạy.
+  Thiếu Tầng 1 thì mọi thứ vẫn chạy (chỉ dùng tiêu chí "Hiếm trong dữ liệu"; xem [docs/glossary.md](docs/glossary.md)).
+* **Tầng 1 từ xa (Colab)** — máy không GPU vẫn có Tầng 1: Colab kéo việc từ worker qua tunnel, train rồi đẩy
+  `signals.parquet` về (nút "Chạy Tầng 1 trên Colab"). Xem [docs/run-local.md](docs/run-local.md) mục 5c.
+* **Dev mới, không cần GPU/Docker**:
+  [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Nguyendev037/VCuboidFit/blob/main/model/notebooks/vcf_dev_setup_colab.ipynb)
+  — notebook dựng sẵn môi trường Tầng 0 + Tầng 1 ([hướng dẫn](docs/colab-dev-setup.md)).
+* **Giao diện**: xoá lịch sử chạy, thanh thời gian xét tệp upload, nút "Rút gọn" danh sách zip, panel tham số
+  hoạt động cả khi job chỉ có Tầng 0.
 
 ## Cấu trúc thư mục
 
@@ -51,11 +58,24 @@ Chi tiết từng bước và xử lý lỗi: [docs/run-local.md](docs/run-local
 
 ## Tài liệu
 
-* [docs/run-local.md](docs/run-local.md) - chạy local (CPU, Docker GPU RTX 4060)
+* [docs/run-local.md](docs/run-local.md) - chạy local (CPU, Docker GPU RTX 4060, worker Docker, Tầng 1 qua Colab)
 * [docs/gpu-rental.md](docs/gpu-rental.md) - thuê GPU, chạy trên trainval
-* [docs/kaggle-colab.md](docs/kaggle-colab.md) - notebook Kaggle / Colab Pro
+* [docs/kaggle-colab.md](docs/kaggle-colab.md) - notebook Kaggle / Colab Pro + agent Colab
+* [docs/colab-dev-setup.md](docs/colab-dev-setup.md) - dev mới: môi trường chạy được trên Colab (không GPU, không Docker)
 * [docs/model-workflow.md](docs/model-workflow.md) - model chọn 5% frame chạy như thế nào (từng bước)
 * [docs/glossary.md](docs/glossary.md) - "hiếm" là gì, ý nghĩa từng chỉ số và tham số
+
+## Biến môi trường
+
+| Biến | Bên | Mặc định | Ý nghĩa |
+|---|---|---|---|
+| `WORKSPACE` | worker + web | worker `../workspace`, web `<repo>/workspace` | Thư mục dữ liệu chạy (`uploads/ datasets/ jobs/`); hai bên PHẢI trỏ cùng chỗ |
+| `VCF_PORT` | worker + web + tunnel | `8001` | Cổng worker nghe/publish; web suy `http://127.0.0.1:${VCF_PORT}` khi không có `WORKER_URL` |
+| `VCF_REMOTE_TOKEN` | worker | rỗng (tắt) | Bật cầu nối Colab; thiếu biến thì mọi `/remote/*` trả 404 `remote_disabled` |
+| `VCF_REMOTE_LEASE_SEC` | worker | `5400` | Hạn giữ việc Tầng 1 từ xa trước khi trả về hàng đợi |
+| `VCF_REMOTE_MAX_RESULT_MB` | worker | `200` | Dung lượng tối đa của `signals.parquet` Colab tải lên |
+
+Chi tiết đầy đủ: `model/worker/.env.example` và `web/.env.example`.
 
 ## Dữ liệu và giấy phép dữ liệu
 

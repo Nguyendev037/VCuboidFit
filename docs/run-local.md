@@ -14,9 +14,14 @@ Web và worker trao đổi qua một thư mục `WORKSPACE` (`uploads/`, `datase
 | job runner (`c4/jobs/runner.py`) | (ghi cạnh `parents[3]`) | `model/workspace` | cùng chỗ trên |
 | web (`web/lib/server/workspace.ts`) | `WORKSPACE` | `<repo>/workspace` (cạnh `web/`) | `../model/workspace` (file `web/.env.example`) |
 
+**Một biến cổng duy nhất: `VCF_PORT`** (mặc định 8001). Nó điều khiển cổng nghe của worker, cổng publish của
+compose/tunnel và URL web dùng để gọi worker (`web/lib/server/worker.ts` suy `http://127.0.0.1:${VCF_PORT}` khi
+không có `WORKER_URL`). Đổi cổng chỉ đổi biến này.
+
 Các biến khác: worker `SEVENZIP_PATH` (mặc định `7z`), `C4_PROFILE` (`local-4060`/`cloud`), `C4_WEIGHTS_DIR`,
-`C4_FAKE_MODELS`; web `WORKER_URL` (mặc định `http://127.0.0.1:8001`), `MAX_UPLOAD_GB` (100), `NEXT_PUBLIC_MOCK`.
-Mẫu: `model/worker/.env.example`, `web/.env.example` (worker không tự đọc `.env` - đặt trong shell).
+`C4_FAKE_MODELS`, và nhóm cầu nối Colab `VCF_REMOTE_TOKEN` / `VCF_REMOTE_LEASE_SEC` (5400 s) /
+`VCF_REMOTE_MAX_RESULT_MB` (200); web `WORKER_URL` (mặc định `http://127.0.0.1:8001`), `MAX_UPLOAD_GB` (100),
+`NEXT_PUBLIC_MOCK`. Mẫu: `model/worker/.env.example`, `web/.env.example` (worker không tự đọc `.env` - đặt trong shell).
 
 ## 1. Worker (Python) - Tầng 0 trên CPU
 
@@ -33,8 +38,9 @@ Chạy service (giữ cửa sổ này mở):
 ```powershell
 cd model\worker
 $env:WORKSPACE = (Resolve-Path ..).Path + "\workspace"     # = model\workspace
-.venv\Scripts\python -m uvicorn service.main:create_app --factory --port 8001
-# kiểm: curl http://127.0.0.1:8001/health
+$env:VCF_PORT = "8001"
+.venv\Scripts\python -m uvicorn service.main:create_app --factory --port $env:VCF_PORT
+# kiểm: curl "http://127.0.0.1:$env:VCF_PORT/health"
 ```
 Không cài `.[gpu]` nếu chỉ chạy đường LiDAR Tầng 0 (không cần torch).
 
@@ -69,22 +75,74 @@ cd model\worker
 
 ## 5. Tầng 1 trong Docker (RTX 4060 8 GB)
 
-Cần Docker Desktop + WSL2 + driver NVIDIA. Cần `index.parquet`: chạy bước 4 cho cùng thư mục `--out` trước.
+Image `vcuboidfit_pointpillars:0.1`, container `VCuboidFit_PointPillars`, compose
+`model/docker/tier1/docker-compose.yml`. Cần Docker Desktop + WSL2 + driver NVIDIA. Cần `index.parquet`:
+chạy bước 4 cho cùng thư mục `--out` trước.
+
 ```powershell
-docker build -t vcf-tier1:0.1 model\docker\tier1          # ~15 phút lần đầu, ~18.7 GB
+docker compose -f model\docker\tier1\docker-compose.yml build     # ~15 phút lần đầu, ~18.7 GB
+docker compose -f model\docker\tier1\docker-compose.yml run --rm pointpillars   # selfcheck: phải in "REPRO OK"
 model\scripts\tier1.ps1 -Data D:\nuscenes -Exp model\workspace\experiments\mini -Sweeps 10 -Epochs 20 -Batch 2
 # rồi chạy lại bước 4: ma trận có thêm hybrid_mmr, t1_*_mmr, entropy_only
 ```
-Hết VRAM: `-Batch 1`, rồi `-Sweeps 1` (dùng cùng số sweeps cho downstream). Image không dùng apt/git
-(mọi gói qua pip/HTTPS). Muốn web dùng Tầng 1: chép `t1\signals.parquet` vào thư mục job.
+Dùng image khác (bản cũ, máy thuê, thử nghiệm): đặt `$env:VCF_TIER1_IMAGE = "<tên-image>"` — `tier1.ps1` và
+mọi compose (`tier1`, `cloud`, `worker`) đều đọc biến này. Hết VRAM: `-Batch 1`, rồi `-Sweeps 1` (dùng cùng
+số sweeps cho downstream). Image không dùng apt/git (mọi gói qua pip/HTTPS). Muốn web dùng Tầng 1: chép
+`t1\signals.parquet` vào thư mục job.
+
+## 5b. Worker Docker (không web)
+
+Image `vcuboidfit_worker:0.1` = worker FastAPI Tầng 0 (CPU), không có web UI, không nướng sẵn dữ liệu Tầng 1.
+```powershell
+$env:VCF_PORT = "8001"
+docker build -f model\docker\worker\Dockerfile -t vcuboidfit_worker:0.1 .
+docker run -d --name vcuboidfit-worker -e VCF_PORT=$env:VCF_PORT -p "${env:VCF_PORT}:${env:VCF_PORT}" -v D:\ws:/data/workspace vcuboidfit_worker:0.1
+# kiểm: curl "http://127.0.0.1:$env:VCF_PORT/health"
+```
+Hoặc compose (`tier1` ở profile `gpu`, dùng lại image `vcuboidfit_pointpillars:0.1`):
+```powershell
+$env:WORKSPACE_DIR = "D:\ws"      # cổng lấy từ VCF_PORT (mặc định 8001; compose còn nhận tên cũ WORKER_PORT)
+docker compose -f model\docker\worker\docker-compose.yml up -d --build worker
+$env:NUSC = "D:\nuscenes"; $env:EXP = "D:\exp"
+docker compose -f model\docker\worker\docker-compose.yml --profile gpu run --rm tier1
+```
+Nếu chạy web local cạnh container: `WORKSPACE` của web phải trỏ **cùng thư mục** với phần mount
+(`-v <thư mục>:/data/workspace`) và `WORKER_URL` (hoặc `VCF_PORT`) trỏ cổng đã publish.
+
+## 5c. Tầng 1 qua Colab (máy yếu)
+
+Máy không có GPU vẫn lấy được Tầng 1: Colab kéo việc từ worker qua tunnel, train rồi đẩy `signals.parquet` về.
+
+Máy yếu (worker + tunnel):
+```powershell
+python -c "import secrets;print(secrets.token_urlsafe(32))"   # sinh token >= 32 ký tự
+$env:VCF_REMOTE_TOKEN = "<dán token vừa sinh>"
+$env:VCF_PORT = "8001"                                        # MỘT biến cổng cho worker, web, tunnel
+# chạy worker như mục 1 (cửa sổ khác), rồi mở tunnel tạm:
+cloudflared tunnel --url "http://127.0.0.1:$env:VCF_PORT"     # in ra https://<x>.trycloudflare.com
+```
+Colab: mở [`model/notebooks/vcf_colab_agent.ipynb`](../model/notebooks/vcf_colab_agent.ipynb), chạy ô 1-3
+(nhập URL tunnel + token bằng `getpass`) rồi ô 4. Agent chạy `model/scripts/colab_agent.py`: `GET /remote/t1/next`
+(mỗi 60 s khi hàng đợi rỗng) → tải bundle → `train_seed` + `infer_t1` → `POST /remote/t1/{id}/result`.
+Test không GPU: thêm `--dry-run` (ghi `signals.parquet` giả).
+
+Web: ở panel tham số bấm **"Chạy Tầng 1 trên Colab"** (chỉ hiện khi worker đã bật `VCF_REMOTE_TOKEN` và job
+chưa có Tầng 1). Khi task xong, panel tự mở khoá Tầng 1. Tắt cầu nối: dừng cloudflared + bỏ biến
+`VCF_REMOTE_TOKEN` (mọi `/remote/*` trả 404).
+
+Ghi chú: URL quick-tunnel của cloudflared là công khai — token là lớp bảo vệ duy nhất, chỉ dùng **tạm**.
+Lease mặc định 5400 s (`VCF_REMOTE_LEASE_SEC`), kết quả tải lên tối đa 200 MB (`VCF_REMOTE_MAX_RESULT_MB`).
 
 ## 6. Lỗi hay gặp
 
 | Hiện tượng | Cách xử |
 |---|---|
 | Web báo không thấy upload / job dù worker có | `WORKSPACE` web và worker khác nhau (mục 0) |
+| Web gọi nhầm cổng worker | đổi **một** biến `VCF_PORT` cho cả worker, web và tunnel |
 | `UnicodeEncodeError cp1252` | `$env:PYTHONIOENCODING="utf-8"` |
 | `.ps1` báo lỗi cú pháp ở chữ có dấu | file phải có BOM UTF-8 (PowerShell 5.1) |
-| `tier_unavailable` trên web | chưa có `t1/signals.parquet` cho job; chạy Tầng 1 rồi chép vào |
+| `tier_unavailable` trên web | chưa có `t1/signals.parquet` cho job; chạy Tầng 1 rồi chép vào, hoặc dùng mục 5c |
+| Nút "Chạy Tầng 1 trên Colab" không hiện | worker chưa đặt `VCF_REMOTE_TOKEN` (khi đó `/remote/*` trả 404 `remote_disabled`) |
+| Agent Colab báo 401 | sai token — agent dừng ngay, không retry |
 | `npm ci` lỗi mạng/peer | xoá `web/node_modules`, dùng đúng `package-lock.json` đã có |
 | Upload `.7z` báo thiếu 7z | cài 7-Zip và đặt `SEVENZIP_PATH`, hoặc dùng `.zip` |

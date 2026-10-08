@@ -64,3 +64,13 @@ Nhãn/tooltip lấy từ API `GET /jobs/{id}/params-schema` (`label`, `help`) �
 | `maxPerScene` / `quotaOff` | Tối đa số frame mỗi cảnh | Giữ tập chọn không dồn vào một đoạn đường. Nếu không đủ chỗ để chọn đủ 5%, hệ thống tự nới và báo cảnh báo. |
 | `alpha` / `beta` / `gamma` | Mức quan trọng: Hiếm trong dữ liệu / Lạ với model / Model chưa chắc chắn | Tự quy đổi về tổng 100%. Chế độ Cơ bản chỉ dùng "Hiếm trong dữ liệu". |
 | `budget` | Ngân sách | Phần trăm số frame được chọn để gán nhãn (mặc định 5%). |
+
+## 6. Tầng 1 từ xa (cầu nối Colab)
+
+| Khái niệm | Tên hiển thị | Tooltip | Chi tiết |
+|---|---|---|---|
+| Cầu nối Colab | **Tầng 1 từ xa** | Máy bạn không có GPU vẫn chạy được Tầng 1: một máy khác (Colab) nhận việc, huấn luyện model rồi gửi kết quả về. | Worker máy yếu là **server**, Colab là **client**: Colab gọi `GET /remote/t1/next` để kéo việc, tải bundle (chỉ mục + dữ liệu), chạy `train_seed` + `infer_t1`, rồi `POST /remote/t1/{taskId}/result`. Kết quả vẫn là điểm "Lạ với model" / "Model chưa chắc chắn" như Tầng 1 chạy local — chỉ khác nơi tính. Bật/tắt bằng `VCF_REMOTE_TOKEN` (bỏ biến ⇒ mọi `/remote/*` trả 404). |
+| Nút "Chạy Tầng 1 trên Colab" | **Chạy Tầng 1 trên Colab** | Gửi việc Tầng 1 của job này cho máy Colab đang kết nối. | Chỉ hiện ở panel tham số khi job **chưa có Tầng 1** và worker đã bật `VCF_REMOTE_TOKEN`. Trạng thái việc: `queued` (chờ) → `leased` (Colab đang làm) → `done` / `failed` / `cancelled`. Xong thì panel tự mở khoá Tầng 1. |
+| `taskId` | **Mã việc từ xa** | Mã định danh việc Tầng 1 đang chạy trên Colab. | Dạng `t1_<12 ký tự hex>`. |
+| Lease | **Hạn giữ việc** | Nếu Colab mất kết nối quá lâu, việc tự trả về hàng đợi để máy khác làm tiếp. | Mặc định 5400 s (`VCF_REMOTE_LEASE_SEC`); hết hạn mà chưa có kết quả ⇒ việc về `queued` (thử lại), ≥ 3 lần thì `failed`. Kết quả tải lên tối đa 200 MB (`VCF_REMOTE_MAX_RESULT_MB`). |
+| Bundle | **Gói dữ liệu gửi cho Colab** | Chỉ mục frame + dữ liệu point cloud của job, đóng thành một gói để Colab tải về. | Tar không nén: `index.parquet` + `data/**`; Colab cache `data/` theo datasetId nên phiên sau chỉ tải lại chỉ mục. |
