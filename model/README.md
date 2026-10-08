@@ -3,9 +3,11 @@
 ```text
 model/
   worker/      Python: c4/ (engine), service/ (FastAPI), configs/, tests/, pyproject.toml
-  docker/      tier1/ (image PointPillars/OpenPCDet), cloud/ (docker-compose cho máy thuê)
-  scripts/     tier1.ps1 / tier1.sh (chạy Tầng 1), cloud/{pack,bootstrap}.sh, fetch_weights.py
-  notebooks/   vcf_tier01_kaggle_colab.ipynb
+  docker/      tier1/ (image vcuboidfit_pointpillars, GPU), worker/ (image vcuboidfit_worker, CPU),
+               cloud/ (docker-compose cho máy thuê)
+  scripts/     tier1.ps1 / tier1.sh (chạy Tầng 1), colab_agent.py + colab_setup.sh (Tầng 1 qua Colab),
+               check_ports.py (bắt cổng ghi cứng), cloud/{pack,bootstrap}.sh, fetch_weights.py
+  notebooks/   vcf_tier01_kaggle_colab.ipynb, vcf_colab_agent.ipynb, vcf_dev_setup_colab.ipynb
 ```
 
 ## Chạy ở máy cá nhân (CPU)

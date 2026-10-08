@@ -27,13 +27,30 @@ tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tha
 
 ## Cấu trúc thư mục
 
+```text
+VCuboidFit/
+├── web/                 Website Next.js 16 + React 19 (Chọn 5 %, Deep Review, Frame Viewer)
+│   ├── app/             trang + route /api/** proxy sang worker
+│   ├── components/ lib/ UI và logic phía client (kèm *.test.ts)
+│   ├── e2e/ mocks/      Playwright e2e + dữ liệu mock (NEXT_PUBLIC_MOCK=1)
+│   └── design/          token màu + mock HTML thiết kế
+├── model/
+│   ├── worker/          Python: c4/ (engine), service/ (FastAPI), configs/, tests/
+│   ├── docker/          tier1/ (PointPillars GPU), worker/ (worker CPU), cloud/ (máy thuê)
+│   ├── scripts/         chạy Tầng 1, agent + setup Colab, check_ports, cloud/
+│   └── notebooks/       Kaggle/Colab Tầng 1, agent Colab, setup dev mới
+├── dataset/             zip nuScenes-mini để thử upload (zip bị gitignore)
+├── tools/vcf-pack/      CLI chia nuScenes thành part zip <= 50 MB + manifest
+└── docs/                hướng dẫn chạy, thuê GPU, Colab, quy trình model, thuật ngữ
+```
+
 | Thư mục | Nội dung |
 |---|---|
 | [`web/`](web/) | Website Next.js 16 + React 19 (3 màn: Chọn 5 %, Deep Review, Frame Viewer) |
 | [`model/`](model/README.md) | Engine `c4` + service FastAPI + cấu hình + test, Docker, script, notebook |
 | [`dataset/`](dataset/README.md) | Bộ zip nuScenes-mini đã đóng gói để thử upload (zip không commit) |
 | [`tools/vcf-pack/`](tools/vcf-pack/) | CLI chia thư mục nuScenes thành các part zip <= 50 MB + manifest |
-| [`docs/`](docs/) | Hướng dẫn chạy, thuê GPU, Kaggle/Colab, kiến trúc + PDF thiết kế |
+| [`docs/`](docs/) | Hướng dẫn chạy local, thuê GPU, Kaggle/Colab, quy trình model, thuật ngữ |
 
 ## Quickstart 5 phút (Windows, chỉ CPU)
 
@@ -44,7 +61,7 @@ Cần Python 3.11+ và Node 20+. Từ thư mục gốc repo (PowerShell):
 python -m venv model\worker\.venv
 model\worker\.venv\Scripts\pip install -e "model\worker[dev,service]"
 $env:WORKSPACE = "$PWD\model\workspace"
-cd model\worker ; ..\..\model\worker\.venv\Scripts\python -m uvicorn service.main:create_app --factory --port 8001
+cd model\worker ; .venv\Scripts\python -m uvicorn service.main:create_app --factory --port 8001
 ```
 ```powershell
 # 2) Web (cửa sổ khác, từ thư mục gốc repo)
@@ -52,6 +69,13 @@ cd web ; copy .env.example .env.local ; npm ci ; npm run dev       # http://loca
 ```
 3) Mở <http://localhost:3000>, ở Bước 1 chọn **tất cả** file trong `dataset/01_small_3scenes/`
 (các `vcf_part_*.zip` + `vcf_manifest.json`), chờ upload, rồi bấm chạy phân tích.
+
+Worker bằng Docker thay cho bước 1 (CPU, đã có 7-Zip để giải nén `.rar`/`.7z`):
+
+```powershell
+docker build -f model/docker/worker/Dockerfile -t vcuboidfit_worker:0.1 .
+docker run -d --name vcuboidfit-worker -e VCF_PORT=8001 -p 8001:8001 -v "$PWD\model\workspace:/data/workspace" vcuboidfit_worker:0.1
+```
 
 Muốn xem giao diện ngay không cần worker: trong `web/` chạy `$env:NEXT_PUBLIC_MOCK="1"; npm run dev`.
 Chi tiết từng bước và xử lý lỗi: [docs/run-local.md](docs/run-local.md).
