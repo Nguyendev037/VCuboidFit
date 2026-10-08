@@ -100,6 +100,9 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     import torch
 
+    from c4.lidar.tier1.repro import set_determinism
+    set_determinism(0)
+
     if not torch.cuda.is_available():
         print("cần GPU", file=sys.stderr)
         return 3

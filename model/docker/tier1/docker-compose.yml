@@ -1,0 +1,26 @@
+# Môi trường PointPillars (Tầng 1) — image vcuboidfit_pointpillars:0.1, container VCuboidFit_PointPillars.
+# Từ gốc repo:
+#   docker compose -f model/docker/tier1/docker-compose.yml build
+#   docker compose -f model/docker/tier1/docker-compose.yml run --rm pointpillars   # selfcheck (REPRO OK)
+#   NUSC=<nuScenes> EXP=<thí nghiệm> docker compose -f model/docker/tier1/docker-compose.yml up pointpillars
+# KHÔNG khai `ports`: container chạy batch, không nghe cổng nào (SPEC-P01 §2b).
+services:
+  pointpillars:
+    image: vcuboidfit_pointpillars:0.1
+    container_name: VCuboidFit_PointPillars
+    build:
+      context: .
+      dockerfile: Dockerfile
+    shm_size: 8g
+    working_dir: /work/worker
+    volumes:
+      - ${NUSC:-.}:/nusc:ro
+      - ${EXP:-.}:/exp
+      - ../../worker:/work/worker
+    environment:
+      PYTHONPATH: /work/worker:/opt/OpenPCDet
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+    command: python -m c4.lidar.tier1.selfcheck

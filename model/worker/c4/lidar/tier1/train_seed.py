@@ -219,6 +219,9 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     import torch
 
+    from c4.lidar.tier1.repro import set_determinism
+    determinism = set_determinism(0)
+
     if not torch.cuda.is_available():
         print("cần GPU (Tầng 0 vẫn chạy CPU)", file=sys.stderr)
         return 3
@@ -258,6 +261,7 @@ def main(argv=None) -> int:
     (a.exp / "t1" / "train_config.yaml").write_text(yaml.safe_dump(dict(
         version=version, sweeps=a.sweeps, epochs=a.epochs, batch=a.batch, n_seed=len(seed_toks),
         base_cfg=BASE_CFG, pcdet_commit=_pcdet_commit(), run_tag=tag,
+        determinism=determinism,
         gt_sampling=False,  # đã đo trên cfg ghi ra bởi verify_written
         ckpt=str(dst / "seed_latest.pth"), post_train_eval=post_eval, **seed_stats)),
         encoding="utf-8")

@@ -41,3 +41,7 @@ WORKDIR /work
 # worker/ được mount vào /work/worker khi chạy (không bake để code luôn mới nhất).
 ENV PYTHONPATH=/work/worker:/opt/OpenPCDet
 CMD ["bash"]
+
+LABEL org.opencontainers.image.title="VCuboidFit_PointPillars" \
+      org.opencontainers.image.version="0.1" \
+      org.opencontainers.image.revision="${OPENPCDET_REF}"

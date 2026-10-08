@@ -3,7 +3,7 @@
 #   ... run --rm tier1        (train seed + infer; cần GPU)
 #   ... run --rm experiment   (tune trên V + báo cáo; CPU)
 x-common: &common
-  image: ${VCF_TIER1_IMAGE:-vcf-tier1:0.1}
+  image: ${VCF_TIER1_IMAGE:-vcuboidfit_pointpillars:0.1}
   shm_size: 16g
   working_dir: /work/worker
   volumes:

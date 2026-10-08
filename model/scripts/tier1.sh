@@ -5,7 +5,7 @@
 # Yêu cầu: <exp_dir>/index.parquet đã có (chạy Tầng 0 trước: c4.cli.lidar_experiment).
 set -euo pipefail
 DATA=$(cd "$1" && pwd); EXP=$(mkdir -p "$2" && cd "$2" && pwd); shift 2
-SWEEPS=10; EPOCHS=20; BATCH=2; DOCKER=1; IMAGE=${VCF_TIER1_IMAGE:-vcf-tier1:0.1}
+SWEEPS=10; EPOCHS=20; BATCH=2; DOCKER=1; IMAGE=${VCF_TIER1_IMAGE:-vcuboidfit_pointpillars:0.1}
 while [ $# -gt 0 ]; do case "$1" in
   --sweeps) SWEEPS=$2; shift 2;; --epochs) EPOCHS=$2; shift 2;; --batch) BATCH=$2; shift 2;;
   --no-docker) DOCKER=0; shift;; *) echo "tham số lạ: $1" >&2; exit 2;; esac; done

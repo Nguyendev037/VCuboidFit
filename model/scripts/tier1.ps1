@@ -1,12 +1,12 @@
 ﻿# Tầng 1 trên Windows + Docker Desktop (L2 · RTX 4060) — tương đương scripts/tier1.sh.
 #   .\scripts\tier1.ps1 -Data H:\ -Exp .\workspace\experiments\mini [-Sweeps 10] [-Epochs 20] [-Batch 2]
-# Yêu cầu: <Exp>\index.parquet đã có (chạy Tầng 0 trước) và image vcf-tier1 đã build:
-#   docker build -t vcf-tier1:0.1 docker\tier1
+# Yêu cầu: <Exp>\index.parquet đã có (chạy Tầng 0 trước) và image vcuboidfit_pointpillars đã build:
+#   docker compose -f docker/tier1/docker-compose.yml build
 param(
     [Parameter(Mandatory = $true)][string]$Data,
     [Parameter(Mandatory = $true)][string]$Exp,
     [int]$Sweeps = 10, [int]$Epochs = 20, [int]$Batch = 2,
-    [string]$Image = $(if ($env:VCF_TIER1_IMAGE) { $env:VCF_TIER1_IMAGE } else { "vcf-tier1:0.1" })
+    [string]$Image = $(if ($env:VCF_TIER1_IMAGE) { $env:VCF_TIER1_IMAGE } else { "vcuboidfit_pointpillars:0.1" })
 )
 $ErrorActionPreference = "Stop"
 $Repo = (Resolve-Path "$PSScriptRoot\..").Path
