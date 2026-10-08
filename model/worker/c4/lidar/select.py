@@ -51,7 +51,7 @@ def _scene_codes(sc):
 
 
 def minmax_score(sc: pd.DataFrame, weights=(1.0, 0.0, 0.0)) -> np.ndarray:
-    """Q4 (chốt Đ14, planning/04 plan.md): điểm cho MMR từ giá trị thô chuẩn hoá min-max trên
+    """Q4 (chốt Đ15, planning/04 plan.md): điểm cho MMR từ giá trị thô chuẩn hoá min-max trên
     frame hợp lệ, cắt ngoại lai ở phân vị 1/99 (một frame lỗi không nén cả pool) — giữ biên độ
     Rar mà hạng phần trăm làm mất. Tín hiệu hằng ⇒ 0."""
     keep = sc["keep"].to_numpy(bool)

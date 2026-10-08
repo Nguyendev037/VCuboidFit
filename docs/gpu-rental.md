@@ -1,7 +1,7 @@
 # Thuê GPU chạy model chọn 5% LiDAR
 
 Tài liệu vận hành cho pipeline LiDAR.
-Thiết kế gốc: [C4-Rare-Scenario-Mining-MVP-Architecture.pdf](C4-Rare-Scenario-Mining-MVP-Architecture.pdf).
+Thiết kế gốc: C4-Rare-Scenario-Mining-MVP-Architecture.pdf.
 
 | Bản | Chạy gì | Cần gì | Khi nào dùng |
 |---|---|---|---|

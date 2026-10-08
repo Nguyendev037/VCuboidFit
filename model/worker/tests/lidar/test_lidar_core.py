@@ -188,7 +188,7 @@ def test_gt_config_groups_disjoint():
 
 
 def test_q4_minmax_score_keeps_magnitude_and_default_is_minmax():
-    """Q4 (Đ14): min-max giữ biên độ Rar, hạng % thì nén; mặc định = minmax."""
+    """Q4 (Đ15): min-max giữ biên độ Rar, hạng % thì nén; mặc định = minmax."""
     from c4.lidar.select import minmax_score
 
     idx = pd.DataFrame(dict(sample_token=list("abcd"), scene_token=["s0", "s0", "s1", "s1"],
