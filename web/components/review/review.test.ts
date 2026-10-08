@@ -200,7 +200,7 @@ describe("Lọc chip theo pipeline (LiDAR vs camera)", () => {
       "Rare GT C",
       "rare (cell)",
     ]);
-    expect(LIDAR_TAG_LABELS["Rare GT Bp"]).toBe("GT Lớp TB");
+    expect(LIDAR_TAG_LABELS["Rare GT Bp"]).toBe("GT Lớp trung bình");
 
     expect(matchesTagFilter(frame({ tags: ["Rare GT Bp"] }), "Rare GT Bp", true)).toBe(true);
     expect(matchesTagFilter(frame({ tags: ["Rare GT B"] }), "Rare GT Bp", true)).toBe(false);
@@ -209,7 +209,7 @@ describe("Lọc chip theo pipeline (LiDAR vs camera)", () => {
   });
 
   it("LiDAR: chip rare (cell) chỉ khớp đúng tag đó", () => {
-    expect(LIDAR_TAG_LABELS["rare (cell)"]).toBe("Rare (cell)");
+    expect(LIDAR_TAG_LABELS["rare (cell)"]).toBe("Hiếm theo nhãn");
     expect(matchesTagFilter(frame({ tags: ["rare (cell)"], rRar: 0.1 }), "rare (cell)", true)).toBe(true);
     expect(matchesTagFilter(frame({ tags: ["Hiếm"], rRar: 0.99 }), "rare (cell)", true)).toBe(false);
     expect(matchesTagFilter(frame({ tags: ["rare"], rRar: 0.99 }), "rare (cell)", true)).toBe(false);

@@ -56,7 +56,7 @@ export function AnalysisPanel({
       id: "too_safe",
       title: "Quá an toàn",
       value: valOf(pool.tooSafe),
-      sub: isLidar ? "rRar thấp và ít tín hiệu hình học" : "rNov ≤ 0.3, rQry ≤ 0.3",
+      sub: isLidar ? "Ít tín hiệu hiếm và hình học" : "Ít yếu tố mới và kịch bản",
       color: "border-vcf-border hover:border-vcf-accent",
       activeBg: "bg-vcf-accent-soft border-vcf-accent text-vcf-accent-ink",
     },
@@ -64,7 +64,7 @@ export function AnalysisPanel({
       id: "easy_for_model",
       title: "Dễ với model",
       value: valOf(poolExtra.easyForModel ?? poolExtra.easy),
-      sub: "rUnc ≤ 0.2 & det ≥ 0.5",
+      sub: "Model rất chắc, tín hiệu đã rõ",
       color: "border-vcf-border hover:border-vcf-accent",
       activeBg: "bg-vcf-accent-soft border-vcf-accent text-vcf-accent-ink",
     },
@@ -194,7 +194,7 @@ export function AnalysisPanel({
                   key={card.id}
                   type="button"
                   onClick={() => onFilterChange?.(card.id)}
-                  className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                  className={`min-w-0 p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
                     isActive
                       ? card.activeBg
                       : `bg-card ${card.color} hover:bg-slate-50`
@@ -202,13 +202,13 @@ export function AnalysisPanel({
                   data-testid={`metric-card-${card.id}`}
                 >
                   {/* Tiêu đề: cho phép xuống tối đa 2 dòng, không cắt chữ; giữ chiều cao đồng nhất giữa các thẻ */}
-                  <div className="text-[11px] font-medium text-slate-500 leading-snug min-h-[2.75em] break-words">
+                  <div className="min-w-0 whitespace-normal text-[11px] font-medium text-slate-500 leading-snug min-h-[2.75em] break-words">
                     {card.title}
                   </div>
                   <div className="text-lg font-bold font-mono my-0.5 text-slate-900">
                     {card.value}
                   </div>
-                  <div className="text-[10px] text-slate-400 truncate">
+                  <div className="text-[10px] text-slate-400 leading-snug break-words">
                     {card.sub}
                   </div>
                 </button>
@@ -300,7 +300,7 @@ export function AnalysisPanel({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs text-slate-600">
                     <span className="font-medium">Phân bố lý do tuyển chọn:</span>
-                    <span className="text-[11px] font-mono text-slate-400">Rar: {rar} · Nov: {nov} · Unc: {unc}</span>
+                    <span className="text-[11px] text-slate-400">Hiếm: {rar} · Lạ với model: {nov} · Chưa chắc: {unc}</span>
                   </div>
                   <div className="h-3 w-full bg-slate-100 rounded-full flex overflow-hidden">
                     <div style={{ width: `${(rar / tot) * 100}%` }} className="bg-vcf-accent h-full" title="Hiếm" />
@@ -322,7 +322,7 @@ export function AnalysisPanel({
                 <div className="flex items-center justify-between text-xs text-slate-600">
                   <span className="font-medium">Phân bố lý do tuyển chọn:</span>
                   <span className="text-[11px] font-mono text-slate-400">
-                    Nov: {nov} · Unc: {unc} · Qry: {qry}
+                    Mới: {nov} · Chưa chắc: {unc} · Kịch bản: {qry}
                   </span>
                 </div>
                 <div className="h-3 w-full bg-slate-100 rounded-full flex overflow-hidden">

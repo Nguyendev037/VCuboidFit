@@ -13,6 +13,9 @@ from service.main import create_app
 from service.settings import Settings
 from tests.fixtures.make_nuscenes import make_nuscenes
 
+# pipeline camera cần torch (cài `.[gpu]`); bản CPU chỉ chạy LiDAR ⇒ bỏ qua module này
+pytest.importorskip("torch", reason="pipeline camera cần torch (.[gpu])")
+
 PARAMS = {"minLuma": 0, "minBlurVar": 0}  # ảnh giả là màu phẳng: không để chất lượng loại hết
 
 

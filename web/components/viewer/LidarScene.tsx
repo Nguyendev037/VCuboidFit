@@ -244,6 +244,7 @@ export function LidarScene({
   const [colorMode, setColorMode] = useState<LidarColorMode>("height");
   const [pointSize, setPointSize] = useState<number>(LIDAR_POINT_STYLE.defaultSize);
   const [cameraReset, setCameraReset] = useState(0);
+  const [mobileControlsOpen, setMobileControlsOpen] = useState(false);
   const colors = useMemo(() => pointCloud ? getLidarColors(pointCloud, colorMode) : null, [colorMode, pointCloud]);
   const activePointCloud = lidarUrl ? pointCloud : null;
   const activeError = lidarUrl ? error : null;
@@ -271,7 +272,10 @@ export function LidarScene({
       <SceneContents view="main" pointCloud={activePointCloud} colors={colors} pointSize={pointSize} boxes3d={boxes3d} showBoxes={showBoxes} camPoses={camPoses} onSelectCam={onSelectCam} viewMode={viewMode} resetTrigger={resetTrigger + cameraReset} />
     </Canvas>
 
-    <div className="absolute left-2 top-2 z-10 flex max-w-[calc(100%-8rem)] flex-wrap items-center gap-1 rounded-md border border-white/10 bg-black/75 p-1.5 text-[10px] sm:left-3 sm:top-3 sm:gap-1.5 sm:p-2 sm:text-xs">
+    <button type="button" aria-expanded={mobileControlsOpen} onClick={() => setMobileControlsOpen((open) => !open)} className="absolute left-2 top-2 z-10 rounded-md border border-white/10 bg-black/75 px-2 py-1.5 text-[10px] text-white md:hidden">
+      {mobileControlsOpen ? "Ẩn điều khiển" : "Điều khiển"}
+    </button>
+    <div className={`${mobileControlsOpen ? "flex" : "hidden"} md:flex absolute left-2 top-11 z-10 max-w-[calc(100%-5rem)] flex-wrap items-center gap-1 rounded-md border border-white/10 bg-black/80 p-1.5 text-[10px] sm:left-3 sm:top-3 sm:gap-1.5 sm:p-2 sm:text-xs`}>
       <span className="px-1 text-white/60">Góc:</span>
       {([ ["free", "Tự do"], ["top", "Trên"], ["rear", "Sau"] ] as const).map(([mode, label]) => <button key={mode} type="button" onClick={() => setViewMode(mode)} aria-pressed={viewMode === mode} className={`rounded px-2 py-1 ${viewMode === mode ? "bg-blue-600 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}>{label}</button>)}
       <button type="button" aria-label="Đặt lại góc nhìn LiDAR" title="Đặt lại camera" onClick={() => { setViewMode("free"); setCameraReset((value) => value + 1); }} className="rounded bg-white/10 px-2 py-1 hover:bg-white/20">Đặt lại</button>
@@ -281,7 +285,7 @@ export function LidarScene({
     <div className="absolute right-2 top-2 z-10 rounded-md border border-white/10 bg-black/75 px-2 py-1.5 text-[10px] text-white/80 sm:right-3 sm:top-3 sm:text-xs" role={loading ? "status" : undefined} aria-live="polite">
       {activeLoading ? "Đang nạp LiDAR…" : activePointCloud ? `${activePointCloud.count.toLocaleString()} điểm` : "Không có LiDAR"}
     </div>
-    <label className="absolute left-2 top-[5.25rem] z-10 flex items-center gap-2 rounded-md border border-white/10 bg-black/70 px-2 py-1 text-[10px] text-white/80 sm:left-3 sm:top-[3.75rem] sm:text-xs">
+    <label className={`${mobileControlsOpen ? "flex" : "hidden"} md:flex absolute left-2 top-[5.25rem] z-10 items-center gap-2 rounded-md border border-white/10 bg-black/80 px-2 py-1 text-[10px] text-white/80 sm:left-3 sm:top-[3.75rem] sm:text-xs`}>
       Cỡ điểm
         <input
           aria-label="Kích thước điểm LiDAR"
@@ -295,7 +299,7 @@ export function LidarScene({
         />
       <output>{pointSize.toFixed(1)}</output>
     </label>
-    <div className="pointer-events-none absolute bottom-2 right-2 z-10 flex gap-1.5 sm:bottom-3 sm:right-3 sm:gap-2">
+    <div className="pointer-events-none absolute bottom-2 right-2 z-10 hidden gap-1.5 md:flex sm:bottom-3 sm:right-3 sm:gap-2">
       {([ ["top", "Trên"], ["side", "Bên"], ["front", "Trước"] ] as const).map(([key, title]) => <div key={key} className="relative h-[62px] w-[76px] overflow-hidden rounded border border-white/25 bg-[#080d15]/90 shadow-lg sm:h-[82px] sm:w-[104px]" aria-label={`Góc nhìn ${title}`}>
         <Canvas dpr={1} frameloop="demand"><SceneContents view={key} pointCloud={activePointCloud} colors={colors} pointSize={pointSize} boxes3d={boxes3d} showBoxes={showBoxes} camPoses={[]} /></Canvas>
         <span className="absolute bottom-0 left-0 right-0 bg-black/75 px-1 py-0.5 text-center text-[9px] text-white/90">{title}</span>

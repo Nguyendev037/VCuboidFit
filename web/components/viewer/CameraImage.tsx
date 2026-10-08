@@ -33,6 +33,16 @@ export function getCamFriendlyName(cam: string): string {
   }
 }
 
+export function getCamCompactName(cam: string): string {
+  switch (cam) {
+    case "CAM_FRONT_LEFT": return "Front L";
+    case "CAM_FRONT_RIGHT": return "Front R";
+    case "CAM_BACK_LEFT": return "Back L";
+    case "CAM_BACK_RIGHT": return "Back R";
+    default: return getCamFriendlyName(cam);
+  }
+}
+
 export function CameraImage({
   camDetail,
   showBoxes = true,
@@ -202,21 +212,24 @@ export function CameraImage({
       </div>
 
       {/* Header thông tin camera */}
-      <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-black/75 backdrop-blur-md px-2 py-1 rounded-md text-xs text-white border border-white/10">
-        <span className="font-semibold text-slate-200">
-          {getCamFriendlyName(camDetail.cam)}
+      <div className="absolute top-1 left-1 z-10 flex min-w-0 max-w-[calc(100%-3rem)] items-center gap-1 bg-black/75 backdrop-blur-md px-1 py-0.5 rounded-md text-[10px] text-white border border-white/10 sm:top-2 sm:left-2 sm:gap-1.5 sm:px-2 sm:py-1 sm:text-xs">
+        <span className="min-w-0 truncate font-semibold text-slate-200">
+          <span className="sm:hidden">{getCamCompactName(camDetail.cam)}</span>
+          <span className="hidden sm:inline">{getCamFriendlyName(camDetail.cam)}</span>
         </span>
         <span
-          className={`text-[10px] px-1 py-0.2 rounded font-mono ${
+          aria-label={camDetail.qOk ? "Đạt" : "Kém"}
+          className={`shrink-0 text-[9px] px-1 py-0.2 rounded font-mono sm:text-[10px] ${
             camDetail.qOk ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
           }`}
         >
-          {camDetail.qOk ? "✓ Đạt" : "✗ Kém"}
+          <span className="sm:hidden" aria-hidden="true">{camDetail.qOk ? "✓" : "!"}</span>
+          <span className="hidden sm:inline">{camDetail.qOk ? "✓ Đạt" : "✗ Kém"}</span>
         </span>
       </div>
 
       {/* Điểm của camera */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-black/75 backdrop-blur-md px-2 py-1 rounded-md text-[11px] text-white/80 border border-white/10 font-mono">
+      <div aria-label={`Điểm camera ${camDetail.score.s.toFixed(2)}`} className="absolute top-1 right-1 z-10 flex items-center gap-1 bg-black/75 backdrop-blur-md px-1 py-0.5 rounded-md text-[9px] text-white/80 border border-white/10 font-mono sm:top-2 sm:right-2 sm:px-2 sm:py-1 sm:text-[11px]">
         <span>S: {camDetail.score.s.toFixed(2)}</span>
       </div>
 

@@ -28,6 +28,7 @@ import type {
 } from "@/lib/api/types";
 import { PRESETS } from "@/lib/api/types";
 import { recallRows, stageLabel } from "@/lib/constants";
+import { isDatasetUsable, datasetValidationMessage } from "@/lib/datasetValidation";
 import { AdvancedParamsPanel } from "@/components/AdvancedParamsPanel";
 import { readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "@/lib/runRecovery";
 import {
@@ -61,7 +62,10 @@ const ANALYSIS_STEPS = [
   { stage: "clip", name: "Khớp kịch bản", hint: "Query" },
   { stage: "merge", name: "Tổng hợp S", hint: "điểm cuối" },
 ];
-const LIDAR_ANALYSIS_STEPS = ANALYSIS_STEPS.filter((step) => step.stage !== "clip");
+const LIDAR_ANALYSIS_STEPS = [
+  { stage: "lidar_index", name: stageLabel("lidar_index", "lidar"), hint: "đọc frame và LiDAR" },
+  { stage: "t0", name: stageLabel("t0", "lidar"), hint: "đặc trưng hình học" },
+];
 
 // Cờ "dữ liệu mẫu" nằm trong sessionStorage; useSyncExternalStore để badge không lệch khi SSR.
 const demoListeners = new Set<() => void>();
@@ -145,6 +149,7 @@ export default function Home() {
       setDemoFlag(true);
       const report = await finalizeUpload("demo");
       setDataset(report);
+      if (!isDatasetUsable(report)) return;
       setPipeline(report.hasLidar ? "lidar" : "camera");
       setRestored(null);
       setAdvancedDraft(null);
@@ -160,6 +165,7 @@ export default function Home() {
     setRestoring(false);
     setJobId(null);
     setDataset(null);
+    setPipeline("lidar");
     setDemoFlag(false); // upload thật: thoát chế độ dữ liệu mẫu
     filesRef.current = files;
     setError("");
@@ -185,7 +191,9 @@ export default function Home() {
       });
       const report = await finalizeUpload(uploadRes.uploadId);
       setDataset(report);
-      setPipeline(report.hasLidar ? "lidar" : "camera");
+      if (isDatasetUsable(report)) {
+        setPipeline(report.hasLidar ? "lidar" : "camera");
+      }
       setJobId(null);
       setRestored(null);
       setAdvancedDraft(null);
@@ -222,7 +230,7 @@ export default function Home() {
   });
 
   async function startJob() {
-    if (!dataset) return;
+    if (!dataset || !isDatasetUsable(dataset)) return;
     ++recoveryRequest.current;
     setRestoring(false);
     setError("");
@@ -641,18 +649,22 @@ export default function Home() {
                 {dataset && (
                   <div
                     data-testid="dataset-report"
-                    className="p-4 bg-emerald-50/50 border border-emerald-200 rounded-xl text-xs flex flex-col gap-2"
+                    role={isDatasetUsable(dataset) ? "status" : "alert"}
+                    className={`p-4 rounded-xl text-xs flex flex-col gap-2 ${isDatasetUsable(dataset) ? "bg-emerald-50/50 border border-emerald-200" : "bg-rose-50 border border-rose-300"}`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-emerald-900">Báo cáo Dataset {dataset.version}</span>
-                      <span className="text-emerald-700 font-mono">
+                      <span className={`font-bold ${isDatasetUsable(dataset) ? "text-emerald-900" : "text-rose-900"}`}>Báo cáo Dataset {dataset.version}</span>
+                      <span className={`font-mono ${isDatasetUsable(dataset) ? "text-emerald-700" : "text-rose-700"}`}>
                         {dataset.scenes} scene · {dataset.frames} frame
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-emerald-800">
+                    <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 ${isDatasetUsable(dataset) ? "text-emerald-800" : "text-rose-800"}`}>
                       <span>LiDAR: {dataset.hasLidar ? "✓ Có" : "✗ Không"}</span>
                       <span>Nhãn 3D: {dataset.hasAnnotations ? "✓ Có" : "✗ Không"}</span>
                     </div>
+                    {!isDatasetUsable(dataset) && (
+                      <p className="font-medium text-rose-800">{datasetValidationMessage(dataset)}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -678,7 +690,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => void startJob()}
-                    disabled={!dataset?.ok || !!jobId}
+                    disabled={!isDatasetUsable(dataset) || !!jobId}
                     className="min-h-10 flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-600 text-white font-medium text-xs rounded-lg shadow-xs transition-colors sm:flex-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-800"
                   >
                     Chạy phân tích
@@ -693,7 +705,7 @@ export default function Home() {
                 </p>
 
                 {/* Stepper 5 bước: đường nối đi qua tâm các vòng tròn, nhãn nằm dưới và căn giữa */}
-                <ol className={`grid ${activePipeline === "lidar" ? "grid-cols-4" : "grid-cols-5"} py-2`} aria-label="Tiến trình phân tích" aria-busy={job.isFetching || job.data?.state === "running"}>
+                <ol className={`grid ${activePipeline === "lidar" ? "grid-cols-2" : "grid-cols-5"} py-2`} aria-label="Tiến trình phân tích" aria-busy={job.isFetching || job.data?.state === "running"}>
                   {analysisSteps.map((s, i) => {
                     const st = job.data?.stages?.find((x) => x.name === s.stage)?.state ?? "queued";
                     const finished = st === "done";
@@ -949,7 +961,7 @@ export default function Home() {
                 {/* Lưới 12 Thumbnail theo Figma 02 */}
                 <div>
                   <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">
-                    12 Frame tiêu biểu đã chọn
+                    {Math.min(12, result?.preview.length ?? 0)} Frame tiêu biểu đã chọn
                   </h3>
                   {result && result.preview.length === 0 ? (
                     <p role="status" className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-700">Chưa có frame xem trước cho lựa chọn này.</p>
@@ -980,7 +992,7 @@ export default function Home() {
                             <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">
                               Hiếm
                             </span>
-                            {f.rank <= 6 && (
+                            {(f.tags?.includes("Khó") || (typeof f.rUnc === "number" && f.rUnc >= 0.8)) && (
                               <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded font-medium">
                                 Khó
                               </span>

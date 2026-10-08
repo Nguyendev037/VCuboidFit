@@ -16,8 +16,15 @@ import {
   type ViewerActions,
 } from "./viewerUtils";
 import type { Cam, CamDetail } from "@/lib/api/types";
+import { getCamCompactName, getCamFriendlyName } from "./CameraImage";
 
 describe("LiDAR Float16 Decoder", () => {
+  it("shortens surround camera labels for narrow mobile tiles", () => {
+    expect(getCamCompactName("CAM_FRONT_LEFT")).toBe("Front L");
+    expect(getCamCompactName("CAM_BACK_RIGHT")).toBe("Back R");
+    expect(getCamFriendlyName("CAM_FRONT_LEFT")).toBe("Front Left");
+  });
+
   it("tô màu intensity bằng thuộc tính màu mới, không sửa vị trí điểm", () => {
     const pointCloud = {
       count: 2,

@@ -252,6 +252,7 @@ def test_route_invalid_dataset_is_400(settings):
 # ---------- tích hợp: run_job thật, model giả ----------
 
 def test_real_run_job_with_fake_models(settings, monkeypatch):
+    pytest.importorskip("torch", reason="pipeline camera cần torch (cài `.[gpu]`)")
     monkeypatch.setenv("C4_FAKE_MODELS", "1")
     ds = make_dataset(settings, n_scenes=1, frames_per_scene=3)
     q = JobQueue(settings)

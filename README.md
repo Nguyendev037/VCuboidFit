@@ -55,6 +55,10 @@ Chi tiết từng bước và xử lý lỗi: [docs/run-local.md](docs/run-local
 * [docs/gpu-rental.md](docs/gpu-rental.md) - thuê GPU, chạy trên trainval
 * [docs/kaggle-colab.md](docs/kaggle-colab.md) - notebook Kaggle / Colab Pro
 * [docs/architecture.md](docs/architecture.md) - thiết kế + engine LiDAR; PDF gốc cạnh đó
+* [docs/glossary.md](docs/glossary.md) - "hiếm" là gì, ý nghĩa từng chỉ số và tham số
+* [docs/ui-components.md](docs/ui-components.md) - từng màn hình / component giao diện
+* [docs/engine-tier0.md](docs/engine-tier0.md), [docs/tier1-pointpillars.md](docs/tier1-pointpillars.md) - chi tiết model
+* [docs/api-reference.md](docs/api-reference.md) - API worker; [docs/faq-troubleshooting.md](docs/faq-troubleshooting.md) - xử lý sự cố
 
 ## Dữ liệu và giấy phép dữ liệu
 

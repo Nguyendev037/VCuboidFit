@@ -11,9 +11,9 @@ export const UPLOAD_NAME_RE = /^[\w.\- ()]+\.(zip|rar|7z|\d{3})$/i;
 export const LIDAR_TAG_LABELS: Record<string, string> = {
   "Rare GT A": "GT Môi trường",
   "Rare GT B": "GT Lớp hiếm",
-  "Rare GT Bp": "GT Lớp TB",
+  "Rare GT Bp": "GT Lớp trung bình",
   "Rare GT C": "GT Cảm biến",
-  "rare (cell)": "Rare (cell)",
+  "rare (cell)": "Hiếm theo nhãn",
 };
 
 export const LIDAR_LABELS = {

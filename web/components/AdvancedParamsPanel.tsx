@@ -31,7 +31,7 @@ function HelpTip({ text }: { text?: string }) {
       >
         ?
       </button>
-      {shown && <span className="mt-1 block basis-full text-[10px] font-normal leading-snug text-slate-500">{text}</span>}
+      {shown && <span className="mt-1 block w-full basis-full text-[10px] font-normal leading-snug text-slate-500">{text}</span>}
     </>
   );
 }
@@ -155,7 +155,7 @@ export function AdvancedParamsPanel({
 
           <label className="flex flex-col gap-1">
             <span className="flex flex-wrap items-center justify-between font-semibold">
-              <span className="flex items-center">
+              <span className="flex flex-wrap items-center">
                 {labelOf("k", "Số láng giềng")}
                 <HelpTip text={kField?.help} />
               </span>
@@ -167,7 +167,7 @@ export function AdvancedParamsPanel({
 
           <label className="flex flex-col gap-1">
             <span className="flex flex-wrap items-center justify-between font-semibold">
-              <span className="flex items-center">
+              <span className="flex flex-wrap items-center">
                 {labelOf("lam", "Ưu tiên khi chọn")}
                 <HelpTip text={lamField?.help} />
               </span>
@@ -216,7 +216,7 @@ export function AdvancedParamsPanel({
               return (
                 <label key={key} className="flex flex-col gap-1">
                   <span className="flex flex-wrap items-center justify-between font-semibold">
-                    <span className="flex items-center">
+                    <span className="flex flex-wrap items-center">
                       {f?.label ?? fallbackLabel}
                       <HelpTip text={f?.help} />
                     </span>

@@ -16,6 +16,9 @@ from service.models import (
     SelectionResult,
 )
 
+# pipeline camera cần torch (cài `.[gpu]`); bản CPU chỉ chạy LiDAR ⇒ bỏ qua module này
+pytest.importorskip("torch", reason="pipeline camera cần torch (.[gpu])")
+
 WORKER = Path(__file__).resolve().parents[2]
 PRESETS = ["balanced", "rare_first", "hard_for_model", "safety_scenarios"]
 MAX_BYTES = 15 * 1024 * 1024

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useSyncExternalStore } from "react";
 import type { Cam, FrameDetail } from "@/lib/api/types";
 import { getFrame } from "@/lib/api/client";
 import { LidarScene } from "./LidarScene";
@@ -20,6 +20,13 @@ export interface FrameViewerProps {
   onClose: () => void;
 }
 
+const subscribeToSampleMode = (callback: () => void) => {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+};
+const getSampleModeSnapshot = () => window.sessionStorage.getItem("vcf-demo") === "1";
+const getSampleModeServerSnapshot = () => false;
+
 export function FrameViewer({
   jobId,
   token,
@@ -29,6 +36,11 @@ export function FrameViewer({
   onClose,
 }: FrameViewerProps) {
   const [frame, setFrame] = useState<FrameDetail | null>(null);
+  const isSampleMode = useSyncExternalStore(
+    subscribeToSampleMode,
+    getSampleModeSnapshot,
+    getSampleModeServerSnapshot,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryVersion, setRetryVersion] = useState(0);
@@ -126,6 +138,7 @@ export function FrameViewer({
             <span className="w-2 h-2 rounded-full bg-blue-500" />
             VCuboidFIT Frame Viewer
           </span>
+          {isSampleMode && <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">Dữ liệu mẫu</span>}
           {frame && (
             <div className="hidden sm:flex min-w-0 items-center gap-2 text-xs text-slate-400 border-l border-white/10 pl-3">
               <span className="bg-blue-600/30 text-blue-400 px-2 py-0.5 rounded font-mono font-semibold">
@@ -166,7 +179,7 @@ export function FrameViewer({
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            Focus (1-7)
+            Focus (1-6)
           </button>
         </div>
 
@@ -579,7 +592,7 @@ export function FrameViewer({
           <span>·</span>
           <span>R Đặt lại 3D</span>
         </div>
-        <div className="hidden md:block text-slate-400">VCuboidFIT Demo UI</div>
+        {isSampleMode && <div className="hidden md:block text-slate-400">VCuboidFIT Demo UI</div>}
       </footer>
     </div>
   );

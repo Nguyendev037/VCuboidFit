@@ -341,7 +341,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
               Danh sách Frame ({filteredList.length} / {rawList.length})
             </h2>
             <span className="text-xs text-slate-400">
-              Click vào thẻ để mở Frame Viewer 3D
+              Bấm vào thẻ để mở Frame Viewer 3D
             </span>
           </div>
 

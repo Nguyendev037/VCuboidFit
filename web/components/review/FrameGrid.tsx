@@ -5,6 +5,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FrameSummary, Cam } from "@/lib/api/types";
 import { CAMS } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
+import { LIDAR_TAG_LABELS } from "@/lib/constants";
 
 export interface FrameGridProps {
   frames: FrameSummary[];
@@ -180,7 +181,7 @@ export function FrameGrid({
             <div className="flex items-center gap-1 flex-wrap">
               {frame.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-[10px] py-0 px-1.5">
-                  {tag}
+                  {pipeline === "lidar" ? LIDAR_TAG_LABELS[tag] ?? tag : tag}
                 </Badge>
               ))}
             </div>
@@ -247,7 +248,7 @@ export function FrameGrid({
                         key={t}
                         className="inline-block bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded mr-1"
                       >
-                        {t}
+                        {isLidar ? LIDAR_TAG_LABELS[t] ?? t : t}
                       </span>
                     ))}
                   </td>
