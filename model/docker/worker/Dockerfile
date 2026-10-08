@@ -13,7 +13,7 @@ COPY model/worker/configs model/worker/configs
 RUN pip install --no-cache-dir -e "./model/worker[service]"
 # 7-Zip Linux tĩnh chính thức (bản phát hành GitHub ip7z/7zip 24.09) qua HTTPS (không apt) — cần cho upload .rar/.7z (service/archives.py)
 RUN python -c "import urllib.request,tarfile,io; d=urllib.request.urlopen('https://github.com/ip7z/7zip/releases/download/24.09/7z2409-linux-x64.tar.xz').read(); tarfile.open(fileobj=io.BytesIO(d),mode='r:xz').extract('7zz','/usr/local/bin')" \
-    && chmod +x /usr/local/bin/7zz && /usr/local/bin/7zz i > /dev/null
+    && chmod +x /usr/local/bin/7zz && ln -s /usr/local/bin/7zz /usr/local/bin/7z && /usr/local/bin/7zz i > /dev/null
 COPY model/docker/worker/start.sh /opt/vcf/
 ENV WORKSPACE=/data/workspace PYTHONIOENCODING=utf-8 VCF_PORT=8001 SEVENZIP_PATH=/usr/local/bin/7zz
 VOLUME /data/workspace

@@ -13,9 +13,11 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import ValidationError
+from starlette.datastructures import UploadFile
+from starlette.formparsers import MultiPartException, MultiPartParser
 
 from service.errors import ApiError
 from service.models import FailIn, HeartbeatIn, RemoteParams, RemoteTask
@@ -26,6 +28,40 @@ JOB_ID = re.compile(r"^[0-9a-f]{12}$")
 MAX_ATTEMPTS = 3
 FINAL = ("done", "failed", "cancelled")
 CHUNK = 1 << 20
+JSON_MAX = 64 * 1024  # body JSON của /remote/*
+MULTIPART_SLACK = 1 << 20  # biên cho boundary/field của multipart
+
+
+class ResultTooLarge(MultiPartException):
+    pass
+
+
+class ResultParser(MultiPartParser):
+    """Chặn byte vượt ngân sách trước khi parser ghi tệp spool."""
+
+    def __init__(self, headers, stream, file_limit: int):
+        super().__init__(headers, stream, max_files=2, max_fields=1, max_part_size=JSON_MAX)
+        self.file_limit = file_limit
+        self.part_bytes = 0
+
+    def on_part_begin(self) -> None:
+        super().on_part_begin()
+        self.part_bytes = 0
+
+    def on_part_data(self, data: bytes, start: int, end: int) -> None:
+        self.part_bytes += end - start
+        if self._current_part.file is not None and self.part_bytes > self.file_limit:
+            raise ResultTooLarge("Kết quả vượt giới hạn kích thước.")
+        super().on_part_data(data, start, end)
+
+
+async def bounded_stream(request: Request, limit: int):
+    received = 0
+    async for chunk in request.stream():
+        received += len(chunk)
+        if received > limit:
+            raise ResultTooLarge("Body vượt giới hạn kích thước.")
+        yield chunk
 
 
 class TaskExists(ApiError):
@@ -79,7 +115,7 @@ class RemoteQueue:
         try:
             return json.loads(f.read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            raise ApiError(404, "not_found", "Không tìm thấy việc.")
+            raise ApiError(404, "not_found", "Không tìm thấy việc.") from None
 
     def _save(self, rec: dict) -> dict:
         _write_json(self._path(rec["taskId"]), rec)
@@ -104,7 +140,7 @@ class RemoteQueue:
             rec = dict(taskId=f"t1_{uuid.uuid4().hex[:12]}", jobId=job_id,
                        datasetId=meta.get("datasetId", ""), state="queued", params=params,
                        createdAt=self._iso(self._now()), leasedAt=None, leaseUntil=None,
-                       attempts=0, error=None, bundleSha256=None)
+                       attempts=0, error=None, bundleSha256=None, leaseId=None)
             return self._save(rec)
 
     def latest(self, job_id: str) -> dict | None:
@@ -114,7 +150,7 @@ class RemoteQueue:
         return max(mine, key=lambda r: r["createdAt"]) if mine else None
 
     def cancel(self, job_id: str) -> dict | None:
-        """Huỷ task queued/leased của job. Không có task/đã kết thúc: không làm gì, KHÔNG ném lỗi."""
+        """Huỷ task queued/leased của job. Không có task/đã kết thúc: bỏ qua, KHÔNG ném lỗi."""
         with self._lock:
             hit = None
             for r in self._all():
@@ -132,7 +168,7 @@ class RemoteQueue:
             for r in self._all():
                 if r["state"] == "leased" and r["leaseUntil"] \
                         and datetime.fromisoformat(r["leaseUntil"]) < now:
-                    r.update(state="queued", leasedAt=None, leaseUntil=None)
+                    r.update(state="queued", leasedAt=None, leaseUntil=None, leaseId=None)
                     self._save(r)
 
     def claim(self) -> dict | None:
@@ -145,38 +181,49 @@ class RemoteQueue:
             r = queued[0]
             now = self._now()
             r.update(state="leased", leasedAt=self._iso(now), attempts=r["attempts"] + 1,
+                     leaseId=uuid.uuid4().hex,
                      leaseUntil=self._iso(now + timedelta(seconds=self.settings.remote_lease_sec)))
             return self._save(r)
 
-    def leased(self, task_id: str) -> dict:
-        """Task phải đang leased (sau reap) — ngược lại 409 not_leased."""
+    def leased(self, task_id: str, lease_id: str | None = None, check: bool = False) -> dict:
+        """Task phải đang leased (sau reap) — ngược lại 409 not_leased.
+        check=True: lease_id phải khớp lượt hiện tại — ngược lại 409 lease_mismatch."""
         with self._lock:
             self.reap()
             r = self.get(task_id)
             if r["state"] != "leased":
                 raise ApiError(409, "not_leased", "Việc không còn được giữ (hết hạn hoặc đã huỷ).")
+            if check:
+                self._check_lease(r, lease_id)
             return r
 
-    def heartbeat(self, task_id: str, stage: str, progress: float) -> dict:
+    @staticmethod
+    def _check_lease(r: dict, lease_id: str | None) -> None:
+        if not lease_id or not hmac.compare_digest(lease_id.encode(),
+                                                   (r.get("leaseId") or "").encode()):
+            raise ApiError(409, "lease_mismatch", "Lease không khớp lượt nhận việc hiện tại.")
+
+    def heartbeat(self, task_id: str, stage: str, progress: float, lease_id: str | None) -> dict:
         with self._lock:
-            r = self.leased(task_id)
+            r = self.leased(task_id, lease_id, check=True)
             r["leaseUntil"] = self._iso(
                 self._now() + timedelta(seconds=self.settings.remote_lease_sec))
             r["stage"], r["progress"] = stage, progress
             return self._save(r)
 
     def finish(self, task_id: str, signals_path: Path, manifest_path: Path | None,
-               meta: dict) -> dict:
+               meta: dict, lease_id: str | None) -> dict:
         import pandas as pd
+
         from c4.contracts import read_table
         with self._lock:
-            r = self.leased(task_id)
+            r = self.leased(task_id, lease_id, check=True)
             job = self.settings.jobs / r["jobId"]
             try:
                 sig = read_table(str(signals_path), "t1_signals")
                 idx = pd.read_parquet(job / "lidar" / "index.parquet", columns=["sample_token"])
             except Exception as e:  # noqa: BLE001 - parquet hỏng / sai schema
-                raise ApiError(422, "bad_signals", f"Kết quả Tầng 1 không hợp lệ: {e}")
+                raise ApiError(422, "bad_signals", f"Kết quả Tầng 1 không hợp lệ: {e}") from e
             missing = set(idx["sample_token"]) - set(sig["sample_token"])
             if missing:
                 raise ApiError(422, "bad_signals",
@@ -187,20 +234,23 @@ class RemoteQueue:
                 os.replace(manifest_path, t1 / "signals.parquet.manifest.json")
             os.replace(signals_path, t1 / "signals.parquet")  # sau cùng: tier_available mở khoá
             _write_json(t1 / "remote_meta.json", meta)
-            r.update(state="done", leaseUntil=None, error=None)
+            r.update(state="done", leaseUntil=None, error=None, leaseId=None)
             return self._save(r)
 
-    def fail(self, task_id: str, error: str) -> dict:
+    def fail(self, task_id: str, error: str, lease_id: str | None) -> dict:
         with self._lock:
+            self.reap()
             r = self.get(task_id)
             if r["state"] != "leased":
                 return r
+            self._check_lease(r, lease_id)
             r["error"] = error[:2000]
             if r["attempts"] >= MAX_ATTEMPTS:
                 r["state"] = "failed"
             else:
                 r.update(state="queued", leasedAt=None)
             r["leaseUntil"] = None
+            r["leaseId"] = None
             return self._save(r)
 
 
@@ -263,12 +313,34 @@ def require_token(request: Request) -> None:
         raise ApiError(401, "unauthorized", "Sai hoặc thiếu token.")
 
 
+def body_guard(kind: str):
+    """Kiểm Content-Length TRƯỚC khi parse body: 411 nếu thiếu/chunked, 413 nếu quá lớn."""
+    def dep(request: Request) -> None:
+        h = request.headers
+        raw = h.get("content-length")
+        if raw is None or h.get("transfer-encoding") or not raw.isdigit():
+            raise ApiError(411, "length_required", "Thiếu hoặc sai Content-Length.")
+        if kind == "result":
+            limit = request.app.state.settings.remote_max_result_mb * 1024 * 1024 + MULTIPART_SLACK
+        else:
+            limit = JSON_MAX
+        if int(raw) > limit:
+            raise ApiError(413, "too_large", "Body vượt giới hạn kích thước.")
+    return dep
+
+
+def lease_header(request: Request) -> str | None:
+    return request.headers.get("x-lease-id")
+
+
 async def _json_body(request: Request, model):
     try:
-        raw = await request.body()
+        raw = b"".join([chunk async for chunk in bounded_stream(request, JSON_MAX)])
         return model.model_validate(json.loads(raw) if raw.strip() else {})
+    except ResultTooLarge as e:
+        raise ApiError(413, "too_large", e.message) from e
     except (ValidationError, ValueError):
-        raise ApiError(422, "bad_request", "Tham số không hợp lệ.")
+        raise ApiError(422, "bad_request", "Tham số không hợp lệ.") from None
 
 
 @router.post("/jobs/{job_id}/t1-remote", status_code=201)
@@ -307,7 +379,9 @@ def cancel_task(job_id: str, request: Request):
 @router.get("/remote/t1/next", dependencies=[Depends(require_token)])
 def next_task(request: Request):
     rec = _q(request).claim()
-    return Response(status_code=204) if rec is None else _public(rec)
+    if rec is None:
+        return Response(status_code=204)
+    return {**_public(rec), "leaseId": rec["leaseId"]}  # chỉ claim trả leaseId
 
 
 @router.get("/remote/t1/{task_id}/bundle", dependencies=[Depends(require_token)])
@@ -324,56 +398,76 @@ def bundle(task_id: str, request: Request):
                              media_type="application/x-tar")
 
 
-@router.post("/remote/t1/{task_id}/heartbeat", dependencies=[Depends(require_token)])
+@router.post("/remote/t1/{task_id}/heartbeat",
+             dependencies=[Depends(require_token), Depends(body_guard("json"))])
 async def heartbeat(task_id: str, request: Request):
     body = await _json_body(request, HeartbeatIn)
-    return _public(_q(request).heartbeat(task_id, body.stage, body.progress))
+    return _public(_q(request).heartbeat(task_id, body.stage, body.progress,
+                                         lease_header(request)))
 
 
-@router.post("/remote/t1/{task_id}/fail", dependencies=[Depends(require_token)])
+@router.post("/remote/t1/{task_id}/fail",
+             dependencies=[Depends(require_token), Depends(body_guard("json"))])
 async def fail(task_id: str, request: Request):
     body = await _json_body(request, FailIn)
     q = _q(request)
     q.get(task_id)  # 404 nếu không có
-    return _public(q.fail(task_id, body.error))
+    return _public(q.fail(task_id, body.error, lease_header(request)))
 
 
-@router.post("/remote/t1/{task_id}/result", dependencies=[Depends(require_token)])
-async def result(task_id: str, request: Request, signals: UploadFile | None = File(None),
-                 manifest: UploadFile | None = File(None), meta: str = Form("{}")):
+@router.post("/remote/t1/{task_id}/result",
+             dependencies=[Depends(require_token), Depends(body_guard("result"))])
+async def result(task_id: str, request: Request):
+    # Không khai báo File/Form: FastAPI sẽ parse (spool) multipart TRƯỚC dependency.
+    # Token + Content-Length đã qua; tự parse form sau khi kiểm lease.
     q = _q(request)
     s: Settings = request.app.state.settings
-    q.leased(task_id)
-    if signals is None:
-        raise ApiError(422, "bad_signals", "Thiếu tệp signals.")
-    try:
-        meta_obj = json.loads(meta)
-    except ValueError:
-        raise ApiError(422, "bad_request", "meta không phải JSON.")
+    lease_id = lease_header(request)
+    q.leased(task_id, lease_id, check=True)
     limit = s.remote_max_result_mb * 1024 * 1024
-    tmp_dir = s.remote / "_tmp"
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-
-    async def save(up: UploadFile, suffix: str) -> Path:
-        p = tmp_dir / f"{task_id}.{uuid.uuid4().hex[:6]}{suffix}"
-        total = 0
-        with open(p, "wb") as f:
-            while chunk := await up.read(CHUNK):
-                total += len(chunk)
-                if total > limit:
-                    f.close()
-                    p.unlink(missing_ok=True)
-                    raise ApiError(413, "too_large", "Kết quả vượt giới hạn kích thước.")
-                f.write(chunk)
-        return p
-
-    sig_p = await save(signals, ".parquet")
-    man_p = None
     try:
-        if manifest is not None:
-            man_p = await save(manifest, ".json")
-        return _public(q.finish(task_id, sig_p, man_p, meta_obj))
+        form = await ResultParser(request.headers,
+                                  bounded_stream(request, limit + MULTIPART_SLACK),
+                                  limit).parse()
+    except ResultTooLarge as e:
+        raise ApiError(413, "too_large", e.message) from e
+    except Exception:  # noqa: BLE001 - multipart hỏng
+        raise ApiError(422, "bad_request", "Body multipart không hợp lệ.") from None
+    try:
+        signals, manifest = form.get("signals"), form.get("manifest")
+        if not isinstance(signals, UploadFile):
+            raise ApiError(422, "bad_signals", "Thiếu tệp signals.")
+        if manifest is not None and not isinstance(manifest, UploadFile):
+            raise ApiError(422, "bad_request", "manifest phải là tệp.")
+        try:
+            meta_obj = json.loads(form.get("meta") or "{}")
+        except (ValueError, TypeError):
+            raise ApiError(422, "bad_request", "meta không phải JSON.") from None
+        tmp_dir = s.remote / "_tmp"
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+
+        async def save(up: UploadFile, suffix: str) -> Path:
+            p = tmp_dir / f"{task_id}.{uuid.uuid4().hex[:6]}{suffix}"
+            total = 0
+            with open(p, "wb") as f:
+                while chunk := await up.read(CHUNK):
+                    total += len(chunk)
+                    if total > limit:
+                        f.close()
+                        p.unlink(missing_ok=True)
+                        raise ApiError(413, "too_large", "Kết quả vượt giới hạn kích thước.")
+                    f.write(chunk)
+            return p
+
+        sig_p = await save(signals, ".parquet")
+        man_p = None
+        try:
+            if manifest is not None:
+                man_p = await save(manifest, ".json")
+            return _public(q.finish(task_id, sig_p, man_p, meta_obj, lease_id))
+        finally:
+            sig_p.unlink(missing_ok=True)
+            if man_p:
+                man_p.unlink(missing_ok=True)
     finally:
-        sig_p.unlink(missing_ok=True)
-        if man_p:
-            man_p.unlink(missing_ok=True)
+        await form.close()

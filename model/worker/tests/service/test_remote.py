@@ -1,6 +1,7 @@
 """WP2: hàng đợi Tầng 1 từ xa (SPEC-P02 §7), TestClient, không GPU."""
 import io
 import json
+import sys
 import tarfile
 from datetime import datetime, timedelta
 
@@ -43,6 +44,10 @@ def env(tmp_path):
         yield c, s, app
 
 
+def _lease(t) -> dict:
+    return {**AUTH, "X-Lease-Id": t["leaseId"]}
+
+
 def _create(c, **body):
     return c.post(f"/jobs/{JOB}/t1-remote", json=body)
 
@@ -67,11 +72,11 @@ def test_2_lifecycle(env):
     assert "bundleSha256" not in task
     t = c.get("/remote/t1/next", headers=AUTH).json()
     assert t["taskId"] == task["taskId"] and t["state"] == "leased" and t["attempts"] == 1
-    hb = c.post(f"/remote/t1/{t['taskId']}/heartbeat", headers=AUTH,
+    hb = c.post(f"/remote/t1/{t['taskId']}/heartbeat", headers=_lease(t),
                 json={"stage": "train", "progress": 0.5})
     assert hb.status_code == 200, hb.text
     assert tier_available(s.jobs / JOB) == [0]
-    r = c.post(f"/remote/t1/{t['taskId']}/result", headers=AUTH,
+    r = c.post(f"/remote/t1/{t['taskId']}/result", headers=_lease(t),
                files={"signals": ("signals.parquet", _signals(TOKENS))},
                data={"meta": json.dumps({"trainSec": 1.0, "inferSec": 2.0, "gpu": "T4"})})
     assert r.status_code == 200, r.text
@@ -85,7 +90,7 @@ def test_3_result_missing_tokens(env):
     c, s, _ = env
     _create(c)
     t = c.get("/remote/t1/next", headers=AUTH).json()
-    r = c.post(f"/remote/t1/{t['taskId']}/result", headers=AUTH,
+    r = c.post(f"/remote/t1/{t['taskId']}/result", headers=_lease(t),
                files={"signals": ("s.parquet", _signals(TOKENS[:2]))})
     assert r.status_code == 422 and r.json()["error"]["code"] == "bad_signals"
     assert not (s.jobs / JOB / "t1" / "signals.parquet").exists()
@@ -107,7 +112,7 @@ def test_5_fail_three_times(env):
     states = []
     for _ in range(3):
         t = c.get("/remote/t1/next", headers=AUTH).json()
-        r = c.post(f"/remote/t1/{t['taskId']}/fail", headers=AUTH, json={"error": "boom"})
+        r = c.post(f"/remote/t1/{t['taskId']}/fail", headers=_lease(t), json={"error": "boom"})
         states.append(r.json()["state"])
     assert states == ["queued", "queued", "failed"]
     assert c.get("/remote/t1/next", headers=AUTH).status_code == 204
@@ -152,6 +157,151 @@ def test_9_bundle(env):
         assert "index.parquet" in names and "data/samples/x.bin" in names
         assert tf.extractfile("data/samples/x.bin").read() == b"1234567"
     # chưa lease thì 409
-    other = c.post(f"/remote/t1/{t['taskId']}/fail", headers=AUTH, json={"error": "x"}).json()
+    other = c.post(f"/remote/t1/{t['taskId']}/fail", headers=_lease(t), json={"error": "x"}).json()
     assert other["state"] == "queued"
     assert c.get(f"/remote/t1/{t['taskId']}/bundle", headers=AUTH).status_code == 409
+
+
+def test_10_upload_rejected_before_body_parse(env, monkeypatch):
+    """Token + Content-Length kiểm TRƯỚC khi parse/spool multipart."""
+    from starlette.requests import Request
+    c, s, _ = env
+    _create(c)
+    t = c.get("/remote/t1/next", headers=AUTH).json()
+    url = f"/remote/t1/{t['taskId']}/result"
+
+    async def boom(self, *a, **k):
+        raise AssertionError("body đã bị parse trước khi kiểm token/giới hạn")
+    monkeypatch.setattr(Request, "form", boom)
+    monkeypatch.setattr(Request, "stream", boom)
+    big = {"Content-Length": str((s.remote_max_result_mb + 10) * 1024 * 1024),
+           "Content-Type": "multipart/form-data; boundary=x"}
+    # không token: 401 dù khai báo body khổng lồ
+    r = c.post(url, headers=big, content=b"x")
+    assert r.status_code == 401, r.text
+    # có token + vượt giới hạn: 413 too_large
+    r = c.post(url, headers={**_lease(t), **big}, content=b"x")
+    assert r.status_code == 413 and r.json()["error"]["code"] == "too_large"
+    # thiếu Content-Length (chunked): 411
+    r = c.post(url, headers={**_lease(t), "Content-Type": "multipart/form-data; boundary=x"},
+               content=iter([b"abc", b"def"]))
+    assert r.status_code == 411 and r.json()["error"]["code"] == "length_required"
+    # JSON route cũng bị chặn body lớn
+    r = c.post(f"/remote/t1/{t['taskId']}/fail",
+               headers={**_lease(t), "Content-Length": str(10_000_000),
+                        "Content-Type": "application/json"}, content=b"{}")
+    assert r.status_code == 413
+
+
+def test_11_lease_id_isolates_attempts(env):
+    c, s, app = env
+    _create(c)
+    old = c.get("/remote/t1/next", headers=AUTH).json()
+    assert old["leaseId"]
+    tid = old["taskId"]
+    hb = {"stage": "train", "progress": 0.1}
+    # thiếu / sai lease: 409 lease_mismatch
+    for h in (AUTH, {**AUTH, "X-Lease-Id": "sai"}):
+        r = c.post(f"/remote/t1/{tid}/heartbeat", headers=h, json=hb)
+        assert r.status_code == 409 and r.json()["error"]["code"] == "lease_mismatch"
+    app.state.remote.clock = lambda: datetime.now() + timedelta(seconds=s.remote_lease_sec + 60)
+    new = c.get("/remote/t1/next", headers=AUTH).json()
+    assert new["taskId"] == tid and new["leaseId"] != old["leaseId"]
+    assert c.get(f"/jobs/{JOB}/t1-remote").json().get("leaseId") is None  # không lộ ra web
+    # lease cũ không gia hạn / fail / nộp kết quả được lượt mới
+    assert c.post(f"/remote/t1/{tid}/heartbeat", headers=_lease(old), json=hb).status_code == 409
+    r = c.post(f"/remote/t1/{tid}/fail", headers=_lease(old), json={"error": "x"})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "lease_mismatch"
+    r = c.post(f"/remote/t1/{tid}/result", headers=_lease(old),
+               files={"signals": ("s.parquet", _signals(TOKENS))})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "lease_mismatch"
+    assert c.get(f"/jobs/{JOB}/t1-remote").json()["state"] == "leased"
+    # lease mới vẫn dùng được
+    assert c.post(f"/remote/t1/{tid}/heartbeat", headers=_lease(new), json=hb).status_code == 200
+    r = c.post(f"/remote/t1/{tid}/result", headers=_lease(new),
+               files={"signals": ("s.parquet", _signals(TOKENS))})
+    assert r.status_code == 200 and r.json()["state"] == "done"
+
+
+def _load_agent():
+    import importlib.util
+    import sys
+    import types
+    from pathlib import Path
+    try:
+        import requests  # noqa: F401
+    except ImportError:  # venv worker không cài requests (chỉ Colab cần): giả tối thiểu
+        fake = types.ModuleType("requests")
+        fake.ConnectionError = type("ConnectionError", (OSError,), {})
+        fake.Timeout = type("Timeout", (OSError,), {})
+        fake.Response = object
+        fake.Session = type("Session", (), {"__init__": lambda self: setattr(self, "headers", {})})
+        sys.modules["requests"] = fake
+    p = Path(__file__).resolve().parents[3] / "scripts" / "colab_agent.py"
+    spec = importlib.util.spec_from_file_location("colab_agent_t", p)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def test_13_result_limit_before_spooling(env, monkeypatch):
+    from starlette.datastructures import UploadFile
+
+    c, s, _ = env
+    s.remote_max_result_mb = 1
+    _create(c)
+    task = c.get("/remote/t1/next", headers=AUTH).json()
+    writes = []
+    original = UploadFile.write
+
+    async def record(self, data):
+        writes.append(len(data))
+        await original(self, data)
+
+    monkeypatch.setattr(UploadFile, "write", record)
+    # Fits the envelope slack but exceeds the per-file budget.
+    r = c.post(f"/remote/t1/{task['taskId']}/result", headers=_lease(task),
+               files={"signals": ("s.parquet", b"x" * (1536 * 1024))})
+    assert r.status_code == 413 and r.json()["error"]["code"] == "too_large"
+    assert sum(writes) <= 1024 * 1024
+    assert c.get(f"/jobs/{JOB}/t1-remote").json()["state"] == "leased"
+
+
+def test_14_result_actual_bytes_override_declared_length(env):
+    c, s, _ = env
+    s.remote_max_result_mb = 1
+    _create(c)
+    task = c.get("/remote/t1/next", headers=AUTH).json()
+    r = c.post(f"/remote/t1/{task['taskId']}/result",
+               headers={**_lease(task), "Content-Length": "10"},
+               files={"signals": ("s.parquet", b"x" * (3 * 1024 * 1024))})
+    assert r.status_code == 413 and r.json()["error"]["code"] == "too_large"
+
+
+def test_12_agent_retry_resends_full_file_and_lease(tmp_path):
+    agent = _load_agent()
+    requests = sys.modules["requests"]
+    f = tmp_path / "s.bin"
+    f.write_bytes(b"0123456789" * 100)
+    seen = []
+
+    class Resp:
+        status_code = 200
+
+    class Sess:
+        headers = {}
+
+        def request(self, method, url, **kw):
+            fh = kw["files"]["signals"][1]
+            seen.append((fh.read(), kw.get("headers")))
+            if len(seen) == 1:
+                raise requests.ConnectionError("rớt giữa chừng")
+            return Resp()
+
+    c = agent.Client("http://x", "tok", sleep=lambda _s: None)
+    c.s = Sess()
+    with open(f, "rb") as fh:
+        c.call("POST", "/remote/t1/t1_aaaaaaaaaaaa/result", files={"signals": ("s", fh)},
+               lease="L1")
+    assert [len(b) for b, _ in seen] == [1000, 1000]
+    assert all(h == {"X-Lease-Id": "L1"} for _, h in seen)

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Next 16 chặn HMR/chunk dev khi mở bằng 127.0.0.1 (khác "localhost") -> trang không hydrate.
+  allowedDevOrigins: ["127.0.0.1"],
   // KHÔNG bật cacheComponents / partialPrefetching (mặc định của create-next-app):
   // cacheComponents xoá `export const dynamic`, mà SPEC-P01 Task 3 bắt buộc dynamic = "force-dynamic".
   // Xem plan.md "Câu hỏi mở" Q1.

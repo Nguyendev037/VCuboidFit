@@ -11,10 +11,10 @@ Mở notebook, chạy lần lượt các ô là có môi trường chạy đư�
 | 1 | Mount Google Drive, đặt `VCF_HOME=/content/drive/MyDrive/vcf` (giữ dữ liệu + bản build qua các phiên) | ~1 phút |
 | 2 | Clone repo (hoặc `git pull`) | < 1 phút |
 | 3 | `bash model/scripts/colab_setup.sh` (pip + build OpenPCDet) | 10-15 phút lần đầu, ~1 phút khi có cache |
-| 4 | Smoke test `pytest -m "not perf and not gpu" tests/lidar` | 1-3 phút |
+| 4 | Smoke test `cd model/worker && pytest -m "not perf and not gpu" tests/lidar` | 1-3 phút |
 | 5 | (Tuỳ chọn) đặt nuScenes-mini vào Drive: tải tay từ nuscenes.org (cần tài khoản), giải nén vào `$VCF_HOME/nuscenes`. Không nhúng credential vào notebook | tuỳ mạng |
 | 6 | Tầng 0 mini (CPU) | vài phút |
-| 7 | Tầng 1 mini (`tier1.sh --no-docker --sweeps 1 --epochs 20 --batch 4`) | 20-60 phút trên T4 |
+| 7 | Tầng 1 mini (`bash model/scripts/tier1.sh "$NUSC" "$EXP" --no-docker --sweeps 1 --epochs 20 --batch 4`; bỏ qua nếu chưa có nuScenes ở bước 5) | 20-60 phút trên T4 |
 | 8 | Chế độ agent: nhận việc Tầng 1 từ worker máy yếu (xem [colab-agent](#chế-độ-agent)) | chạy liên tục |
 
 Chạy script riêng (ngoài notebook): `bash model/scripts/colab_setup.sh [--cpu-only]`. `--cpu-only` bỏ bước

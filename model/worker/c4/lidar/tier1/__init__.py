@@ -1,1 +1,1 @@
-"""Tầng 1 — chạy TRONG image vcf-tier1 (import pcdet). Không import từ code Tầng 0 CPU."""
+"""Tầng 1 — chạy TRONG image vcuboidfit_pointpillars (import pcdet). Không import code Tầng 0."""

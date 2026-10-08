@@ -125,6 +125,11 @@ Colab: mở [`model/notebooks/vcf_colab_agent.ipynb`](../model/notebooks/vcf_col
 (nhập URL tunnel + token bằng `getpass`) rồi ô 4. Agent chạy `model/scripts/colab_agent.py`: `GET /remote/t1/next`
 (mỗi 60 s khi hàng đợi rỗng) → tải bundle → `train_seed` + `infer_t1` → `POST /remote/t1/{id}/result`.
 Test không GPU: thêm `--dry-run` (ghi `signals.parquet` giả).
+Giao thức: `next` trả `leaseId` của lượt nhận việc; `heartbeat`/`result`/`fail` phải gửi header `X-Lease-Id` = `leaseId` đó,
+sai hoặc thiếu ⇒ `409 lease_mismatch`. POST `/remote/*` bắt buộc có `Content-Length`: thiếu hoặc chunked ⇒ `411 length_required`,
+quá giới hạn (result > `VCF_REMOTE_MAX_RESULT_MB` + 1 MiB, heartbeat/fail > 64 KiB) ⇒ `413 too_large`.
+Agent Colab và worker phải cùng phiên bản >= 0.6.1.
+Worker đếm byte thực tế khi nhận: từng tệp tối đa `VCF_REMOTE_MAX_RESULT_MB`, toàn body tối đa mức đó + 1 MiB; tệp vượt ngưỡng bị chặn trước khi ghi thêm vào tệp tạm, kể cả khi khai sai Content-Length.
 
 Web: ở panel tham số bấm **"Chạy Tầng 1 trên Colab"** (chỉ hiện khi worker đã bật `VCF_REMOTE_TOKEN` và job
 chưa có Tầng 1). Khi task xong, panel tự mở khoá Tầng 1. Tắt cầu nối: dừng cloudflared + bỏ biến

@@ -18,7 +18,7 @@ fi
 if [ -f vcf-tier1.tar.gz ]; then
   echo "nạp image từ vcf-tier1.tar.gz"; gunzip -c vcf-tier1.tar.gz | docker load
 else
-  echo "build image (≈15–25 phút)"; docker build -t vcf-tier1:0.1 docker/tier1
+  echo "build image (≈15–25 phút)"; docker build -t vcuboidfit_pointpillars:0.1 docker/tier1
 fi
-docker run --rm --gpus all vcf-tier1:0.1 python -c "import torch,pcdet;print('GPU', torch.cuda.get_device_name(0))"
+docker run --rm --gpus all vcuboidfit_pointpillars:0.1 python -c "import torch,pcdet;print('GPU', torch.cuda.get_device_name(0))"
 echo "OK. Tiếp: tải nuScenes trainval vào \$NUSC (docs/gpu-rental.md §3) rồi chạy compose."
