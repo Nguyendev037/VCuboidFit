@@ -3,12 +3,13 @@
 #   NUSC=<nuScenes> EXP=<thí nghiệm> docker compose -f model/docker/worker/docker-compose.yml --profile gpu run --rm tier1
 services:
   worker:
-    image: vcf-worker:0.1
+    image: vcuboidfit_worker:0.1
     build:
       context: ../../..
       dockerfile: model/docker/worker/Dockerfile
     environment:
       VCF_PORT: ${VCF_PORT:-${WORKER_PORT:-8001}}
+      VCF_REMOTE_TOKEN: ${VCF_REMOTE_TOKEN:-}   # trống ⇒ /remote/* tắt (404); đặt ở host để Colab kéo việc
     ports:
       - "${VCF_PORT:-${WORKER_PORT:-8001}}:${VCF_PORT:-${WORKER_PORT:-8001}}"
     volumes:

@@ -26,6 +26,7 @@ ALLOWED = [
     re.compile(r"VCF_PORT\s*(?:=|\|\||\?\?)\s*[\"'`]?\d+[\"'`]?"),
     re.compile(r"^\s*EXPOSE\s+\d+\s*$"),
 ]
+EXTERNAL_URL = re.compile(r"https?://(?!127\.0\.0\.1|localhost|0\.0\.0\.0)[^\s'\"]+")
 PORTLIKE = re.compile(r"(?<![\d.])\d{4,5}(?![\d.])")  # 4-5 chữ số, không phải một phần IP/phiên bản
 
 
@@ -47,6 +48,7 @@ def _scan_lines(path: Path, text: str, errs: list[str]) -> None:
             continue
         for rx in ALLOWED:
             s = rx.sub("", s)
+        s = EXTERNAL_URL.sub("", s)  # URL tải về bên ngoài (vd 7z2409) không phải cổng
         m = PORTLIKE.search(s)
         if m:
             errs.append(f"{path.relative_to(REPO)}:{n}: số cổng cứng '{m.group()}' — dùng VCF_PORT")
