@@ -651,7 +651,7 @@ export default function Home() {
               {(recentJobs.data?.length ?? 0) > 0 && <button type="button" onClick={() => setDeleteTarget({ kind: "all" })} className="ml-auto px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 rounded">Xoá tất cả</button>}
               <button type="button" title="Làm mới lịch sử" aria-label="Làm mới lịch sử" onClick={() => void recentJobs.refetch()} className="p-2 hover:bg-slate-200 rounded"><RefreshCw size={16} /></button>
             </div>
-            {recentJobs.isPending && <p className="text-xs text-slate-500">Đang tải lịch sử…</p>}
+            {recentJobs.isPending && <p role="status" className="text-xs text-slate-500">Đang tải lịch sử…</p>}
             {recentJobs.error && <p role="alert" className="text-xs text-rose-700">{recentJobs.error.message}</p>}
             {recentJobs.data?.length === 0 && <p className="text-xs text-slate-500">Chưa có lần chạy.</p>}
             <div role="list" className="max-h-48 overflow-auto divide-y divide-slate-200">
