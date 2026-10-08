@@ -15,6 +15,8 @@ import type {
   SelectionInfo,
   Pipeline,
   ParamsSchema,
+  RemoteTask,
+  T1RemoteStatus,
   SelectionResult,
   SelectParams,
   UploadStatus,
@@ -142,6 +144,22 @@ export function getParamsSchema(jobId: string): Promise<ParamsSchema> {
   return isMock()
     ? mockApi.getParamsSchema(jobId)
     : request("GET", `/api/jobs/${seg(jobId)}/params-schema`);
+}
+
+/** Việc Tầng 1 trên Colab của job. Chế độ dữ liệu mẫu: coi như tính năng tắt. */
+export async function getT1Remote(jobId: string): Promise<T1RemoteStatus> {
+  if (isMock()) return { enabled: false, task: null };
+  try {
+    return { enabled: true, task: await request<RemoteTask>("GET", `/api/jobs/${seg(jobId)}/t1-remote`) };
+  } catch (e) {
+    if (e instanceof ApiError && e.code === "remote_disabled") return { enabled: false, task: null };
+    if (e instanceof ApiError && e.code === "not_found") return { enabled: true, task: null };
+    throw e;
+  }
+}
+
+export function createT1Remote(jobId: string): Promise<RemoteTask> {
+  return request<RemoteTask>("POST", `/api/jobs/${seg(jobId)}/t1-remote`, {});
 }
 
 export function listFrames(jobId: string, sid: string, q: FrameQuery = {}): Promise<FrameSummary[]> {

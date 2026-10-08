@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { FolderOpen, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import {
   createJob,
   getJob,
@@ -12,6 +12,8 @@ import {
   listSelections,
   getSelection,
   getParamsSchema,
+  getT1Remote,
+  createT1Remote,
   cancelJob,
   deleteJob,
   deleteAllJobs,
@@ -40,8 +42,11 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   draftFromSchema,
+  hasTier1,
   isAdvancedPanelInitiallyOpen,
   normalizeAdvancedParams,
+  sanitizeDraft,
+  sanitizeSelectParams,
   type AdvancedDraft,
   type AdvancedSubmitParams,
 } from "@/lib/advancedParams";
@@ -61,6 +66,8 @@ const PRESET_LABELS: Record<Preset, { title: string; desc: string }> = {
   hard_for_model: { title: "Khó với model", desc: "Ưu tiên Model chưa chắc chắn" },
   safety_scenarios: { title: "Kịch bản an toàn", desc: "Ưu tiên Hiếm + Model chưa chắc" },
 };
+
+const PRESET_LOCK_TITLE = "Chiến lược chỉ đổi được khi job có Tầng 1 (model seed); job này chưa có nên dùng mặc định Tầng 0.";
 
 const ANALYSIS_STEPS = [
   { stage: "index", name: "Lập chỉ mục", hint: "đọc ảnh & nhãn" },
@@ -315,7 +322,27 @@ export default function Home() {
     enabled: !!jobId && done && activePipeline === "lidar",
     staleTime: 60_000,
   });
-  const currentAdvancedDraft = advancedDraft ?? draftFromSchema(paramsSchema.data);
+  const currentAdvancedDraft = sanitizeDraft(advancedDraft, paramsSchema.data);
+  const noTier1 = !!paramsSchema.data && !hasTier1(paramsSchema.data);
+
+  // A7: Tầng 1 chạy từ xa trên Colab (chỉ hỏi khi job chưa có Tầng 1)
+  const t1Remote = useQuery({
+    queryKey: ["t1-remote", jobId, demo],
+    queryFn: () => getT1Remote(jobId!),
+    enabled: !!jobId && done && activePipeline === "lidar" && noTier1 && !demo,
+    retry: false,
+    refetchInterval: (q) => (["queued", "leased"].includes(q.state.data?.task?.state ?? "") ? 15_000 : false),
+  });
+  const t1Run = useMutation({
+    mutationFn: () => createT1Remote(jobId!),
+    onSuccess: () => void t1Remote.refetch(),
+    onError: () => void t1Remote.refetch(),
+  });
+  const t1State = t1Remote.data?.task?.state;
+  useEffect(() => {
+    if (t1State === "done" && noTier1) void paramsSchema.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t1State, noTier1]);
 
   const [debounced, setDebounced] = useState<SelectParams>({
     budget,
@@ -418,11 +445,12 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const selectParams = activePipeline === "lidar" ? sanitizeSelectParams(debounced, paramsSchema.data) : debounced;
   const selection = useQuery({
-    queryKey: ["select", jobId, debounced, demo],
+    queryKey: ["select", jobId, selectParams, demo],
     queryFn: () => restored && paramsEqual(debounced, restored.params)
-      ? getSelection(jobId!, restored.id) : select(jobId!, debounced),
-    enabled: !!jobId && done && !restoring,
+      ? getSelection(jobId!, restored.id) : select(jobId!, selectParams),
+    enabled: !!jobId && done && !restoring && (activePipeline !== "lidar" || !paramsSchema.isPending),
     placeholderData: (previous, previousQuery) => previousQuery?.queryKey[1] === jobId && previousQuery?.queryKey[3] === demo ? keepPreviousData(previous) : undefined,
   });
 
@@ -715,7 +743,7 @@ export default function Home() {
                 </div>
 
                 {/* Điều khiển upload khi đang tiến hành */}
-                {uploading && (
+                {uploading && !checking && (
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
@@ -1247,6 +1275,8 @@ export default function Home() {
                   id="strategy-select"
                   aria-label="Chiến lược"
                   value={preset}
+                  disabled={noTier1}
+                  title={noTier1 ? PRESET_LOCK_TITLE : undefined}
                   onChange={(e) => changePreset(e.target.value as Preset)}
                   className="text-xs border border-slate-200 rounded px-1 py-0.5 text-slate-600 bg-white"
                 >
@@ -1268,7 +1298,9 @@ export default function Home() {
                       type="button"
                       onClick={() => changePreset(pKey)}
                       aria-pressed={isSelected}
-                      className={`p-3 rounded-xl border text-left flex flex-col gap-0.5 transition-all ${
+                      disabled={noTier1}
+                      title={noTier1 ? PRESET_LOCK_TITLE : undefined}
+                      className={`p-3 rounded-xl border text-left flex flex-col gap-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                         isSelected
                           ? "border-blue-600 bg-blue-50/60 ring-1 ring-blue-600"
                           : "border-slate-200 hover:border-slate-300 bg-white"
@@ -1332,6 +1364,19 @@ export default function Home() {
               onDraftChange={setAdvancedDraft}
               onApply={handleApplyAdvanced}
               onReset={handleResetAdvanced}
+              schemaError={paramsSchema.isError ? (paramsSchema.error instanceof Error ? paramsSchema.error.message : "Hãy thử lại.") : null}
+              onRetrySchema={() => void paramsSchema.refetch()}
+              colab={
+                noTier1 && t1Remote.data?.enabled
+                  ? {
+                      enabled: true,
+                      task: t1Remote.data.task,
+                      busy: t1Run.isPending,
+                      error: t1Run.isError ? (t1Run.error instanceof Error ? t1Run.error.message : "Không tạo được việc trên Colab.") : null,
+                      onRun: () => t1Run.mutate(),
+                    }
+                  : undefined
+              }
             />
 
             {/* Kịch bản quan tâm */}

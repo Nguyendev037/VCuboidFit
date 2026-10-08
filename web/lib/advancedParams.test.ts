@@ -10,6 +10,9 @@ import {
   draftFromSchema,
   isAdvancedPanelInitiallyOpen,
   normalizeAdvancedParams,
+  tier0LockNote,
+  sanitizeDraft,
+  sanitizeSelectParams,
 } from "./advancedParams";
 
 const schema: ParamsSchema = {
@@ -156,6 +159,29 @@ describe("panel ngôn ngữ thường", () => {
     expect(render({ tier: 1 })).not.toContain("Chế độ Cơ bản chỉ dùng");
   });
 
+  it("tier 0 có Tầng 1: ghi chú hướng dẫn chọn Tầng 1 và thanh khoá có tooltip", () => {
+    const html = render({ tier: 0 });
+    expect(html).toContain("Chọn Tầng 1 ở trên để chỉnh 2 tiêu chí còn lại.");
+    expect(html).toContain("Đã khoá ở Tầng 0");
+    expect(html.match(/<label[^>]*title="Đã khoá ở Tầng 0[^"]*"/g)?.length).toBe(2);
+    expect(render({ tier: 1 })).not.toContain("Đã khoá");
+  });
+
+  it("tier 0 không có Tầng 1: ghi chú trỏ docs/run-local.md mục 5", () => {
+    const sch = JSON.parse(JSON.stringify(mock)) as ParamsSchema;
+    sch.tierAvailable = [0];
+    const html = render({ tier: 0 }, sch);
+    expect(html).toContain("job này chưa có, xem docs/run-local.md mục 5.");
+    expect(html).not.toContain("Chọn Tầng 1 ở trên");
+    expect(html.match(/<label[^>]*title="Đã khoá: tiêu chí này cần tín hiệu Tầng 1[^"]*"/g)?.length).toBe(2);
+  });
+
+  it("tier0LockNote không có basicNote dùng câu mặc định", () => {
+    expect(tier0LockNote({ tier1Available: true })).toBe(
+      "Đang ở Tầng 0: chỉ dùng tiêu chí Hiếm trong dữ liệu. Chọn Tầng 1 ở trên để chỉnh 2 tiêu chí còn lại.",
+    );
+  });
+
   it("option có disabledReason bị disable và hiện lý do", () => {
     const sch = JSON.parse(JSON.stringify(mock)) as ParamsSchema;
     sch.fields.find((f) => f.key === "tier")!.options![1].disabledReason = "Chưa có model AI";
@@ -175,5 +201,30 @@ describe("panel ngôn ngữ thường", () => {
     const html = render({}, schema);
     expect(html).toContain("Tham số nâng cao");
     expect(html).toContain("Tầng 1");
+  });
+
+  describe("job không có Tầng 1", () => {
+    const tier0 = (() => {
+      const sch = JSON.parse(JSON.stringify(mock)) as ParamsSchema;
+      sch.tierAvailable = [0];
+      return sch;
+    })();
+
+    it("A3: thanh β, γ hiển thị 0% (khoá), α 100%", () => {
+      expect(weightPercents(draftFromSchema(tier0))).toEqual({ alpha: 100, beta: 0, gamma: 0 });
+    });
+
+    it("A5: select không mang tier=1 hay β,γ > 0", () => {
+      const out = sanitizeSelectParams({ budget: 0.05, tier: 1 as const, alpha: 0.5, beta: 0.25, gamma: 0.25 }, tier0);
+      expect(out).toMatchObject({ tier: 0, alpha: 1, beta: 0, gamma: 0 });
+      const keep = { budget: 0.05, tier: 1 as const, beta: 0.3 };
+      expect(sanitizeSelectParams(keep, schema)).toBe(keep);
+    });
+
+    it("A6: draft cũ của job có Tầng 1 bị reset về mặc định Tầng 0", () => {
+      const old: AdvancedDraft = { ...draftFromSchema(schema), tier: 1, alpha: 0.5, beta: 0.25, gamma: 0.25 };
+      expect(sanitizeDraft(old, tier0)).toEqual(draftFromSchema(tier0));
+      expect(sanitizeDraft(old, schema)).toBe(old);
+    });
   });
 });

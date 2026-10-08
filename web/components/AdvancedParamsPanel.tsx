@@ -1,8 +1,8 @@
 "use client";
 
-import { Settings } from "lucide-react";
-import type { ParamsSchema, ParamsSchemaOption } from "@/lib/api/types";
-import { weightPercents, type AdvancedDraft } from "@/lib/advancedParams";
+import { Lock, Settings } from "lucide-react";
+import type { ParamsSchema, ParamsSchemaOption, RemoteTask } from "@/lib/api/types";
+import { tier0LockNote, tier0LockTitle, weightPercents, type AdvancedDraft } from "@/lib/advancedParams";
 import { SETTINGS } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
 
@@ -15,6 +15,45 @@ interface AdvancedParamsPanelProps {
   onDraftChange: (next: AdvancedDraft) => void;
   onApply: () => void;
   onReset: () => void;
+  /** A8: lỗi tải schema (thông báo tiếng Việt) + thử lại. */
+  schemaError?: string | null;
+  onRetrySchema?: () => void;
+  /** A7: chạy Tầng 1 trên Colab. `enabled=false` ⇒ ẩn nút. */
+  colab?: { enabled: boolean; task: RemoteTask | null; busy: boolean; error?: string | null; onRun: () => void };
+}
+
+const COLAB_STATE_TEXT: Record<string, string> = {
+  queued: "Đang chờ Colab nhận việc…",
+  leased: "Colab đang huấn luyện và suy luận…",
+  done: "Colab đã xong, đang mở khoá Tầng 1…",
+  failed: "Colab báo lỗi",
+  cancelled: "Việc đã bị huỷ",
+};
+
+function ColabBox({ colab }: { colab: NonNullable<AdvancedParamsPanelProps["colab"]> }) {
+  const state = colab.task?.state;
+  const active = state === "queued" || state === "leased";
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-2">
+      {state && (
+        <span data-testid="colab-status" className="text-[11px] text-slate-700">
+          {COLAB_STATE_TEXT[state] ?? state}
+          {state === "failed" && colab.task?.error ? `: ${colab.task.error}` : ""}
+        </span>
+      )}
+      {colab.error && <span role="alert" className="text-[11px] text-red-700">{colab.error}</span>}
+      {!active && state !== "done" && (
+        <button
+          type="button"
+          disabled={colab.busy}
+          onClick={colab.onRun}
+          className="min-h-9 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          Chạy Tầng 1 trên Colab
+        </button>
+      )}
+    </div>
+  );
 }
 
 function RangeEnds({ min, max }: { min?: string; max?: string }) {
@@ -36,6 +75,9 @@ export function AdvancedParamsPanel({
   onDraftChange,
   onApply,
   onReset,
+  schemaError,
+  onRetrySchema,
+  colab,
 }: AdvancedParamsPanelProps) {
   const field = (key: string) => schema?.fields.find((f) => f.key === key);
   const numberField = (key: string, fallback: { min: number; max: number; step: number }) => {
@@ -75,6 +117,8 @@ export function AdvancedParamsPanel({
       : draft.lam.toFixed(2);
   const pcts = weightPercents(draft);
   const weightGroup = schema?.groups?.weights;
+  const tier1Option = tierOptions.find((o) => o.value === 1);
+  const tier1Available = tierAvailable.includes(1) && !tier1Option?.disabledReason;
 
   return (
     <div className="border-t border-slate-100 pt-3">
@@ -99,6 +143,16 @@ export function AdvancedParamsPanel({
 
       {open && (
         <div id="advanced-settings" className="mt-3 p-3 bg-slate-50 rounded-lg text-[11px] text-slate-700 space-y-3">
+          {schemaError && (
+            <div role="alert" className="flex items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-2 text-red-800">
+              <span>Không tải được tham số của lần chạy này. {schemaError}</span>
+              {onRetrySchema && (
+                <button type="button" onClick={onRetrySchema} className="shrink-0 rounded-md border border-red-300 bg-white px-2 py-1 font-semibold">
+                  Thử lại
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <span className="flex flex-wrap items-center font-semibold text-slate-700">
               {labelOf("tier", "Tầng chọn")}
@@ -196,9 +250,10 @@ export function AdvancedParamsPanel({
               const fallbackLabel = key === "alpha" ? "Hiếm trong dữ liệu" : key === "beta" ? "Lạ với model" : "Model chưa chắc chắn";
               const disabled = draft.tier === 0 && key !== "alpha";
               return (
-                <label key={key} className="flex flex-col gap-1">
+                <label key={key} className="flex flex-col gap-1" title={disabled ? tier0LockTitle(tier1Available) : undefined}>
                   <span className="flex flex-wrap items-center justify-between font-semibold">
                     <span className="flex flex-wrap items-center">
+                      {disabled && <Lock className="mr-1 h-3 w-3 text-slate-400" aria-label="Đã khoá" />}
                       {f?.label ?? fallbackLabel}
                       <Tooltip label={f?.label ?? key} content={helpOf(key, f?.help)} />
                     </span>
@@ -218,8 +273,9 @@ export function AdvancedParamsPanel({
               );
             })}
             {draft.tier === 0 && (
-              <span className="text-[10px] text-slate-500">{weightGroup?.basicNote ?? "Chế độ cơ bản chỉ dùng tiêu chí đầu tiên."}</span>
+              <span className="text-[10px] text-slate-500">{tier0LockNote({ basicNote: weightGroup?.basicNote, tier1Available })}</span>
             )}
+            {draft.tier === 0 && !tier1Available && colab?.enabled && <ColabBox colab={colab} />}
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-1">

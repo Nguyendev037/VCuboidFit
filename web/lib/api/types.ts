@@ -255,6 +255,26 @@ export interface ParamsSchema {
   groups?: Record<string, ParamsSchemaGroup>;
 }
 
+// ---- Tầng 1 chạy từ xa (Colab) — 01-CONTRACTS §2.2 ----
+export type RemoteTaskState = "queued" | "leased" | "done" | "failed" | "cancelled";
+export interface RemoteTask {
+  taskId: string;
+  jobId: string;
+  datasetId: string;
+  state: RemoteTaskState;
+  params: { epochs: number; sweeps: number; batch: number };
+  createdAt: string;
+  leasedAt?: string | null;
+  leaseUntil?: string | null;
+  attempts: number;
+  error?: string | null;
+}
+/** `enabled=false` ⇔ worker trả 404 `remote_disabled`; `task=null` ⇔ job chưa có việc nào. */
+export interface T1RemoteStatus {
+  enabled: boolean;
+  task: RemoteTask | null;
+}
+
 // ---- Analysis (spec tổng §3.1 / §3.2 & worker API) ----
 export interface CountPct {
   count: number;
