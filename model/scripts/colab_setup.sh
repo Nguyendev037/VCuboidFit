@@ -29,7 +29,9 @@ if [ "$CUDA_MAJOR" -ge 12 ]; then SPCONV=spconv-cu120; else SPCONV=spconv-cu118;
 echo "== [2/5] pip pinned set"
 PINS="$SPCONV|numpy<2|nuscenes-devkit|easydict|tensorboardX|kornia==0.6.12|scikit-learn|joblib|pyarrow|pandas|pyyaml|opencv-python-headless|requests"
 PIN_HASH=$(printf '%s' "$PINS" | "$PY" -c 'import sys,hashlib;print(hashlib.sha256(sys.stdin.read().encode()).hexdigest()[:16])')
-if [ -f "$VCF_HOME/.pins_$PIN_HASH" ]; then
+# Marker pip PHAI nam o runtime (/tmp), khong tren Drive: phien Colab moi mat goi pip nhung Drive van con marker.
+PIN_MARK=${VCF_RUNTIME_DIR:-/tmp}/.vcf_pins_$PIN_HASH
+if [ -f "$PIN_MARK" ]; then
   echo "cache: bo pip da cai (marker $PIN_HASH)"
 else
   IFS='|' read -r -a PKGS <<< "$PINS"
@@ -39,7 +41,7 @@ else
   else
     "$PY" -m pip -q install "${PKGS[@]}"
   fi
-  touch "$VCF_HOME/.pins_$PIN_HASH"
+  touch "$PIN_MARK"
 fi
 
 echo "== [3/5] OpenPCDet"
