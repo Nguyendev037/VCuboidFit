@@ -14,7 +14,7 @@ export const RARITY_CONCEPTS: Record<string, GlossaryItem> = {
   "rare (cell)": {
     label: "Hiếm thật (theo nhãn)",
     tooltip: "Frame có ít nhất một vật thể thuộc nhóm rất ít gặp trong bộ dữ liệu (theo nhãn 3D có sẵn). Chỉ dùng để CHẤM xem model chọn đúng không.",
-    detail: "Một \"ô\" = loại vật thể × khoảng cách (0–20, 20–40, >40 m) × số điểm LiDAR trên vật (≤5, 6–20, >20). Ô hiếm khi xuất hiện ở dưới ngưỡng phần trăm số frame. Frame hiếm thật nếu chứa ≥ 1 ô hiếm. Ngưỡng chốt ở cổng G1.",
+    detail: "Một \"ô\" = loại vật thể × khoảng cách (0–20, 20–40, >40 m) × số điểm LiDAR trên vật (≤5, 6–20, >20). Ô hiếm khi xuất hiện ở dưới ngưỡng τ = 2% số frame. Frame hiếm thật nếu chứa ≥ 1 ô hiếm. Ngưỡng chốt ở cổng G1.",
   },
 };
 

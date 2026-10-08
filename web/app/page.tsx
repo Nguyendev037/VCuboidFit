@@ -51,10 +51,10 @@ const formatDuration = (seconds: number) =>
   `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)} s`;
 
 const PRESET_LABELS: Record<Preset, { title: string; desc: string }> = {
-  balanced: { title: "Cân bằng", desc: "Hybrid mặc định" },
-  rare_first: { title: "Hiếm trước", desc: "Ưu tiên Novelty" },
-  hard_for_model: { title: "Khó với model", desc: "Ưu tiên Uncertainty" },
-  safety_scenarios: { title: "Kịch bản an toàn", desc: "Ưu tiên Query" },
+  balanced: { title: "Cân bằng", desc: "Cân bằng các tiêu chí" },
+  rare_first: { title: "Hiếm trước", desc: "Ưu tiên Hiếm trong dữ liệu" },
+  hard_for_model: { title: "Khó với model", desc: "Ưu tiên Model chưa chắc chắn" },
+  safety_scenarios: { title: "Kịch bản an toàn", desc: "Ưu tiên Hiếm + Model chưa chắc" },
 };
 
 const ANALYSIS_STEPS = [
@@ -828,9 +828,14 @@ export default function Home() {
                   Sau khi phân tích: 4 thẻ số, biểu đồ 6 method, lưới 12 frame đầu và nút Deep Review.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {["Đã chọn", "Recall@5 %", "Uplift", "Redundancy"].map((label) => (
-                    <div key={label} className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                      <span className="text-xs text-slate-500">{label}</span>
+                  {[
+                    "Đã chọn",
+                    METRICS.recall.label,
+                    activePipeline === "lidar" ? METRICS.nRecall.label : METRICS.uplift.label,
+                    activePipeline === "lidar" ? METRICS.sceneRecall.label : METRICS.redundancy.label
+                  ].map((label) => (
+                    <div key={label} className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center flex flex-col items-center justify-center">
+                      <span className="text-xs text-slate-500 font-medium leading-tight line-clamp-2">{label}</span>
                       <p className="text-xl font-bold text-slate-400 mt-1">—</p>
                     </div>
                   ))}
@@ -936,9 +941,11 @@ export default function Home() {
 
                 {/* 4 Thẻ số theo Figma 02 */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
-                    <span className="text-xs text-slate-500 font-medium">Đã chọn</span>
-                    <Tooltip label={SETTINGS.budget.label} content={SETTINGS.budget.tooltip} />
+                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 flex flex-col">
+                    <div className="flex items-start gap-1">
+                      <span className="text-xs text-slate-700 font-medium leading-tight line-clamp-2">Đã chọn</span>
+                      <Tooltip label={SETTINGS.budget.label} content={SETTINGS.budget.tooltip} />
+                    </div>
                     <p className="text-2xl font-bold font-mono text-slate-900 mt-1" data-testid="metric-selected">
                       {result ? `${result.budgetB} / ${result.poolSize}` : "21 / 404"}
                     </p>
@@ -947,9 +954,11 @@ export default function Home() {
                     </span>
                   </div>
 
-                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
-                    <span className="text-xs text-slate-500 font-medium">Recall@{pct(budget)}</span>
-                    <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} />
+                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 flex flex-col">
+                    <div className="flex items-start gap-1">
+                      <span className="text-xs text-slate-700 font-medium leading-tight line-clamp-2">{METRICS.recall.label}</span>
+                      <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} />
+                    </div>
                     <p className="text-2xl font-bold font-mono text-emerald-600 mt-1" data-testid="metric-recall">
                       {m ? pct(m.hybrid.recall) : "38 %"}
                     </p>
@@ -962,18 +971,22 @@ export default function Home() {
                     </span>
                   </div>
 
-                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
-                    <span className="text-xs text-slate-500 font-medium">{activePipeline === "lidar" ? "nRecall" : "Uplift"}</span>
-                    <Tooltip label={activePipeline === "lidar" ? METRICS.nRecall.label : METRICS.uplift.label} content={activePipeline === "lidar" ? METRICS.nRecall.tooltip : METRICS.uplift.tooltip} />
+                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 flex flex-col">
+                    <div className="flex items-start gap-1">
+                      <span className="text-xs text-slate-700 font-medium leading-tight line-clamp-2">{activePipeline === "lidar" ? METRICS.nRecall.label : METRICS.uplift.label}</span>
+                      <Tooltip label={activePipeline === "lidar" ? METRICS.nRecall.label : METRICS.uplift.label} content={activePipeline === "lidar" ? METRICS.nRecall.tooltip : METRICS.uplift.tooltip} />
+                    </div>
                     <p className="text-2xl font-bold font-mono text-emerald-600 mt-1" data-testid="metric-uplift">
                       {m ? (activePipeline === "lidar" ? pct(m.hybrid.nRecall ?? m.hybrid.recall) : `${m.hybrid.uplift.toFixed(1)}×`) : "7,6×"}
                     </p>
                     <span className="text-[11px] text-slate-400 mt-1 block">{activePipeline === "lidar" ? "chuẩn hoá theo nhóm" : "so với random"}</span>
                   </div>
 
-                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200">
-                    <span className="text-xs text-slate-500 font-medium">{activePipeline === "lidar" ? "Scene-Recall" : "Redundancy"}</span>
-                    <Tooltip label={activePipeline === "lidar" ? METRICS.sceneRecall.label : METRICS.redundancy.label} content={activePipeline === "lidar" ? METRICS.sceneRecall.tooltip : METRICS.redundancy.tooltip} />
+                  <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 flex flex-col">
+                    <div className="flex items-start gap-1">
+                      <span className="text-xs text-slate-700 font-medium leading-tight line-clamp-2">{activePipeline === "lidar" ? METRICS.sceneRecall.label : METRICS.redundancy.label}</span>
+                      <Tooltip label={activePipeline === "lidar" ? METRICS.sceneRecall.label : METRICS.redundancy.label} content={activePipeline === "lidar" ? METRICS.sceneRecall.tooltip : METRICS.redundancy.tooltip} />
+                    </div>
                     <p className="text-2xl font-bold font-mono text-slate-900 mt-1" data-testid="metric-redundancy">
                       {m ? (activePipeline === "lidar" ? pct(m.hybrid.sceneRecall ?? m.hybrid.coverage) : m.hybrid.redundancy.toFixed(2).replace(".", ",")) : "0,12"}
                     </p>
@@ -993,7 +1006,7 @@ export default function Home() {
                     </div>
                   )}
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-800">
-                    <span className="inline-flex items-center gap-1">Recall@5 % theo method <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} /></span>
+                    <span className="inline-flex items-center gap-1">Tỉ lệ bắt frame hiếm theo cách chọn <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} /></span>
                     <span className="text-slate-400 font-normal">Random trung bình 5 % ± 2</span>
                   </div>
                   <div className="space-y-2 text-xs">
@@ -1149,8 +1162,12 @@ export default function Home() {
                         )}
                       </span>
                       <span className="text-[10px] text-slate-500">
-                        {activePipeline === "lidar" && pKey === "safety_scenarios"
-                          ? "Ưu tiên Hiếm + Không chắc"
+                        {activePipeline === "lidar"
+                          ? pKey === "rare_first"
+                            ? "Ưu tiên Hiếm trong dữ liệu"
+                            : pKey === "safety_scenarios"
+                            ? "Ưu tiên Hiếm + Model chưa chắc"
+                            : item.desc
                           : item.desc}
                       </span>
                     </button>
