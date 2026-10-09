@@ -28,7 +28,7 @@ x-gpu: &gpu
 services:
   pointpillars:
     <<: *gpu
-    container_name: VCuboidFit_PointPillars
+    container_name: VCuboidFit_PillPoint
     build:
       context: .
       dockerfile: Dockerfile

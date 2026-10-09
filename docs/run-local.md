@@ -75,7 +75,7 @@ cd model\worker
 
 ## 5. Tầng 1 trong Docker (RTX 4060 8 GB)
 
-Image `vcuboidfit_pointpillars:0.1`, container `VCuboidFit_PointPillars`, compose
+Image `vcuboidfit_pointpillars:0.1`, container `VCuboidFit_PillPoint`, compose
 `model/docker/tier1/docker-compose.yml`. Cần Docker Desktop + WSL2 + driver NVIDIA. Cần `index.parquet`:
 chạy bước 4 cho cùng thư mục `--out` trước.
 
