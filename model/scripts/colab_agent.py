@@ -279,6 +279,7 @@ def gpu_name(dry: bool) -> str:
 
 def loop(a, sleep=time.sleep) -> int:
     c = Client(a.server, a.token, sleep)
+    idle = 0
     try:
         while True:
             try:
@@ -293,8 +294,12 @@ def loop(a, sleep=time.sleep) -> int:
                 if a.once:
                     log("khong co viec")
                     return 0
+                if idle % 5 == 0:  # in lan dau roi ~5 phut/lan: agent van song
+                    log(f"khong co viec - dang cho (hoi lai moi {IDLE_SEC} s)")
+                idle += 1
                 sleep(IDLE_SEC)
                 continue
+            idle = 0
             task = r.json()
             try:
                 process(c, task, a)
