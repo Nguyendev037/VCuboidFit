@@ -23,7 +23,7 @@ tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tha
 * **Tầng 1 từ xa (Colab)** — máy không GPU vẫn có Tầng 1: Colab kéo việc từ worker qua tunnel, train rồi đẩy
   `signals.parquet` về (nút "Chạy Tầng 1 trên Colab"). Xem [docs/run-local.md](docs/run-local.md) mục 5c.
 * **Dev mới, không cần GPU/Docker**:
-  [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Nguyendev037/VCuboidFit/blob/main/model/notebooks/colab_dev_setup.ipynb)
+  [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Nguyendev037/VCuboidFit/blob/main/model/notebooks/run_on_colab.ipynb)
   — notebook dựng sẵn môi trường Tầng 0 + Tầng 1 ([hướng dẫn](docs/colab-dev-setup.md)).
 * **Giao diện**: xoá lịch sử chạy, thanh thời gian xét tệp upload, nút "Rút gọn" danh sách zip, panel tham số
   hoạt động cả khi job chỉ có Tầng 0.

@@ -15,7 +15,7 @@ sweeps) — ghi rõ trong báo cáo và dùng cùng giá trị cho downstream.
 | Đĩa | `/kaggle/working` 20 GB, input dataset riêng tư lớn hơn | ~100–200 GB tạm + Google Drive |
 | Dữ liệu | upload keyframe LIDAR_TOP + meta thành Kaggle Dataset riêng tư | để trên Drive, copy vào `/content` |
 
-**Notebook làm sẵn toàn bộ các bước dưới đây:** [`notebooks/tier0_tier1_experiment.ipynb`](../model/notebooks/tier0_tier1_experiment.ipynb).
+**Notebook làm sẵn toàn bộ các bước dưới đây:** [`notebooks/run_on_colab.ipynb`](../model/notebooks/run_on_colab.ipynb).
 
 **Ô lệnh chung** (Colab / Kaggle, CUDA 12.x có sẵn):
 ```bash
@@ -38,7 +38,7 @@ Lưu `$EXP` (nhất là `t1/ckpt`, `t1/*.pkl`, `features/`) ra Drive / Kaggle Ou
 (2) Tầng 1 với `--sweeps 1` → (3) downstream (stretch).
 
 Dev mới chỉ muốn một môi trường chạy được (không GPU, không Docker): xem
-[colab-dev-setup.md](colab-dev-setup.md) và [`notebooks/colab_dev_setup.ipynb`](../model/notebooks/colab_dev_setup.ipynb).
+[colab-dev-setup.md](colab-dev-setup.md) và [`notebooks/run_on_colab.ipynb`](../model/notebooks/run_on_colab.ipynb).
 
 ## 5. Agent Colab - nhận việc Tầng 1 từ worker máy yếu
 
@@ -47,9 +47,9 @@ train + suy luận, rồi đẩy `signals.parquet` về job. Worker là server, 
 
 Máy yếu bật `VCF_REMOTE_TOKEN` và mở tunnel — các bước ở [run-local.md](run-local.md) mục 5c.
 
-**Notebook làm sẵn:** [`notebooks/colab_tier1_agent.ipynb`](../model/notebooks/colab_tier1_agent.ipynb) (4 ô: cài môi
-trường → clone repo → nhập URL tunnel + token bằng `getpass` → chạy agent). Chạy ô 1 của notebook này tương đương
-"ô lệnh chung" ở mục 4 (đã gồm `requests`).
+**Notebook làm sẵn:** [`notebooks/run_on_colab.ipynb`](../model/notebooks/run_on_colab.ipynb) (chế độ agent là
+phần 9: nhập URL tunnel + token bằng `getpass` rồi chạy agent; cần chạy phần 1–4 trước để có repo và môi trường,
+tương đương "ô lệnh chung" ở mục 4).
 
 **Chạy trực tiếp bằng CLI** (sau khi đã clone repo + có môi trường ở mục 4):
 ```bash

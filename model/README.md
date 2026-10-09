@@ -7,7 +7,7 @@ model/
                cloud/ (docker-compose cho máy thuê)
   scripts/     tier1.ps1 / tier1.sh (chạy Tầng 1), colab_agent.py + colab_setup.sh (Tầng 1 qua Colab),
                check_ports.py (bắt cổng ghi cứng), cloud/{pack,bootstrap}.sh, fetch_weights.py
-  notebooks/   tier0_tier1_experiment.ipynb, colab_tier1_agent.ipynb, colab_dev_setup.ipynb
+  notebooks/   run_on_colab.ipynb
 ```
 
 ## Chạy ở máy cá nhân (CPU)

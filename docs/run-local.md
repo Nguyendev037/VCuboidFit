@@ -121,7 +121,7 @@ $env:VCF_PORT = "8001"                                        # MỘT biến c�
 # chạy worker như mục 1 (cửa sổ khác), rồi mở tunnel tạm:
 cloudflared tunnel --url "http://127.0.0.1:$env:VCF_PORT"     # in ra https://<x>.trycloudflare.com
 ```
-Colab: mở [`model/notebooks/colab_tier1_agent.ipynb`](../model/notebooks/colab_tier1_agent.ipynb), chạy ô 1-3
+Colab: mở [`model/notebooks/run_on_colab.ipynb`](../model/notebooks/run_on_colab.ipynb), chạy phần 1–4 rồi phần 9 (chế độ agent)
 (nhập URL tunnel + token bằng `getpass`) rồi ô 4. Agent chạy `model/scripts/colab_agent.py`: `GET /remote/t1/next`
 (mỗi 60 s khi hàng đợi rỗng) → tải bundle → `train_seed` + `infer_t1` → `POST /remote/t1/{id}/result`.
 Test không GPU: thêm `--dry-run` (ghi `signals.parquet` giả).

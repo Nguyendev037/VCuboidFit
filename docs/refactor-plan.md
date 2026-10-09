@@ -28,12 +28,13 @@ kiểm tra sau mỗi bước.
 `delta_t`→`redundancy_window_s`, `combine`→`combine_scores`, `stack`→`stack_block_vectors`,
 `embed`→`embed_descriptors`, `signals`→`compute_t1_signals`, `scores_for`→`score_pool`.
 
-Đổi tên notebook (mọi tham chiếu trong README và `docs/` đã cập nhật):
-`vcf_tier01_kaggle_colab.ipynb`→`tier0_tier1_experiment.ipynb`,
-`vcf_colab_agent.ipynb`→`colab_tier1_agent.ipynb`, `vcf_dev_setup_colab.ipynb`→`colab_dev_setup.ipynb`.
-Lý do: tiền tố `vcf_` lặp lại tên repo, `tier01` không nói được notebook làm gì, và tên cũ trộn thứ
-tự "kaggle_colab" với "colab_agent". Lưu ý: nút "Open in Colab" ở README trỏ vào nhánh `main`, nên chỉ
-mở được sau khi nhánh này được merge.
+Notebook: ba file (`vcf_tier01_kaggle_colab`, `vcf_colab_agent`, `vcf_dev_setup_colab`) được gộp thành
+**một** `model/notebooks/run_on_colab.ipynb`. Lý do: `vcf_dev_setup_colab` đã chứa Tầng 0, Tầng 1 và chế
+độ agent, `vcf_colab_agent` chỉ là bản rút gọn của chính ô đó, và notebook thí nghiệm lặp lại phần cài
+môi trường; ba tên cũng khó phân biệt. Notebook mới nạp dữ liệu bằng `SOURCE_URL` (Colab tự tải, không
+phải upload từ máy), file trong `Drive/vcf_upload` hoặc nút upload; cài môi trường bằng
+`scripts/colab_setup.sh` (cache bản build OpenPCDet trên Drive); chế độ agent là phần 9. README và
+`docs/` đã cập nhật. Nút "Open in Colab" ở README trỏ vào nhánh `main` nên chỉ mở được sau khi merge.
 
 Chưa đổi (có chủ ý): `pct_rank`, `criterion`, `fmt_table`, `oracle`, `reasons`, `budget`, `Truth`, `Pool`,
 `index.py`, `params.py`, tên CLI `lidar_t0`/`lidar_g1`, (nhóm C).
