@@ -142,7 +142,7 @@ Sau khi hoàn tất, hệ thống sẽ sinh ra các tệp báo cáo điểm số
 VCuboidFit được thiết kế để tương thích với đa dạng hạ tầng từ máy cá nhân đến đám mây. Bạn có thể xem thêm hướng dẫn cài đặt tương ứng với nền tảng của mình:
 - [Chạy Local / Web (run-local.md)](run-local.md)
 - [Thuê GPU Đám mây (gpu-rental.md)](gpu-rental.md)
-- [Môi trường Kaggle / Colab (kaggle-colab.md)](kaggle-colab.md)
+- [Chạy trên Google Colab (colab-dev-setup.md)](colab-dev-setup.md)
 
 ## 8. Vì sao có hai tầng
 - **Tầng 0 (hình học):** chỉ cần CPU, chạy nhanh, không phụ thuộc vào việc một mô hình đã học gì. Đây là đường mặc định.

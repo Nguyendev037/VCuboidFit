@@ -1,5 +1,5 @@
 # Tầng 1 (M4/M5): PointPillars huấn luyện từ đầu trên seed S bằng OpenPCDet.
-# Một image cho cả 3 nơi chạy: RTX 4060 local (WSL2), GPU thuê, Kaggle/Colab (dùng script giống hệt).
+# Một image cho cả 3 nơi chạy: RTX 4060 local (WSL2), GPU thuê, Colab (dùng script giống hệt).
 # CUDA 11.8 + sm_75..sm_90: T4, A10/3090, 4060/4090/L4, A100, H100.
 FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel
 

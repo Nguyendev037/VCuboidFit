@@ -1,4 +1,4 @@
-"""Vá OpenPCDet cho numpy ≥ 1.24 và không có av2 (dùng trong Dockerfile + Kaggle/Colab).
+"""Vá OpenPCDet cho numpy ≥ 1.24 và không có av2 (dùng trong Dockerfile + Colab).
 
 python patch_pcdet.py <OpenPCDet_root>   → in số file đã sửa; thoát 1 nếu còn alias sót.
 """

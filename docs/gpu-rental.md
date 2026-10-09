@@ -8,12 +8,12 @@ Thiết kế gốc: C4-Rare-Scenario-Mining-MVP-Architecture.pdf.
 | **L1 · local CPU** (Windows thuần) | Tầng 0 + web | Python 3.12 venv | Demo, dev, mọi máy |
 | **L2 · local GPU Docker** (RTX 4060 8 GB) | Tầng 0 + Tầng 1 trên nuScenes-mini | Docker Desktop + WSL2 + NVIDIA | Thử Tầng 1, cổng G2 |
 | **C · GPU thuê** (Ubuntu + Docker) | Toàn bộ trên trainval (28 130 keyframe) | GPU ≥ 16 GB, ~400 GB đĩa | Kết quả thật để báo cáo |
-| **K · Kaggle / Colab Pro** (tạm) | Tầng 0 + Tầng 1 với `--sweeps 1` | Notebook GPU T4/L4/A100 | Khi chưa thuê được máy |
+| **K · Google Colab** (tạm) | Tầng 0 + Tầng 1 với `--sweeps 1` | Notebook GPU T4/L4/A100 | Khi chưa thuê được máy |
 
 Tầng 0 (descriptor hình học, CPU) là kết quả bắt buộc; Tầng 1 (PointPillars seed) là "nên có".
 Thiếu Tầng 1 thì mọi thứ vẫn chạy với α = 1.
 
-> Chạy ở máy cá nhân (CPU / RTX 4060 Docker): xem [run-local.md](run-local.md). Kaggle / Colab: [kaggle-colab.md](kaggle-colab.md).
+> Chạy ở máy cá nhân (CPU / RTX 4060 Docker): xem [run-local.md](run-local.md). Google Colab: [colab-dev-setup.md](colab-dev-setup.md).
 
 Image Tầng 1 dùng chung cho cả ba nơi chạy GPU: **`vcuboidfit_pointpillars:0.1`** (container
 `VCuboidFit_PointPillars`). Đổi tên image bằng biến `VCF_TIER1_IMAGE` — `model/scripts/tier1.ps1` và các

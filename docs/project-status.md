@@ -1,6 +1,8 @@
 # Tình trạng dự án và kế hoạch còn lại
 
 Cập nhật 2026-10-09 · phiên bản hiện hành **v0.6.2** (tag `v0.6.2` = `d0d7eb3`, đã push; trước đó tag `v0.6.1` = `ccf2b84`).
+**v0.6.3**: notebook Colab chạy Tầng 1 cho worker máy bạn (điền URL + token, Run all) và notebook Colab 4 ô đọc ZIP trong Drive/datatest; bỏ Kaggle. Notebook test 9/9; chưa đo Colab thật. Xem [hướng dẫn](colab-dev-setup.md).
+
 Repo này là **ROOT duy nhất** của sản phẩm (xem [README](../README.md)): code, tài liệu, Docker, notebook đều sửa và push tại đây.
 
 Nguồn các khẳng định: hồ sơ kế hoạch nội bộ 01–05 (ghi dạng "hồ sơ NN, mục X"; thư mục kế hoạch nằm ngoài repo này),
@@ -21,7 +23,7 @@ và engine Python `c4` (Tầng 0 hình học trên CPU, Tầng 1 PointPillars tu
 | Dữ liệu trainval | **Chưa có** trên máy dev ⇒ mọi kết luận về chất lượng chọn chưa chốt |
 
 Tài liệu liên quan: [run-local](run-local.md) · [model-workflow](model-workflow.md) · [glossary](glossary.md) ·
-[gpu-rental](gpu-rental.md) · [kaggle-colab](kaggle-colab.md) · [colab-dev-setup](colab-dev-setup.md).
+[gpu-rental](gpu-rental.md) · [colab-dev-setup](colab-dev-setup.md).
 
 ## 2. Đã làm
 
@@ -104,7 +106,7 @@ Cột "ai làm": **Người** = cần tay người (dữ liệu, tài khoản, q
 | C. Đóng băng | Chạy `python -m c4.cli.lidar_g1` trên trainval; chốt τ, cell, định nghĩa nhóm C (Q1/Q2) | Người quyết, Agent chạy | B | **G1** hồ sơ 04 |
 | C. Đóng băng | Tune α/β/γ, λ, m trên split val bằng lưới; ghi `configs/final.yaml`; tag `freeze-v1` | Agent chạy, Người duyệt | G1 | **G4** hồ sơ 04 |
 | D. Chấm điểm | Chấm split V và P (P chấm **một lần** sau freeze); báo cáo recall, uplift, coverage, redundancy | Agent | G4 | G-T0 mức server |
-| E. Tầng 1 GPU thật | Train seed trên trainval bằng GPU thuê/Colab ([gpu-rental](gpu-rental.md), [kaggle-colab](kaggle-colab.md)); infer; hybrid | Người thuê GPU, Agent chạy | B, G4 | G-T1 mức server |
+| E. Tầng 1 GPU thật | Train seed trên trainval bằng GPU thuê/Colab ([gpu-rental](gpu-rental.md), [colab-dev-setup](colab-dev-setup.md)); infer; hybrid | Người thuê GPU, Agent chạy | B, G4 | G-T1 mức server |
 | E. Tầng 1 GPU thật | Downstream PointPillars: S∪A so với S∪A_rand (script đã có, mini chỉ kiểm script với |A| = 7) | Agent | E trước | PDF §5.4 (stretch) |
 | F. So sánh | Đo hybrid so với Tầng 0 thuần trên trainval, có khoảng tin cậy (bootstrap) | Agent | D, E | Kết luận chất lượng; mở khoá v0.5.0 của hồ sơ 04 |
 | G. Đóng hồ sơ | Ký "✅ ĐÃ HOÀN THÀNH" kèm thời gian cho hồ sơ 04 và 05; đồng bộ não, changelog, roadmap | Agent | C–F và A | Đóng hồ sơ |

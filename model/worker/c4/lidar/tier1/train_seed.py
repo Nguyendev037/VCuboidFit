@@ -23,7 +23,7 @@ BASE_CFG = "cfgs/nuscenes_models/cbgs_pp_multihead.yaml"
 
 
 def _pcdet_commit() -> str:
-    """Commit OpenPCDet đã build; thiếu file (cài tay trên Kaggle/Colab) không được làm hỏng run."""
+    """Commit OpenPCDet đã build; thiếu file (cài tay trên Colab) không được làm hỏng run."""
     f = PCDET / "BUILD_COMMIT"
     return f.read_text().strip() if f.is_file() else "unknown"
 

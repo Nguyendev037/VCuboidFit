@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Setup moi truong Tang 1 tren Colab/Kaggle cho dev moi (SPEC-P02 §6b). Idempotent, khong can Docker.
+# Setup moi truong Tang 1 tren Colab cho dev moi (SPEC-P02 §6b). Idempotent, khong can Docker.
 #   bash model/scripts/colab_setup.sh [--cpu-only]
 # --cpu-only: bo buoc 3 (OpenPCDet) va coi loi spconv la canh bao (may khong GPU chi chay Tang 0).
 # Bien: VCF_HOME (mac dinh $HOME/vcf) giu build OpenPCDet + marker cache qua cac phien.
@@ -61,7 +61,7 @@ PYEOF
   rm -rf "$T"
   echo "$PCDET_COMMIT" > "$VCF_HOME/OpenPCDet/BUILD_COMMIT"
   "$PY" "$REPO/model/docker/tier1/patch_pcdet.py" "$VCF_HOME/OpenPCDet"
-  (cd "$VCF_HOME/OpenPCDet" && TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9" "$PY" setup.py develop)
+  (cd "$VCF_HOME/OpenPCDet" && TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9" "$PY" -m pip install -q --no-build-isolation -e .)
   touch "$VCF_HOME/OpenPCDet/.built"
 fi
 

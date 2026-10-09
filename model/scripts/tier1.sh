@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Tầng 1 (SPEC-P02 §4) — dùng chung cho Docker local (WSL2/4060), GPU thuê, Kaggle/Colab.
+# Tầng 1 (SPEC-P02 §4) — dùng chung cho Docker local (WSL2/4060), GPU thuê, Colab.
 #   scripts/tier1.sh <nuscenes_root> <exp_dir> [--sweeps N] [--epochs E] [--batch B] [--no-docker]
-# --no-docker: chạy thẳng trong môi trường đã có pcdet (Kaggle/Colab sau khi cài theo docs).
+# --no-docker: chạy thẳng trong môi trường đã có pcdet (Colab sau khi cài theo docs).
 # Yêu cầu: <exp_dir>/index.parquet đã có (chạy Tầng 0 trước: c4.cli.lidar_experiment).
 set -euo pipefail
 DATA=$(cd "$1" && pwd); EXP=$(mkdir -p "$2" && cd "$2" && pwd); shift 2

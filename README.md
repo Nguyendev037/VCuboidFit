@@ -4,7 +4,7 @@ Chọn **5 % keyframe LiDAR đáng gán nhãn 3D nhất** từ một bộ dữ l
 ego pose và timestamp (không camera, không nhãn). Có engine Python (CPU, thêm tầng PointPillars
 tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tham số, xem kết quả, soi từng frame.
 
-> **Repo này là ROOT duy nhất của dự án** (bản hoàn chỉnh nhất, phiên bản hiện tại v0.6.2). Mọi thay đổi
+> **Repo này là ROOT duy nhất của dự án** (bản hoàn chỉnh nhất, phiên bản hiện tại v0.6.3). Mọi thay đổi
 > code, tài liệu, Docker, notebook đều làm, commit và push thẳng tại đây — không sinh lại từ nơi khác.
 
 ## Kiến trúc
@@ -21,10 +21,12 @@ tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tha
 * **Tầng 1** (tuỳ chọn, GPU): PointPillars train từ đầu trên seed -> novelty/uncertainty -> hybrid.
   Thiếu Tầng 1 thì mọi thứ vẫn chạy (chỉ dùng tiêu chí "Hiếm trong dữ liệu"; xem [docs/glossary.md](docs/glossary.md)).
 * **Tầng 1 từ xa (Colab)** — máy không GPU vẫn có Tầng 1: Colab kéo việc từ worker qua tunnel, train rồi đẩy
-  `signals.parquet` về (nút "Chạy Tầng 1 trên Colab"). Xem [docs/run-local.md](docs/run-local.md) mục 5c.
+  `signals.parquet` về (nút "Chạy Tầng 1 trên Colab"). Điền URL + token rồi **Run all**:
+  [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Nguyendev037/VCuboidFit/blob/main/model/notebooks/vcf_colab_agent.ipynb)
+  ([hướng dẫn](docs/colab-dev-setup.md), Cách 1).
 * **Dev mới, không cần GPU/Docker**:
   [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Nguyendev037/VCuboidFit/blob/main/model/notebooks/vcf_dev_setup_colab.ipynb)
-  — notebook dựng sẵn môi trường Tầng 0 + Tầng 1 ([hướng dẫn](docs/colab-dev-setup.md)).
+  — 4 ô đọc ZIP trong `MyDrive/datatest`, chạy CPU và lưu kết quả về Drive; GPU tùy chọn ([hướng dẫn](docs/colab-dev-setup.md)).
 * **Giao diện**: xoá lịch sử chạy, thanh thời gian xét tệp upload, nút "Rút gọn" danh sách zip, panel tham số
   hoạt động cả khi job chỉ có Tầng 0.
 
@@ -41,7 +43,7 @@ VCuboidFit/
 │   ├── worker/          Python: c4/ (engine), service/ (FastAPI), configs/, tests/
 │   ├── docker/          tier1/ (PointPillars GPU), worker/ (worker CPU), cloud/ (máy thuê)
 │   ├── scripts/         chạy Tầng 1, agent + setup Colab, check_ports, cloud/
-│   └── notebooks/       Kaggle/Colab Tầng 1, agent Colab, setup dev mới
+│   └── notebooks/       Colab chạy Tầng 1 cho worker; Colab tự chạy từ ZIP Drive
 ├── dataset/             zip nuScenes-mini để thử upload (zip bị gitignore)
 ├── tools/vcf-pack/      CLI chia nuScenes thành part zip <= 50 MB + manifest
 └── docs/                hướng dẫn chạy, thuê GPU, Colab, quy trình model, thuật ngữ
@@ -53,7 +55,7 @@ VCuboidFit/
 | [`model/`](model/README.md) | Engine `c4` + service FastAPI + cấu hình + test, Docker, script, notebook |
 | [`dataset/`](dataset/README.md) | Bộ zip nuScenes-mini đã đóng gói để thử upload (zip không commit) |
 | [`tools/vcf-pack/`](tools/vcf-pack/) | CLI chia thư mục nuScenes thành các part zip <= 50 MB + manifest |
-| [`docs/`](docs/) | Hướng dẫn chạy local, thuê GPU, Kaggle/Colab, quy trình model, thuật ngữ |
+| [`docs/`](docs/) | Hướng dẫn chạy local, thuê GPU, Colab, quy trình model, thuật ngữ |
 
 ## Quickstart 5 phút (Windows, chỉ CPU)
 
@@ -87,8 +89,8 @@ Chi tiết từng bước và xử lý lỗi: [docs/run-local.md](docs/run-local
 
 * [docs/run-local.md](docs/run-local.md) - chạy local (CPU, Docker GPU RTX 4060, worker Docker, Tầng 1 qua Colab)
 * [docs/gpu-rental.md](docs/gpu-rental.md) - thuê GPU, chạy trên trainval
-* [docs/kaggle-colab.md](docs/kaggle-colab.md) - notebook Kaggle / Colab Pro + agent Colab
-* [docs/colab-dev-setup.md](docs/colab-dev-setup.md) - dev mới: môi trường chạy được trên Colab (không GPU, không Docker)
+* [docs/getting-started.md](docs/getting-started.md) - mở dự án: web, worker, Tầng 1
+* [docs/colab-dev-setup.md](docs/colab-dev-setup.md) - Google Colab: chạy Tầng 1 cho máy bạn (Run all), hoặc tự chạy từ ZIP
 * [docs/model-workflow.md](docs/model-workflow.md) - model chọn 5% frame chạy như thế nào (từng bước)
 * [docs/glossary.md](docs/glossary.md) - "hiếm" là gì, ý nghĩa từng chỉ số và tham số
 * [docs/project-status.md](docs/project-status.md) - tình trạng dự án, số đo hiện có và kế hoạch còn lại theo phase

@@ -7,7 +7,7 @@ model/
                cloud/ (docker-compose cho máy thuê)
   scripts/     tier1.ps1 / tier1.sh (chạy Tầng 1), colab_agent.py + colab_setup.sh (Tầng 1 qua Colab),
                check_ports.py (bắt cổng ghi cứng), cloud/{pack,bootstrap}.sh, fetch_weights.py
-  notebooks/   vcf_tier01_kaggle_colab.ipynb, vcf_colab_agent.ipynb, vcf_dev_setup_colab.ipynb
+  notebooks/   vcf_colab_agent.ipynb (Colab chạy Tầng 1 cho worker), vcf_dev_setup_colab.ipynb (Colab tự chạy từ ZIP)
 ```
 
 ## Chạy ở máy cá nhân (CPU)
@@ -23,7 +23,9 @@ $env:WORKSPACE = "..\workspace"        # = model/workspace, web phải trỏ cù
 
 Thí nghiệm không qua web (CLI): `python -m c4.cli.lidar_experiment --data-root <nuScenes> --out ..\workspace\experiments\mini --split V --tune`.
 
-Tầng 1 (Docker + GPU), máy thuê, Kaggle: xem [docs/run-local.md](../docs/run-local.md),
-[docs/gpu-rental.md](../docs/gpu-rental.md), [docs/kaggle-colab.md](../docs/kaggle-colab.md).
+Tầng 1 (Docker + GPU), máy thuê, Colab: xem [docs/run-local.md](../docs/run-local.md),
+[docs/gpu-rental.md](../docs/gpu-rental.md), [docs/colab-dev-setup.md](../docs/colab-dev-setup.md).
 Các biến môi trường: [`worker/.env.example`](worker/.env.example) (worker không tự đọc `.env`,
 hãy đặt biến trong shell).
+
+Colab đơn giản: [4 ô đọc ZIP trong MyDrive/datatest](../docs/colab-dev-setup.md), CPU mặc định, GPU tùy chọn.
