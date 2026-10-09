@@ -19,7 +19,7 @@ sweeps) — ghi rõ trong báo cáo và dùng cùng giá trị cho downstream.
 
 **Ô lệnh chung** (Colab / Kaggle, CUDA 12.x có sẵn):
 ```bash
-pip -q install spconv-cu120 "numpy<2" nuscenes-devkit easydict tensorboardX kornia==0.6.12 \
+pip -q install spconv-cu121 "numpy<2" nuscenes-devkit easydict tensorboardX kornia==0.6.12 \
     scikit-learn joblib pyarrow pandas pyyaml opencv-python-headless
 wget -qO pcdet.tgz https://github.com/open-mmlab/OpenPCDet/archive/233f849829b6ac19afb8af8837a0246890908755.tar.gz
 tar xzf pcdet.tgz && mv OpenPCDet-233f849829b6ac19afb8af8837a0246890908755 OpenPCDet

@@ -24,7 +24,8 @@ if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
 else
   echo "CANH BAO: khong thay GPU (nvidia-smi) - van cai phan CPU"
 fi
-if [ "$CUDA_MAJOR" -ge 12 ]; then SPCONV=spconv-cu120; else SPCONV=spconv-cu118; fi
+# cu121: spconv 2.3.8 co wheel cho Python 3.10-3.12 (cu120 chi toi 3.11; Colab hien dung 3.12); chay tot tren driver CUDA 12.x.
+if [ "$CUDA_MAJOR" -ge 12 ]; then SPCONV=spconv-cu121; else SPCONV=spconv-cu118; fi
 
 echo "== [2/5] pip pinned set"
 PINS="$SPCONV|numpy<2|nuscenes-devkit|easydict|tensorboardX|kornia==0.6.12|scikit-learn|joblib|pyarrow|pandas|pyyaml|opencv-python-headless|requests"
