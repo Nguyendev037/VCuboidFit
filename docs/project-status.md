@@ -98,7 +98,7 @@ Cột "ai làm": **Người** = cần tay người (dữ liệu, tài khoản, q
 
 | Phase | Việc | Ai làm | Phụ thuộc | Gate đóng |
 |---|---|---|---|---|
-| A. Colab thật | Chạy `vcf_dev_setup_colab.ipynb` trên Colab: ô 1–4 xanh (`SETUP OK` + pytest xanh) | Người | Tài khoản Colab; [colab-dev-setup](colab-dev-setup.md) | **G3b** hồ sơ 05 |
+| A. Colab thật | Chạy `colab_dev_setup.ipynb` trên Colab: ô 1–4 xanh (`SETUP OK` + pytest xanh) | Người | Tài khoản Colab; [colab-dev-setup](colab-dev-setup.md) | **G3b** hồ sơ 05 |
 | A. Colab thật | Một vòng thật: máy không GPU tạo task, Colab chạy mini 20 epoch, web mở khoá Tầng 1; ghi thời gian train/infer thực | Người chạy, Agent ghi evidence | Tunnel tới worker, `VCF_REMOTE_TOKEN`; [run-local](run-local.md) mục 5c | **G3** hồ sơ 05 |
 | B. Dữ liệu | Tải nuScenes trainval LiDAR, đóng gói bằng `tools/vcf-pack` rồi nạp qua web | Người | Dung lượng đĩa, giấy phép nuScenes | Điều kiện cho C, D, E |
 | C. Đóng băng | Chạy `python -m c4.cli.lidar_g1` trên trainval; chốt τ, cell, định nghĩa nhóm C (Q1/Q2) | Người quyết, Agent chạy | B | **G1** hồ sơ 04 |

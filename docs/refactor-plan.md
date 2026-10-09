@@ -28,6 +28,13 @@ kiểm tra sau mỗi bước.
 `delta_t`→`redundancy_window_s`, `combine`→`combine_scores`, `stack`→`stack_block_vectors`,
 `embed`→`embed_descriptors`, `signals`→`compute_t1_signals`, `scores_for`→`score_pool`.
 
+Đổi tên notebook (mọi tham chiếu trong README và `docs/` đã cập nhật):
+`vcf_tier01_kaggle_colab.ipynb`→`tier0_tier1_experiment.ipynb`,
+`vcf_colab_agent.ipynb`→`colab_tier1_agent.ipynb`, `vcf_dev_setup_colab.ipynb`→`colab_dev_setup.ipynb`.
+Lý do: tiền tố `vcf_` lặp lại tên repo, `tier01` không nói được notebook làm gì, và tên cũ trộn thứ
+tự "kaggle_colab" với "colab_agent". Lưu ý: nút "Open in Colab" ở README trỏ vào nhánh `main`, nên chỉ
+mở được sau khi nhánh này được merge.
+
 Chưa đổi (có chủ ý): `pct_rank`, `criterion`, `fmt_table`, `oracle`, `reasons`, `budget`, `Truth`, `Pool`,
 `index.py`, `params.py`, tên CLI `lidar_t0`/`lidar_g1`, (nhóm C).
 Trường `tier_available` trong `service/models.py` được **giữ nguyên** vì nó sinh ra khoá JSON

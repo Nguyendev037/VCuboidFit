@@ -10,8 +10,8 @@ từng bước của cách đó. Mỗi bước có **kết quả đúng** để 
 | **A. Chỉ Colab** | Thử môi trường, chạy Tầng 0 + Tầng 1 trên nuScenes-mini, không cần web | Tài khoản Google, tài khoản nuScenes (để tải dữ liệu) |
 | **B. Máy bạn + Colab (chế độ agent)** | Dùng website trên máy bạn (máy không có GPU), nhờ GPU của Colab chạy Tầng 1 rồi tự gửi kết quả về | Máy Windows chạy được worker + web ([run-local.md](run-local.md)), `cloudflared`, tài khoản Google |
 
-Hai cách dùng chung notebook [`model/notebooks/vcf_dev_setup_colab.ipynb`](../model/notebooks/vcf_dev_setup_colab.ipynb):
-[Open in Colab](https://colab.research.google.com/github/Nguyendev037/VCuboidFit/blob/main/model/notebooks/vcf_dev_setup_colab.ipynb).
+Hai cách dùng chung notebook [`model/notebooks/colab_dev_setup.ipynb`](../model/notebooks/colab_dev_setup.ipynb):
+[Open in Colab](https://colab.research.google.com/github/Nguyendev037/VCuboidFit/blob/main/model/notebooks/colab_dev_setup.ipynb).
 Cách A chạy ô 1–7; cách B chạy ô 1–3 rồi nhảy thẳng tới ô 8.
 
 **Phiên bản:** máy bạn và Colab phải cùng phiên bản repo (≥ 0.6.1). Trước khi làm, `git pull` ở máy bạn;
