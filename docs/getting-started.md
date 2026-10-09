@@ -5,7 +5,7 @@ Dự án có **3 phần**, chạy ở 3 chỗ khác nhau:
 | Phần | Là gì | Có giao diện? | Chạy bằng |
 |---|---|---|---|
 | **Web** (`web/`) | Website Next.js: nạp dữ liệu, chỉnh tham số, xem kết quả | **Có** — <http://localhost:3000> | `npm run dev` (KHÔNG có image Docker cho web) |
-| **Worker** (`model/worker/`) | API FastAPI chạy Tầng 0 (CPU), cổng 8001 | Không — chỉ trả JSON (`/health`) | Python venv **hoặc** Docker `vcuboidfit_worker:0.1` |
+| **Worker** (`model/worker/`) | API FastAPI chạy Tầng 0 (CPU), cổng 8001 | Không — chỉ trả JSON (`/health`) | `dev_up.ps1` (Tầng 0 + Tầng 1) **hoặc** Docker (chỉ Tầng 0) |
 | **Tầng 1** (`model/docker/tier1/`) | PointPillars trên GPU, chạy xong thì thoát | Không — chạy theo lượt | Docker `vcuboidfit_pointpillars:0.1` |
 
 > Docker **không có UI** là đúng thiết kế. Muốn thấy giao diện thì luôn mở web bằng `npm run dev`.
@@ -13,17 +13,25 @@ Dự án có **3 phần**, chạy ở 3 chỗ khác nhau:
 
 Mọi lệnh dưới đây chạy trong PowerShell, đứng ở **thư mục gốc repo** (thư mục có `README.md`).
 
-## Cách 1 — Worker bằng Docker + Web bằng npm (khuyên dùng)
+## Cách 1 — Worker native bằng `dev_up.ps1` + Web bằng npm (khi cần Tầng 1)
 
-**Cửa sổ 1 — worker (Docker):**
+**Cửa sổ 1 — worker native (Python):**
 ```powershell
-$env:WORKSPACE_DIR = "$PWD\model\workspace"
-$env:VCF_PORT = "8001"
-docker compose -f model\docker\worker\docker-compose.yml up -d --build worker
-curl.exe http://127.0.0.1:8001/health        # đúng: {"ok":true,...}
+# chỉ lần đầu
+python -m venv model\worker\.venv
+model\worker\.venv\Scripts\pip install -e "model\worker[dev,service]"
+# mỗi lần mở, từ gốc repo
+powershell -File model\scripts\dev_up.ps1 -Port 8001
 ```
-Lần đầu build mất vài phút. Container tên `worker-worker-1`, cột Ports trong Docker Desktop phải là
-`0.0.0.0:8001->8001/tcp`.
+Script đặt `WORKSPACE=<repo>\model\workspace`, tự chọn thư mục mới nhất trong
+`model/workspace/experiments/` có đủ `index.parquet`, `t1/cfg/pp_seed.yaml` và
+`t1/ckpt/seed_latest.pth`. Có thể chọn seed cụ thể bằng `-Exp <thư mục thí nghiệm>`.
+Nếu không có seed, worker vẫn chạy Tầng 0. `VCF_REMOTE_TOKEN` đã đặt trong môi trường được giữ nguyên.
+Tầng 1 cục bộ cần Docker + GPU NVIDIA và image PointPillars ở mục "Thêm Tầng 1".
+
+Script in cổng, workspace và seed; cổng bận thì in tên tiến trình đang giữ cổng và thoát mã **3**,
+không dừng tiến trình/container nào. **Chỉ MỘT phiên quản worker cổng 8001**; phiên khác dùng cổng khác
+và workspace riêng, không khởi động thêm worker vào dữ liệu của phiên hiện tại.
 
 **Cửa sổ 2 — web:**
 ```powershell
@@ -35,21 +43,19 @@ npm run dev                                                          # mở http
 `web/.env.local` phải có `WORKER_URL=http://127.0.0.1:8001` và `WORKSPACE=../model/workspace` (bản copy từ
 `.env.example` đã đúng sẵn).
 
-**Tắt:** Ctrl+C ở cửa sổ web; `docker compose -f model\docker\worker\docker-compose.yml down` cho worker.
+## Cách 2 — Worker Docker (chỉ Tầng 0)
 
-## Cách 2 — Không dùng Docker (worker bằng Python)
+Worker trong container không chạy được Tầng 1 cục bộ; trạng thái Tầng 1 báo `skipped` kèm lý do nhắc Docker.
+Nếu cần Tầng 1 trên máy này, dùng worker native ở Cách 1.
 
 ```powershell
-# lần đầu
-python -m venv model\worker\.venv
-model\worker\.venv\Scripts\pip install -e "model\worker[dev,service]"
-# mỗi lần mở
-$env:WORKSPACE = "$PWD\model\workspace"
-cd model\worker
-.venv\Scripts\python -m uvicorn service.main:create_app --factory --port 8001
+$env:WORKSPACE_DIR = "$PWD\model\workspace"
+$env:VCF_PORT = "8001"
+docker compose -f model\docker\worker\docker-compose.yml up -d --build worker
+curl.exe http://127.0.0.1:8001/health        # đúng: {"ok":true,...}
 ```
-Rồi mở cửa sổ khác chạy web như Cách 1 (cửa sổ 2). **Chỉ chạy MỘT worker**: đang chạy worker Docker thì đừng
-bật thêm worker Python ở cổng 8001 (và ngược lại).
+Lần đầu build mất vài phút. Container tên `worker-worker-1`, cột Ports trong Docker Desktop phải là
+`0.0.0.0:8001->8001/tcp`. Mở web như Cách 1 (cửa sổ 2). Không bật Docker worker khi cổng 8001 đang có worker.
 
 ## Dùng giao diện
 
@@ -73,17 +79,18 @@ $env:NUSC = "H:\"                                                               
 $env:EXP  = "$PWD\model\workspace\experiments\mini"                              # đã chạy Tầng 0 (có index.parquet)
 docker compose -f model\docker\tier1\docker-compose.yml run --rm tier1           # train + infer -> $EXP\t1\signals.parquet
 ```
-Để job LiDAR tự chạy Tầng 1, đặt `VCF_T1_EXP` trỏ tới thư mục thí nghiệm này rồi khởi động worker; không
-cần chép file tay. Máy không có GPU: dùng Colab ([colab-dev-setup.md](colab-dev-setup.md)). Chi tiết thêm:
+Để job LiDAR tự chạy Tầng 1, khởi động worker native bằng `dev_up.ps1` (tự tìm seed) hoặc truyền
+`-Exp <thư mục thí nghiệm>`; không chép `signals.parquet` vào job bằng tay. Máy không có GPU: dùng Colab ([colab-dev-setup.md](colab-dev-setup.md)). Chi tiết thêm:
 [run-local.md](run-local.md) mục 5.
 
 ## Kiểm nhanh khi "không thấy model"
 
 | Triệu chứng | Nguyên nhân hay gặp | Sửa |
 |---|---|---|
-| Web báo không kết nối được worker / danh sách trống mãi | Worker chưa chạy, hoặc container chạy **không publish cổng** (bấm Run trong Docker Desktop mà không đặt port) | Dùng đúng lệnh `docker compose ... up -d worker` ở Cách 1; kiểm `curl.exe http://127.0.0.1:8001/health` |
+| Web báo không kết nối được worker / danh sách trống mãi | Worker chưa chạy, hoặc container chạy **không publish cổng** (bấm Run trong Docker Desktop mà không đặt port) | Dùng `dev_up.ps1` ở Cách 1 hoặc Docker ở Cách 2; kiểm `curl.exe http://127.0.0.1:8001/health` |
 | Container worker có trong Docker nhưng cột Ports chỉ là `8001/tcp` | Thiếu `-p 8001:8001` | Xoá container đó, chạy lại bằng compose |
-| Worker chạy nhưng web không thấy dữ liệu đã nạp | Worker và web dùng **hai thư mục dữ liệu khác nhau** (volume ẩn danh, hoặc `WORKSPACE` khác) | Worker: `WORKSPACE_DIR=<repo>\model\workspace`; web: `WORKSPACE=../model/workspace` |
+| Worker chạy nhưng web không thấy dữ liệu đã nạp | Worker và web dùng **hai thư mục dữ liệu khác nhau** (volume ẩn danh, hoặc `WORKSPACE` khác) | Worker native: script đặt `WORKSPACE`; Docker: `WORKSPACE_DIR=<repo>\model\workspace`; web: `WORKSPACE=../model/workspace` |
 | `Method Not Allowed` khi xoá lần chạy | Worker đang chạy bản code cũ | Khởi động lại worker (Docker: thêm `--build`) |
+| Hai thanh Tầng 1 khoá + lý do nhắc Docker | Worker đang chạy trong container | Dùng `dev_up.ps1` ở Cách 1 |
 | Hai thanh Tầng 1 bị khoá | Lần chạy chưa có `t1\signals.parquet` | Mục "Thêm Tầng 1" ở trên |
-| Cổng 8001 đã bị chiếm | Đang có 2 worker (Python + Docker) | Tắt một bên |
+| Cổng 8001 đã bị chiếm | Đã có tiến trình nghe cổng | `dev_up.ps1` in tên tiến trình và thoát 3; dùng worker hiện tại, không tự dừng worker của phiên khác |

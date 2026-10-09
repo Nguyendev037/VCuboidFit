@@ -118,9 +118,10 @@ class JobQueue:
     def _tier1(self, job_id: str, job: JobStatus) -> Tier1Info:
         """Khối `tier1` (plan 09 §3): state từ stage `t1`, lý do từ status/`logs/t1.log`."""
         from c4.jobs.runner import tier1_reason  # nhập muộn như _default_runner
-        from c4.lidar.pipeline import tier1_machine_ready
+        from c4.lidar.pipeline import tier1_machine_reason
         d = self._dir(job_id)
-        machine = tier1_machine_ready()
+        machine_reason = tier1_machine_reason()
+        machine = machine_reason is None
         can_run = machine and (d / "lidar" / "index.parquet").is_file()
         stage = next((x for x in job.stages if x.name == "t1"), None)
         has_signals = (d / "t1" / "signals.parquet").is_file()
@@ -132,11 +133,12 @@ class JobQueue:
             state = "done"
         elif raw in ("skipped", "failed"):
             state = raw
-            reason = tier1_reason(d / "logs" / "t1.log") or stage.reason  # log mới nhất thắng
+            reason = (machine_reason if raw == "skipped" and not machine else
+                      tier1_reason(d / "logs" / "t1.log") or stage.reason)
             if raw == "failed" and not reason:
                 reason = "Tầng 1 chạy lỗi."
         elif not machine:
-            state, reason = "skipped", "Máy này chưa có model Tầng 1."
+            state, reason = "skipped", machine_reason
         else:
             state = "ready"
         nov = None

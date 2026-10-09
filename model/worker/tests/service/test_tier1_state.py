@@ -182,3 +182,54 @@ def test_select_allowed_while_only_t1_runs(lidar_job, monkeypatch):
     st["stage"], st["stages"][1]["state"] = "t0", "running"  # t0 chưa xong ⇒ vẫn chặn
     (d / "status.json").write_text(json.dumps(st), encoding="utf-8")
     assert c.post(f"/jobs/{jid}/select", json={}).status_code == 409
+
+
+# ---- plan 09 H05: lý do máy chưa sẵn sàng (Docker / thiếu checkpoint)
+@pytest.mark.parametrize("stage_state", [None, "skipped"])
+def test_worker_in_docker_reports_skipped(client, tmp_path, monkeypatch, stage_state):
+    from pathlib import Path
+
+    from c4.lidar.pipeline import tier1_machine_ready, tier1_machine_reason
+
+    c, s = client
+    monkeypatch.setenv("VCF_T1_EXP", str(_exp(tmp_path)))
+    original_exists = Path.exists
+    monkeypatch.setattr(Path, "exists", lambda path:
+                        True if path == Path("/.dockerenv") else original_exists(path))
+    _job(s, "eeeeeeeeeeee", "done")
+    if stage_state:
+        (s.jobs / "eeeeeeeeeeee" / "status.json").write_text(json.dumps(dict(
+            jobId="eeeeeeeeeeee", pipeline="lidar", state="done", stage="t1",
+            done=1, total=1, stages=[dict(name="t1", state=stage_state,
+                                         reason="Lúc phân tích, máy chưa bật model Tầng 1.")]
+        )), encoding="utf-8")
+    r = c.get("/jobs/eeeeeeeeeeee")
+    assert r.status_code == 200
+    t1 = r.json()["tier1"]
+    assert t1["state"] == "skipped" and t1["canRun"] is False
+    assert t1["reason"] == (
+        "Worker đang chạy trong Docker nên không chạy được Tầng 1 trên máy này.")
+    assert tier1_machine_reason() == t1["reason"]
+    assert tier1_machine_ready() is False
+    assert c.get("/jobs/eeeeeeeeeeee/params-schema").json()["tierAvailable"] == [0]
+
+
+def test_missing_checkpoint_reports_incomplete_model(client, tmp_path, monkeypatch):
+    from c4.lidar.pipeline import tier1_machine_ready, tier1_machine_reason
+
+    c, s = client
+    exp = tmp_path / "incomplete-exp"
+    for rel in ("index.parquet", "t1/cfg/pp_seed.yaml"):
+        f = exp / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(b"x")
+    monkeypatch.setenv("VCF_T1_EXP", str(exp))
+    _job(s, "ffffffffffff", "done")
+    r = c.get("/jobs/ffffffffffff")
+    assert r.status_code == 200
+    t1 = r.json()["tier1"]
+    assert t1["state"] == "skipped" and t1["canRun"] is False
+    assert t1["reason"] == "Model Tầng 1 trên máy chưa đủ file."
+    assert tier1_machine_reason() == t1["reason"]
+    assert tier1_machine_ready() is False
+    assert c.get("/jobs/ffffffffffff/params-schema").json()["tierAvailable"] == [0]

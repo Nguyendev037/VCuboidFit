@@ -29,15 +29,24 @@ PREVIEW_N = 12
 DUP_THETA = 0.95
 
 
-def tier1_machine_ready() -> bool:
-    """Khả dụng Tầng 1 là thuộc tính của MÁY (plan 09 D1): thí nghiệm seed có đủ index, cấu hình
-    và checkpoint. Không phụ thuộc job nên UI biết trước khi phân tích."""
+def tier1_machine_reason() -> str | None:
+    """Lý do máy chưa chạy được Tầng 1 (plan 09 D7), không lộ cấu hình nội bộ."""
+    if Path("/.dockerenv").exists():
+        return "Worker đang chạy trong Docker nên không chạy được Tầng 1 trên máy này."
     exp_s = os.environ.get("VCF_T1_EXP", "").strip()
     if not exp_s:
-        return False
+        return "Máy này chưa có model Tầng 1."
     exp = Path(exp_s)
-    return all(exp.joinpath(*rel).is_file() for rel in (
-        ("index.parquet",), ("t1", "cfg", "pp_seed.yaml"), ("t1", "ckpt", "seed_latest.pth")))
+    if not all(exp.joinpath(*rel).is_file() for rel in (
+            ("index.parquet",), ("t1", "cfg", "pp_seed.yaml"),
+            ("t1", "ckpt", "seed_latest.pth"))):
+        return "Model Tầng 1 trên máy chưa đủ file."
+    return None
+
+
+def tier1_machine_ready() -> bool:
+    """Khả dụng toàn máy, không phụ thuộc job (plan 09 D1 + D7)."""
+    return tier1_machine_reason() is None
 
 
 def tier_available(job: Path) -> list[int]:
