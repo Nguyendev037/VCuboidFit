@@ -1,8 +1,8 @@
 """Job runner: chạy các stage của một pipeline, mỗi stage một tiến trình con `c4.cli.*`.
 
 Pipeline đọc từ `job.json` (`pipeline`): `camera` = index → dino → det → clip → merge (mặc định khi
-job.json không nói gì), `lidar` = lidar_index → t0 (01-CONTRACTS §4). `t1` KHÔNG chạy trong runner
-web: nó chạy Docker ngoài, runner chỉ phát hiện `t1/signals.parquet` có sẵn.
+job.json không nói gì), `lidar` = lidar_index → t0 → t1 (01-CONTRACTS §4). Stage `t1` suy luận
+seed đã train qua Docker khi `VCF_T1_EXP` được đặt; stage này không chặn job (`OPTIONAL_STAGES`).
 
 Một khoá `filelock` (`<workspace>/gpu.lock`) bao cả job: hai job cùng lúc thì job sau chờ
 (`status.state = "queued"`). Tiến độ lấy từ `progress/<stage>.json` của stage con, ghi vào
@@ -23,9 +23,10 @@ from filelock import FileLock, Timeout
 STAGES = ["index", "dino", "det", "clip", "merge"]
 PIPELINES = dict(  # thứ tự stage bắt buộc của từng pipeline (camera giữ nguyên như trước)
     camera=STAGES,
-    lidar=["lidar_index", "t0"])
+    lidar=["lidar_index", "t0", "t1"])
+OPTIONAL_STAGES = {"t1"}  # stage lỗi không làm job failed (01-CONTRACTS §C6)
 MODULES = dict(index="build_index", dino="extract_dino", det="extract_det", clip="extract_clip",
-               merge="merge_features", lidar_index="lidar_index", t0="lidar_t0")
+               merge="merge_features", lidar_index="lidar_index", t0="lidar_t0", t1="lidar_t1")
 OUTPUTS = dict(  # đường dẫn tương đối thư mục job; ghi nguyên tử nên có đủ = stage đã ghi xong
     index=["index/frames.parquet", "index/frames.parquet.manifest.json",
            "index/cam_poses.parquet", "index/cam_poses.parquet.manifest.json"],
@@ -34,7 +35,8 @@ OUTPUTS = dict(  # đường dẫn tương đối thư mục job; ghi nguyên t�
     clip=["cache/clip_img.npy", "cache/feat_clip.parquet"],
     merge=["cache/features_cache.parquet", "cache/features_cache.parquet.manifest.json"],
     lidar_index=["lidar/index.parquet"],
-    t0=["lidar/z0.npy", "lidar/filter.parquet"])
+    t0=["lidar/z0.npy", "lidar/filter.parquet"],
+    t1=["t1/signals.parquet"])
 POLL_S = 1.0
 TERMINATE_WAIT_S = 10.0
 WORKER_DIR = Path(__file__).resolve().parents[2]
@@ -208,6 +210,10 @@ def _run_stages(job: Path, data_root: Path, profile: str, st: _Status, env: dict
         if rc is None:
             s["state"] = "cancelled"
             return st.finish("cancelled")
+        if rc != 0 and stage in OPTIONAL_STAGES:
+            s["state"] = "failed"  # không finish, không ghi marker: job vẫn done, lần sau thử lại
+            st.write()
+            continue
         if rc != 0:
             s["state"] = "failed"
             msg = _failure_message(stage, rc, job / "logs" / f"{stage}.log")

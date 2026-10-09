@@ -73,9 +73,9 @@ $env:NUSC = "H:\"                                                               
 $env:EXP  = "$PWD\model\workspace\experiments\mini"                              # đã chạy Tầng 0 (có index.parquet)
 docker compose -f model\docker\tier1\docker-compose.yml run --rm tier1           # train + infer -> $EXP\t1\signals.parquet
 ```
-Web chỉ mở khoá Tầng 1 cho một lần chạy khi thư mục job có `t1\signals.parquet`
-(`model\workspace\jobs\<job>\t1\`), nên sau khi chạy xong cần chép `t1\` sang đúng job đó. Máy không có GPU:
-dùng Colab ([colab-dev-setup.md](colab-dev-setup.md)). Chi tiết thêm: [run-local.md](run-local.md) mục 5.
+Để job LiDAR tự chạy Tầng 1, đặt `VCF_T1_EXP` trỏ tới thư mục thí nghiệm này rồi khởi động worker; không
+cần chép file tay. Máy không có GPU: dùng Colab ([colab-dev-setup.md](colab-dev-setup.md)). Chi tiết thêm:
+[run-local.md](run-local.md) mục 5.
 
 ## Kiểm nhanh khi "không thấy model"
 

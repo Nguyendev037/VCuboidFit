@@ -93,8 +93,9 @@ docker compose -f model\docker\tier1\docker-compose.yml run --rm tier1   # -> <E
 ```
 Dùng image khác (bản cũ, máy thuê, thử nghiệm): đặt `$env:VCF_TIER1_IMAGE = "<tên-image>"` — `tier1.ps1` và
 mọi compose (`tier1`, `cloud`, `worker`) đều đọc biến này. Hết VRAM: `-Batch 1`, rồi `-Sweeps 1` (dùng cùng
-số sweeps cho downstream). Image không dùng apt/git (mọi gói qua pip/HTTPS). Muốn web dùng Tầng 1: chép
-`t1\signals.parquet` vào thư mục job.
+số sweeps cho downstream). Image không dùng apt/git (mọi gói qua pip/HTTPS). Muốn job LiDAR tự chạy Tầng 1: đặt `$env:VCF_T1_EXP` = đường dẫn tuyệt đối tới thư mục thí nghiệm đã train
+(chứa `index.parquet`, `t1/cfg/pp_seed.yaml`, `t1/ckpt/seed_latest.pth`), rồi khởi động worker. Job LiDAR tự chạy
+stage `t1` sau `t0` và ghi `t1/signals.parquet` vào job. Không đặt `VCF_T1_EXP` ⇒ job chỉ có Tầng 0.
 
 ## 5b. Worker Docker (không web)
 
@@ -152,7 +153,7 @@ Lease mặc định 5400 s (`VCF_REMOTE_LEASE_SEC`), kết quả tải lên tố
 | Web gọi nhầm cổng worker | đổi **một** biến `VCF_PORT` cho cả worker, web và tunnel |
 | `UnicodeEncodeError cp1252` | `$env:PYTHONIOENCODING="utf-8"` |
 | `.ps1` báo lỗi cú pháp ở chữ có dấu | file phải có BOM UTF-8 (PowerShell 5.1) |
-| `tier_unavailable` trên web | chưa có `t1/signals.parquet` cho job; chạy Tầng 1 rồi chép vào, hoặc dùng mục 5c |
+| `tier_unavailable` trên web | chưa có `t1/signals.parquet` cho job; đặt `VCF_T1_EXP` (mục 5) rồi chạy job, hoặc dùng mục 5c |
 | Nút "Chạy Tầng 1 trên Colab" không hiện | worker chưa đặt `VCF_REMOTE_TOKEN` (khi đó `/remote/*` trả 404 `remote_disabled`) |
 | Agent Colab báo 401 | sai token — agent dừng ngay, không retry |
 | `npm ci` lỗi mạng/peer | xoá `web/node_modules`, dùng đúng `package-lock.json` đã có |

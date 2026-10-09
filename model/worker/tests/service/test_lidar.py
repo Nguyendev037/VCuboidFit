@@ -66,7 +66,7 @@ def client(env):
 def test_job_runs_lidar_stages_only(env):
     st = env["status"]
     assert st["pipeline"] == "lidar"
-    assert [s["name"] for s in st["stages"]] == ["lidar_index", "t0"]
+    assert [s["name"] for s in st["stages"]] == ["lidar_index", "t0", "t1"]
     assert all(s["state"] == "done" for s in st["stages"])
     job = env["settings"].jobs / env["jid"]
     assert (job / "lidar" / "index.parquet").is_file()

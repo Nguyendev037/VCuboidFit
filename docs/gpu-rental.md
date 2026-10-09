@@ -72,5 +72,5 @@ chọn máy ≥ 16 vCPU.
 | `libGL.so.1` / `No module named av2` / `np.int` trong container | đã xử lý trong Dockerfile (opencv headless, `patch_pcdet.py`) |
 | `ZeroDivisionError` ở `balanced_infos_resampling` | seed thiếu lớp ⇒ `train_seed` tự tắt CBGS (ghi trong `t1/train_config.yaml`) |
 | CUDA OOM | giảm `--batch`, rồi `--sweeps 1` |
-| `tier_unavailable` trên web | chưa có `t1/signals.parquet` cho job — chạy Tầng 1 rồi chép `t1/` vào job |
+| `tier_unavailable` trên web | chưa có `t1/signals.parquet` cho job — đặt VCF_T1_EXP rồi chạy job |
 

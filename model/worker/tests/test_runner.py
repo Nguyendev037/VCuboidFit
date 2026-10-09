@@ -300,8 +300,8 @@ def test_lidar_pipeline_runs_lidar_index_then_t0(tmp_path, ws, monkeypatch):
     job = _lidar_job(tmp_path)
     st = run_job(job, tmp_path, "local-4060", env=ws)
     assert st["state"] == "done" and st["error"] is None and st["pipeline"] == "lidar"
-    assert seen == ["lidar_index", "t0"]
-    assert [s["name"] for s in st["stages"]] == runner.PIPELINES["lidar"] == ["lidar_index", "t0"]
+    assert seen == ["lidar_index", "t0", "t1"]
+    assert [s["name"] for s in st["stages"]] == runner.PIPELINES["lidar"] == ["lidar_index", "t0", "t1"]
     assert (job / "progress" / "lidar_index.done.json").is_file()
     assert (job / "progress" / "t0.done.json").is_file()
     assert runner.MODULES["lidar_index"] == "lidar_index" and runner.MODULES["t0"] == "lidar_t0"
@@ -387,3 +387,23 @@ def test_second_job_waits_for_gpu_lock(tmp_path, ws, monkeypatch):
     end1 = max(_ts(s["finishedAt"]) for s in s1["stages"])
     start2 = _ts(next(s for s in s2["stages"] if s["name"] == "index")["startedAt"])
     assert start2 >= end1
+
+
+def test_lidar_pipeline_has_t1():
+    assert runner.PIPELINES["lidar"] == ["lidar_index", "t0", "t1"]
+    assert runner.MODULES["t1"] == "lidar_t1"
+    assert runner.OUTPUTS["t1"] == ["t1/signals.parquet"]
+    assert runner.OPTIONAL_STAGES == {"t1"}
+
+
+def test_t1_nonfatal(tmp_path, ws, monkeypatch):
+    monkeypatch.setattr(runner, "_is_done", lambda job, stage: False)
+    monkeypatch.setattr(runner, "_run_stage",
+                        lambda job, st, stage, cmd, env, cancel: 4 if stage == "t1" else 0)
+    job = _lidar_job(tmp_path, "L3")
+    st = run_job(job, tmp_path, "local-4060", env=ws)
+    assert st["state"] == "done"
+    saved = _status(job)
+    assert saved["state"] == "done"
+    assert {s["name"]: s["state"] for s in saved["stages"]}["t1"] == "failed"
+    assert not (job / "progress" / "t1.done.json").exists()
