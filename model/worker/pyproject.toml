@@ -24,7 +24,8 @@ line-length = 100
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["perf: performance budget tests",
-           "gpu: cần CUDA và trọng số thật (tự skip nếu thiếu)"]
+           "gpu: cần CUDA và trọng số thật (tự skip nếu thiếu)",
+           "legacy: pipeline camera cũ, không thuộc luồng LiDAR (tests/legacy_camera)"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B"]

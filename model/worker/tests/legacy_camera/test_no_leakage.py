@@ -1,6 +1,6 @@
 from pathlib import Path
 
-C4 = Path(__file__).resolve().parent.parent / "c4"
+C4 = Path(__file__).resolve().parents[2] / "c4"
 
 
 def test_no_leakage():

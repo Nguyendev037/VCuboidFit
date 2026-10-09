@@ -15,9 +15,10 @@ kiểm tra sau mỗi bước.
 | 2.3 Nhãn Tầng 1 | Xong, chưa thử trên GPU | `infos_index` không còn khoá nhãn (`strip_labels`, `verify_index_label_free`, có test). Bundle gửi Colab (`service/remote.py`) chỉ giữ `sample_annotation.json` của frame S và T, có test. Lưu ý: file này được đọc cả vào RAM nên với trainval đầy đủ sẽ nặng; chưa chạy thử với OpenPCDet thật |
 | 2.4 Tách chọn mẫu và chấm điểm | Xong | `web_selection.py` (label-free, nằm trong danh sách của test chống rò rỉ), `web_scoring.py` (đọc nhãn), `web_run.py` (ghép hai phần) |
 | 2.5 Metric trên giao diện | Xong (phương án nhẹ) | Thêm cảnh báo `METRICS_NOTE` vào `warnings` của kết quả khi có metric từ nhãn (`web_scoring.py`); chưa ẩn metric |
-| 2.5 Mã camera | Chưa làm | Cần bạn quyết định. Đính chính: pipeline mặc định khi tạo job đã là `lidar` nếu dữ liệu có LiDAR; `camera` trong `runner.py` chỉ là mặc định cho job cũ chưa ghi `pipeline`, nên không đổi |
+| 2.5 Mã camera | Xong (phương án nhẹ) | Xem dòng 3.3. Đính chính: pipeline mặc định khi tạo job đã là `lidar` nếu dữ liệu có LiDAR; `camera` trong `runner.py` chỉ là mặc định cho job cũ chưa ghi `pipeline`, nên không đổi |
 | 3.4 Thư mục tài liệu | Xong | `docss/` → `docs/design/` với tên file mới; các tham chiếu `planning/`, `SPEC-P0x` trong comment **chưa** sửa vì không có tài liệu nguồn để trỏ tới |
-| 3.2, 3.3 | Chưa làm | Agent ra khỏi `scripts/`, mã camera |
+| 3.3 Mã camera | Xong (phương án nhẹ) | 14 file test camera chuyển sang `tests/legacy_camera/`, tự gắn marker `legacy`; `pytest -m "not legacy"` chạy riêng phần LiDAR (242 pass). Chưa xoá mã `c4/extract`, `c4/mining`, `c4/pipeline`, `c4/eval` |
+| 3.2 Agent ra khỏi `scripts/` | Chưa làm | `colab_agent.py` do dev vừa sửa nhiều ở v0.6.2, nên để sau để tránh xung đột |
 | 4 Đổi tên | Xong nhóm A và hầu hết nhóm B | Xem danh sách dưới |
 
 Đã đổi tên: `pipeline.py`→`web_selection.py`, `eval.py`→`evaluation.py`, `select.py`→`selectors.py`,
