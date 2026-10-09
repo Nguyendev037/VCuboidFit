@@ -4,6 +4,9 @@ Chọn **5 % keyframe LiDAR đáng gán nhãn 3D nhất** từ một bộ dữ l
 ego pose và timestamp (không camera, không nhãn). Có engine Python (CPU, thêm tầng PointPillars
 tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tham số, xem kết quả, soi từng frame.
 
+> **Repo này là ROOT duy nhất của dự án** (bản hoàn chỉnh nhất, phiên bản hiện tại v0.6.2). Mọi thay đổi
+> code, tài liệu, Docker, notebook đều làm, commit và push thẳng tại đây — không sinh lại từ nơi khác.
+
 ## Kiến trúc
 
 ```text
@@ -89,6 +92,7 @@ Chi tiết từng bước và xử lý lỗi: [docs/run-local.md](docs/run-local
 * [docs/colab-dev-setup.md](docs/colab-dev-setup.md) - dev mới: môi trường chạy được trên Colab (không GPU, không Docker)
 * [docs/model-workflow.md](docs/model-workflow.md) - model chọn 5% frame chạy như thế nào (từng bước)
 * [docs/glossary.md](docs/glossary.md) - "hiếm" là gì, ý nghĩa từng chỉ số và tham số
+* [docs/project-status.md](docs/project-status.md) - tình trạng dự án, số đo hiện có và kế hoạch còn lại theo phase
 
 ## Biến môi trường
 

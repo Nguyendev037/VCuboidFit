@@ -11,8 +11,7 @@ import numpy as np
 import pandas as pd
 
 from c4.contracts import read_table, validate, write_table
-from c4.lidar.descriptor import (BLOCKS, embed_descriptors, frame_descriptor,
-                                  stack_block_vectors)
+from c4.lidar.descriptor import BLOCKS, embed_descriptors, frame_descriptor, stack_block_vectors
 
 BATCH = 256
 

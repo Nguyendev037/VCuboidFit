@@ -63,6 +63,6 @@ Cách hoạt động: `GET /remote/t1/next` (hàng đợi rỗng ⇒ ngủ 60 s)
 chạy → `POST /remote/t1/{taskId}/result`. Lỗi train/infer ⇒ `POST .../fail` (kèm 2000 ký tự cuối stderr).
 
 Xử lý lỗi phía agent: `401` (sai token) dừng ngay không retry; `404 remote_disabled` (worker chưa bật
-`VCF_REMOTE_TOKEN`) dừng; `409 not_leased` bỏ task và quay lại hàng đợi; lỗi mạng/5xx thử lại 3 lần (5/15/45 s).
-Token không bao giờ bị in ra log. Trên web, task do nút **"Chạy Tầng 1 trên Colab"** tạo ra (panel tham số).
+`VCF_REMOTE_TOKEN`) dừng; `409 not_leased` bỏ task và quay lại hàng đợi; `409 lease_mismatch` (lease cũ, đã có lượt nhận việc mới) cũng bỏ task; `411`/`413` là lỗi gửi body (thiếu Content-Length / quá giới hạn) và không retry; lỗi mạng/5xx thử lại 3 lần (5/15/45 s).
+Mọi POST kèm header `X-Lease-Id` = `leaseId` nhận từ `next`. Agent Colab và worker phải cùng phiên bản >= 0.6.1. Token không bao giờ bị in ra log. Trên web, task do nút **"Chạy Tầng 1 trên Colab"** tạo ra (panel tham số).
 

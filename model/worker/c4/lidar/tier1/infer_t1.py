@@ -1,5 +1,5 @@
 """M5 · suy luận model seed trên MỌI keyframe: z1 (BEV pooled), box gốc + box lật, tín hiệu
-Tầng 1 và mAP seed trên T (SPEC-P02 §3). Chạy TRONG image vcf-tier1 sau train_seed.
+Tầng 1 và mAP seed trên T (SPEC-P02 §3). Chạy TRONG image vcuboidfit_pointpillars sau train_seed.
 
 python -m c4.lidar.tier1.infer_t1 --exp /exp [--batch 4]
 Mã thoát: 0 ok · 2 contract · 3 không có GPU · 4 thiếu file.

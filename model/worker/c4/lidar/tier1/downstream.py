@@ -1,5 +1,5 @@
 """M9 · downstream (PDF §5.4, stretch): huấn luyện PointPillars trên S ∪ A và chấm trên T, với CÙNG
-config/epoch/sweeps như model seed. Chạy TRONG image vcf-tier1 sau train_seed.
+config/epoch/sweeps như model seed. Chạy TRONG image vcuboidfit_pointpillars sau train_seed.
 
 python -m c4.lidar.tier1.downstream --exp /exp --nusc /nusc
     --selected /exp/V/hybrid_mmr/selected_5pct.csv --tag hybrid [--epochs 20] [--batch 2]

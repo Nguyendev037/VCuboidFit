@@ -6,7 +6,7 @@
 # KHÔNG khai `ports`: container chạy batch, không nghe cổng nào (SPEC-P01 §2b).
 services:
   pointpillars:
-    image: vcuboidfit_pointpillars:0.1
+    image: ${VCF_TIER1_IMAGE:-vcuboidfit_pointpillars:0.1}
     container_name: VCuboidFit_PointPillars
     build:
       context: .

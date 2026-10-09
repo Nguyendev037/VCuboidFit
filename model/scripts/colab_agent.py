@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """Colab agent: keo viec Tang 1 tu worker, train + suy luan, day signals.parquet ve.
 
-Dung: python colab_agent.py --server https://<tunnel> --token $VCF_REMOTE_TOKEN --work /content/vcf [--once]
+Dung: python colab_agent.py --server https://<tunnel> --token $VCF_REMOTE_TOKEN
+      --work /content/vcf [--once]
 Chi dung thu vien chuan + requests (pandas/pyarrow chi nap lazily o --dry-run).
 Token KHONG BAO GIO duoc in ra log.
 """
@@ -46,6 +47,13 @@ def log(msg: str) -> None:
     print(time.strftime("%H:%M:%S"), msg, flush=True)
 
 
+def _rewind(files) -> None:
+    for v in (files or {}).values():
+        f = v[1] if isinstance(v, tuple) else v
+        if hasattr(f, "seek"):
+            f.seek(0)
+
+
 class Client:
     def __init__(self, server: str, token: str, sleep=time.sleep):
         self.base = server.rstrip("/")
@@ -65,18 +73,25 @@ class Client:
             raise Stop("token bi tu choi (401) - dung, khong retry", 2)
         if r.status_code == 404 and self._code(r) == "remote_disabled":
             raise Stop("worker chua bat VCF_REMOTE_TOKEN", 3)
-        if r.status_code == 409 and self._code(r) == "not_leased":
+        if r.status_code == 409 and self._code(r) in ("not_leased", "lease_mismatch"):
             raise NotLeased()
+        if r.status_code == 411:
+            raise Stop("client thieu Content-Length (411) - dung, khong retry", 4)
         if r.status_code in (413, 422):
             raise TaskRejected(f"{r.status_code} {self._code(r)}")
         if r.status_code >= 500:
             raise requests.ConnectionError(f"HTTP {r.status_code}")
         return r
 
-    def call(self, method: str, path: str, **kw) -> requests.Response:
-        """Retry 3 lan backoff 5/15/45 s cho mang/5xx; loi cuoi ne ra ngoai."""
+    def call(self, method: str, path: str, lease: str | None = None,
+             **kw) -> requests.Response:
+        """Retry 3 lan backoff 5/15/45 s cho mang/5xx; loi cuoi ne ra ngoai.
+        lease: leaseId cua luot nhan viec, gui o header X-Lease-Id."""
         kw.setdefault("timeout", 60)
+        if lease:
+            kw["headers"] = {"X-Lease-Id": lease}
         for i in range(len(BACKOFF) + 1):
+            _rewind(kw.get("files"))  # moi lan thu lai phai gui lai tu byte dau
             try:
                 return self.check(self.s.request(method, self.base + path, **kw))
             except (requests.ConnectionError, requests.Timeout) as e:
@@ -137,9 +152,9 @@ def fetch_bundle(c: Client, task: dict, work: Path) -> tuple[Path, Path]:
 
 
 class Heartbeat(threading.Thread):
-    def __init__(self, c: Client, tid: str, interval: float):
+    def __init__(self, c: Client, tid: str, interval: float, lease: str | None = None):
         super().__init__(daemon=True)
-        self.c, self.tid, self.interval = c, tid, interval
+        self.c, self.tid, self.interval, self.lease = c, tid, interval, lease
         self.stage, self.progress = "train", 0.0
         self.stop_ev = threading.Event()
         self.sent = 0
@@ -148,6 +163,7 @@ class Heartbeat(threading.Thread):
         while True:  # nhip dau gui ngay lap tuc
             try:
                 self.c.call("POST", f"/remote/t1/{self.tid}/heartbeat",
+                            lease=self.lease,
                             json={"stage": self.stage, "progress": self.progress})
                 self.sent += 1
             except Exception as e:  # heartbeat hong khong duoc giet viec dang chay
@@ -189,6 +205,7 @@ def run_stage(args_list: list[str], env: dict, cwd: Path) -> None:
 
 def process(c: Client, task: dict, a) -> None:
     tid = task["taskId"]
+    lease = task.get("leaseId")
     work = Path(a.work)
     work.mkdir(parents=True, exist_ok=True)
     params = task.get("params") or {}
@@ -197,7 +214,7 @@ def process(c: Client, task: dict, a) -> None:
     hb = None
     try:
         exp, data = fetch_bundle(c, task, work)
-        hb = Heartbeat(c, tid, a.heartbeat_sec)
+        hb = Heartbeat(c, tid, a.heartbeat_sec, lease)
         hb.start()
         t0 = time.monotonic()
         if a.dry_run:
@@ -227,24 +244,24 @@ def process(c: Client, task: dict, a) -> None:
             files["manifest"] = ("signals.manifest.json", open(man, "rb"))
         try:
             c.call("POST", f"/remote/t1/{tid}/result", files=files,
-                   data={"meta": json.dumps(meta)}, timeout=(30, 600))
+                   data={"meta": json.dumps(meta)}, timeout=(30, 600), lease=lease)
         finally:
             for _, f in files.values():
                 f.close()
         log(f"da gui ket qua {tid}")
     except StageError as e:
-        _fail(c, tid, str(e))
+        _fail(c, tid, str(e), lease)
     except TaskRejected as e:
-        _fail(c, tid, f"bi tu choi: {e}")
+        _fail(c, tid, f"bi tu choi: {e}", lease)
     finally:
         if hb is not None:
             hb.stop()
 
 
-def _fail(c: Client, tid: str, msg: str) -> None:
+def _fail(c: Client, tid: str, msg: str, lease: str | None = None) -> None:
     log(f"viec {tid} that bai: {msg[-300:]}")
     try:
-        c.call("POST", f"/remote/t1/{tid}/fail", json={"error": msg[-2000:]})
+        c.call("POST", f"/remote/t1/{tid}/fail", json={"error": msg[-2000:]}, lease=lease)
     except NotLeased:
         pass
 

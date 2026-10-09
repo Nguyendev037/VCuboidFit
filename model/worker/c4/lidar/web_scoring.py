@@ -6,7 +6,6 @@ from c4.contracts import read_table
 from c4.lidar import evaluation as ev
 from c4.lidar.web_selection import WebSelection
 
-
 METRICS_NOTE = ("Các chỉ số dùng nhãn thật của chính tập này, chỉ để minh hoạ. Đổi tham số rồi "
                 "chọn cấu hình theo chỉ số này là dò tham số trên tập chấm; kết luận chính thức "
                 "phải chấm trên tập P đúng một lần sau khi đóng băng tham số.")
@@ -23,7 +22,7 @@ def _count_pct(n, total):
 
 
 def attach_truth(sel: WebSelection, job: Path) -> dict:
-    """Thêm metrics, đếm rare GT và tag "Rare GT …" vào result nếu job có nhãn; không thì giữ nguyên."""
+    """Thêm metrics, đếm rare GT và tag "Rare GT" vào result nếu job có nhãn; không thì giữ."""
     result = sel.result
     gt_path = Path(job) / "gt" / "gt_rare_lidar.parquet"
     if not gt_path.is_file():

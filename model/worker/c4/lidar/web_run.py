@@ -1,4 +1,4 @@
-"""Điểm vào duy nhất của luồng web: chọn (label-free) rồi chấm bằng nhãn (nếu có), ghi result.json."""
+"""Điểm vào duy nhất của luồng web: chọn (label-free), chấm nhãn (nếu có), ghi result.json."""
 from c4.lidar.params import LidarParams
 from c4.lidar.web_scoring import attach_truth
 from c4.lidar.web_selection import select_for_web

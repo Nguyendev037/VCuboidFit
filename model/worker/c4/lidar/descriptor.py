@@ -1,7 +1,8 @@
 """M3 · descriptor hình học Tầng 0 (PDF §4.1): khối A–E → z-score → chia √d khối → PCA.
 
-Không model, không nhãn, chạy CPU. Một frame = một dict {khối: vector}; ghép và PCA ở `embed_descriptors`
-trên đúng tập đang chọn (PCA không dùng nhãn nên fit trên chính tập đó là hợp lệ).
+Không model, không nhãn, chạy CPU. Một frame = một dict {khối: vector}; ghép và PCA ở
+`embed_descriptors` trên đúng tập đang chọn (PCA không dùng nhãn nên fit trên chính tập đó
+là hợp lệ).
 """
 from pathlib import Path
 

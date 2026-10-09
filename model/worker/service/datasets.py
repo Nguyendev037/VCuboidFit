@@ -91,11 +91,13 @@ class _Progress:
 
     def write(self, phase: str, done: float, total: float, unit: str) -> None:
         elapsed = time.monotonic() - self.t0
-        eta = elapsed * (total - done) / done if done > 0 and phase not in ("done", "error") else None
+        running = done > 0 and phase not in ("done", "error")
+        eta = elapsed * (total - done) / done if running else None
         if phase == "done":
             eta = 0.0
         doc = dict(uploadId=self.upload_id, phase=phase, done=done, total=total, unit=unit,
-                   elapsedSec=round(elapsed, 2), etaSec=None if eta is None else round(max(eta, 0.0), 1),
+                   elapsedSec=round(elapsed, 2),
+                   etaSec=None if eta is None else round(max(eta, 0.0), 1),
                    updatedAt=datetime.now().isoformat(timespec="seconds"))
         try:
             tmp = self.path.with_suffix(".tmp")

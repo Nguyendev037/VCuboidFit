@@ -1,4 +1,4 @@
-"""M4 · huấn luyện PointPillars TỪ ĐẦU chỉ trên seed S (SPEC-P02 §2). Chạy TRONG image vcf-tier1.
+"""M4 · huấn luyện PointPillars TỪ ĐẦU chỉ trên seed S (SPEC-P02 §2). Chạy TRONG image PointPillars.
 
 python -m c4.lidar.tier1.train_seed --exp /exp --nusc /nusc [--version v1.0-mini] [--sweeps 10]
     [--epochs 20] [--batch 2] [--workers 4]

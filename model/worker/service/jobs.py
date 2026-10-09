@@ -122,7 +122,7 @@ class JobQueue:
         shutil.rmtree(self._dir(job_id))
 
     def delete(self, job_id: str, on_deleted=None) -> None:
-        """Xoá một job không active. 404 nếu id sai dạng/không có; 409 `job_active` nếu đang chạy."""
+        """Xoá job không active. 404 nếu id sai/không có; 409 `job_active` nếu đang chạy."""
         if not _JOB_ID.fullmatch(job_id):
             raise ApiError(404, "not_found", "Không tìm thấy job.")
         with self._cv:

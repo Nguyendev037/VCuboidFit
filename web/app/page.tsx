@@ -611,6 +611,7 @@ export default function Home() {
           <span className="text-xs text-slate-500 font-mono">
             {jobId ? `Job ${jobId}` : "Chưa có job"}
           </span>
+          <span role="status" aria-live="polite">
           {done ? (
             <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -626,6 +627,7 @@ export default function Home() {
               Chờ dữ liệu
             </span>
           )}
+          </span>
         </div>
       </header>
 
@@ -649,11 +651,11 @@ export default function Home() {
               {(recentJobs.data?.length ?? 0) > 0 && <button type="button" onClick={() => setDeleteTarget({ kind: "all" })} className="ml-auto px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 rounded">Xoá tất cả</button>}
               <button type="button" title="Làm mới lịch sử" aria-label="Làm mới lịch sử" onClick={() => void recentJobs.refetch()} className="p-2 hover:bg-slate-200 rounded"><RefreshCw size={16} /></button>
             </div>
-            {recentJobs.isPending && <p className="text-xs text-slate-500">Đang tải lịch sử…</p>}
+            {recentJobs.isPending && <p role="status" className="text-xs text-slate-500">Đang tải lịch sử…</p>}
             {recentJobs.error && <p role="alert" className="text-xs text-rose-700">{recentJobs.error.message}</p>}
             {recentJobs.data?.length === 0 && <p className="text-xs text-slate-500">Chưa có lần chạy.</p>}
-            <div className="max-h-48 overflow-auto divide-y divide-slate-200">
-              {recentJobs.data?.map((item) => <div key={item.jobId} className="flex items-center justify-between gap-3 py-2 text-xs">
+            <div role="list" className="max-h-48 overflow-auto divide-y divide-slate-200">
+              {recentJobs.data?.map((item) => <div role="listitem" key={item.jobId} className="flex items-center justify-between gap-3 py-2 text-xs">
                 <div className="min-w-0"><p className="font-medium break-all">{item.version || item.datasetId} · {item.frames} frame · {item.pipeline === "lidar" ? "LiDAR" : "Camera"}{item.createdAt && item.finishedAt ? ` · ${formatDuration(Math.max(0, (new Date(item.finishedAt).getTime() - new Date(item.createdAt).getTime()) / 1000))}` : ""}</p><p className="text-slate-500 break-all">{item.jobId} · {item.state === "done" ? "Hoàn tất" : item.state === "running" ? "Đang chạy" : item.state === "queued" ? "Đang chờ" : item.state === "failed" ? "Lỗi" : "Đã huỷ"}{item.createdAt ? ` · ${new Date(item.createdAt).toLocaleString("vi-VN")}` : ""}</p></div>
                 <div className="flex items-center shrink-0">
                 <button type="button" disabled={restoring || uploading} onClick={() => void openRun(item)} className="flex items-center gap-1 px-2 py-2 text-blue-700 hover:bg-blue-50 rounded disabled:opacity-50"><FolderOpen size={16} />Mở</button>

@@ -13,7 +13,7 @@ TOL = 1e-4
 
 
 def _forward(seed: int):
-    """Một forward PillarVFE -> PointPillarScatter -> BaseBEVBackbone trên cloud tổng hợp cố định."""
+    """Một forward PillarVFE -> PointPillarScatter -> BaseBEVBackbone trên cloud tổng hợp."""
     import numpy as np
     import torch
     from easydict import EasyDict

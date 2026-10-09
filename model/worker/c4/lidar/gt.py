@@ -1,5 +1,6 @@
 """M2 · ground truth "rare" theo cell (PDF §5.1). MODULE DUY NHẤT của pipeline LiDAR được đọc
-annotation và scene.description. Kết quả chỉ `c4.lidar.evaluation` được đọc (test_no_leakage_lidar)."""
+annotation và scene.description. Kết quả chỉ `c4.lidar.evaluation` được đọc
+(test_no_leakage_lidar)."""
 import math
 
 import numpy as np

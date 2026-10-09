@@ -19,8 +19,14 @@ from c4.lidar import load_lidar_config
 from c4.lidar.extract import load_filter
 from c4.lidar.params import LidarParams, params_schema, resolve
 from c4.lidar.scoring import combine_scores, rarity
-from c4.lidar.selectors import (budget, l2_normalize, select_coreset, select_mmr, select_random,
-                                select_topk)
+from c4.lidar.selectors import (
+    budget,
+    l2_normalize,
+    select_coreset,
+    select_mmr,
+    select_random,
+    select_topk,
+)
 from c4.lidar.t1_signals import load_signals, unc_score
 
 PREVIEW_N = 12
@@ -203,10 +209,12 @@ def _analysis(index, sc, keep, in_pool, job: Path, hybrid, B, groups, r) -> dict
                                 "groups": int(sum(c > 1 for c in
                                                   np.unique(groups_pool, return_counts=True)[1]))},
                  "tooSafe": _count_pct(too_safe.sum(), N), "easy": _count_pct(easy.sum(), N),
-                 "unlabelable": {"total": _count_pct((~keep & in_pool).sum(), N), "dark": 0, "blurry": 0,
+                 "unlabelable": {"total": _count_pct((~keep & in_pool).sum(), N), "dark": 0,
+                                 "blurry": 0,
                                  "noObjects": int(reasons.get("few_points", 0)),
                                  "readError": int(reasons.get("read_error", 0))},
-                 "excludedByCamera": _count_pct(0, N), "highValue": _count_pct(n_high, N), "rareGt": None},
+                 "excludedByCamera": _count_pct(0, N), "highValue": _count_pct(n_high, N),
+                 "rareGt": None},
         "selected": {"scenesCovered": int(top["scene_token"].nunique()), "reasons": kinds,
                      "duplicatesInSelection": dup_in},
         "histogram": {"bins": [round(float(b), 6) for b in bins],
