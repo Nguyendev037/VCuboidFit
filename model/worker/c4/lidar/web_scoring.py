@@ -7,6 +7,11 @@ from c4.lidar import evaluation as ev
 from c4.lidar.web_selection import WebSelection
 
 
+METRICS_NOTE = ("Các chỉ số dùng nhãn thật của chính tập này, chỉ để minh hoạ. Đổi tham số rồi "
+                "chọn cấu hình theo chỉ số này là dò tham số trên tập chấm; kết luận chính thức "
+                "phải chấm trên tập P đúng một lần sau khi đóng băng tham số.")
+
+
 def _web_metrics(m: dict) -> dict:
     keys = ["recall", "nRecall", "uplift", "precision", "sceneRecall", "coverage",
             "coverageGain", "redundancy", "nBoxes"]
@@ -31,6 +36,7 @@ def attach_truth(sel: WebSelection, job: Path) -> dict:
         random=({k: _web_metrics(v) for k, v in res["random"].items()} if res["random"] else None),
         ablation={k: _web_metrics(v) for k, v in res["runs"].items() if k != "hybrid"},
         ci95=None)
+    result["warnings"] = [*result.get("warnings", []), METRICS_NOTE]
     n = len(pool_index)
     rare_gt = {"total": _count_pct(len(truth.rare), n)}
     rare_gt.update({g: _count_pct(len(v), n) for g, v in truth.groups.items()})
