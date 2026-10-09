@@ -158,6 +158,13 @@ export async function getT1Remote(jobId: string): Promise<T1RemoteStatus> {
   }
 }
 
+/** Plan 09 §3: chạy (lại) Tầng 1 trên chính máy worker; 409 nếu job đang chạy hoặc máy chưa có model. */
+export function runTier1(jobId: string): Promise<{ state: "queued" }> {
+  return isMock()
+    ? Promise.resolve({ state: "queued" as const })
+    : request<{ state: "queued" }>("POST", `/api/jobs/${seg(jobId)}/t1/run`, {});
+}
+
 export function createT1Remote(jobId: string): Promise<RemoteTask> {
   return request<RemoteTask>("POST", `/api/jobs/${seg(jobId)}/t1-remote`, {});
 }

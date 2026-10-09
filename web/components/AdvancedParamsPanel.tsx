@@ -2,9 +2,10 @@
 
 import { Lock, Settings } from "lucide-react";
 import type { ParamsSchema, ParamsSchemaOption, RemoteTask } from "@/lib/api/types";
-import { tier0LockNote, tier0LockTitle, weightPercents, type AdvancedDraft } from "@/lib/advancedParams";
+import { TIER1_BALANCED, tier0LockNote, tier0LockTitle, weightPercents, type AdvancedDraft } from "@/lib/advancedParams";
 import { SETTINGS } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { TierStatus, type TierStatusProps } from "@/components/TierStatus";
 
 interface AdvancedParamsPanelProps {
   open: boolean;
@@ -20,6 +21,8 @@ interface AdvancedParamsPanelProps {
   onRetrySchema?: () => void;
   /** A7: chạy Tầng 1 trên Colab. `enabled=false` ⇒ ẩn nút. */
   colab?: { enabled: boolean; task: RemoteTask | null; busy: boolean; error?: string | null; onRun: () => void };
+  /** Plan 09 §8: trạng thái Tầng 0/Tầng 1 của job (không truyền ⇒ ẩn, ví dụ worker cũ). */
+  tierStatus?: TierStatusProps;
 }
 
 const COLAB_STATE_TEXT: Record<string, string> = {
@@ -78,6 +81,7 @@ export function AdvancedParamsPanel({
   schemaError,
   onRetrySchema,
   colab,
+  tierStatus,
 }: AdvancedParamsPanelProps) {
   const field = (key: string) => schema?.fields.find((f) => f.key === key);
   const numberField = (key: string, fallback: { min: number; max: number; step: number }) => {
@@ -119,6 +123,23 @@ export function AdvancedParamsPanel({
   const weightGroup = schema?.groups?.weights;
   const tier1Option = tierOptions.find((o) => o.value === 1);
   const tier1Available = tierAvailable.includes(1) && !tier1Option?.disabledReason;
+  // novSource "none": job có Tầng 1 nhưng thiếu frame seed ⇒ worker ép β = 0, khoá thanh cho khớp
+  const noNovelty = tierStatus?.tier1?.state === "done" && tierStatus.tier1.novSource === "none";
+  const defaultOf = (key: string, fallback: number) => {
+    const v = field(key)?.default;
+    return typeof v === "number" ? v : fallback;
+  };
+  /** Sang Tầng 1 với trọng số Tầng 0 (100/0/0) ⇒ dùng mặc định Tầng 1 của schema, kẻo "Nâng cao" vẫn chỉ là Tầng 0. */
+  const switchTier = (tier: 0 | 1): Partial<AdvancedDraft> => {
+    if (tier === 0) return { tier, beta: 0, gamma: 0 };
+    if (draft.beta > 0 || draft.gamma > 0) return { tier };
+    // Mặc định schema là của Tầng 0 (1/0/0) ⇒ dùng preset "balanced" của worker (lidar.yaml presets.balanced)
+    const fromSchema = defaultOf("beta", 0) + defaultOf("gamma", 0) > 0;
+    const { alpha, beta, gamma } = fromSchema
+      ? { alpha: defaultOf("alpha", 0.5), beta: defaultOf("beta", 0.25), gamma: defaultOf("gamma", 0.25) }
+      : TIER1_BALANCED;
+    return { tier, alpha, beta: noNovelty ? 0 : beta, gamma };
+  };
 
   return (
     <div className="border-t border-slate-100 pt-3">
@@ -160,7 +181,7 @@ export function AdvancedParamsPanel({
             </span>
             <div className="grid grid-cols-2 p-1 bg-white rounded-lg border border-slate-200 gap-1">
               {tierOptions.map((opt) => {
-                const reason = opt.disabledReason || (tierAvailable.includes(opt.value) ? null : "Chưa có model seed");
+                const reason = opt.disabledReason || (tierAvailable.includes(opt.value) ? null : "Máy chưa có model Tầng 1");
                 const selected = draft.tier === opt.value;
                 return (
                   <button
@@ -169,13 +190,7 @@ export function AdvancedParamsPanel({
                     disabled={!!reason}
                     title={reason ?? opt.hint ?? opt.label}
                     aria-pressed={selected}
-                    onClick={() =>
-                      set({
-                        tier: opt.value as 0 | 1,
-                        beta: opt.value === 0 ? 0 : draft.beta,
-                        gamma: opt.value === 0 ? 0 : draft.gamma,
-                      })
-                    }
+                    onClick={() => set(switchTier(opt.value as 0 | 1))}
                     className={`flex flex-col items-center rounded-md px-2 py-1.5 transition-colors ${
                       selected ? "bg-blue-600 text-white" : "text-slate-700 hover:bg-slate-100 disabled:hover:bg-transparent"
                     }`}
@@ -187,6 +202,7 @@ export function AdvancedParamsPanel({
                 );
               })}
             </div>
+            {tierStatus && <TierStatus {...tierStatus} />}
           </div>
 
           <label className="flex flex-col gap-1">
@@ -248,9 +264,13 @@ export function AdvancedParamsPanel({
             {(["alpha", "beta", "gamma"] as const).map((key) => {
               const f = field(key);
               const fallbackLabel = key === "alpha" ? "Hiếm trong dữ liệu" : key === "beta" ? "Lạ với model" : "Model chưa chắc chắn";
-              const disabled = draft.tier === 0 && key !== "alpha";
+              const disabled = (draft.tier === 0 && key !== "alpha") || (noNovelty && key === "beta");
               return (
-                <label key={key} className="flex flex-col gap-1" title={disabled ? tier0LockTitle(tier1Available) : undefined}>
+                <label
+                  key={key}
+                  className="flex flex-col gap-1"
+                  title={disabled ? (draft.tier === 0 ? tier0LockTitle(tier1Available) : "Dữ liệu này thiếu frame seed nên chưa tính được Lạ với model.") : undefined}
+                >
                   <span className="flex flex-wrap items-center justify-between font-semibold">
                     <span className="flex flex-wrap items-center">
                       {disabled && <Lock className="mr-1 h-3 w-3 text-slate-400" aria-label="Đã khoá" />}

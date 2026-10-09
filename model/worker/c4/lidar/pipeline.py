@@ -7,7 +7,8 @@ out/selections/<sid>/{result.json, scores.parquet, selected.csv}.
 """
 import hashlib
 import json
-from dataclasses import asdict
+import os
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import numpy as np
@@ -28,12 +29,26 @@ PREVIEW_N = 12
 DUP_THETA = 0.95
 
 
+def tier1_machine_ready() -> bool:
+    """Khả dụng Tầng 1 là thuộc tính của MÁY (plan 09 D1): thí nghiệm seed có đủ index, cấu hình
+    và checkpoint. Không phụ thuộc job nên UI biết trước khi phân tích."""
+    exp_s = os.environ.get("VCF_T1_EXP", "").strip()
+    if not exp_s:
+        return False
+    exp = Path(exp_s)
+    return all(exp.joinpath(*rel).is_file() for rel in (
+        ("index.parquet",), ("t1", "cfg", "pp_seed.yaml"), ("t1", "ckpt", "seed_latest.pth")))
+
+
 def tier_available(job: Path) -> list[int]:
-    return [0, 1] if (job / "t1" / "signals.parquet").is_file() else [0]
+    """Tầng dùng ĐƯỢC để chọn trên job này: cần t1/signals.parquet của job (kể cả từ máy ngoài)."""
+    return [0, 1] if (Path(job) / "t1" / "signals.parquet").is_file() else [0]
 
 
 def schema(job: Path, cfg=None) -> dict:
-    return params_schema(cfg or load_lidar_config(), tier_available(Path(job)))
+    """`tierAvailable` = [0,1] khi máy sẵn sàng (cho MỌI job) hoặc job đã có tín hiệu Tầng 1."""
+    avail = [0, 1] if tier1_machine_ready() else tier_available(Path(job))
+    return params_schema(cfg or load_lidar_config(), avail)
 
 
 def _fingerprint(job: Path) -> str:
@@ -68,8 +83,26 @@ def _web_metrics(m: dict) -> dict:
 def run_selection_lidar(job_dir, params: LidarParams, cfg=None) -> dict:
     job = Path(job_dir)
     cfg = cfg or load_lidar_config()
-    avail = tier_available(job)
+    has_sig = tier_available(job) == [0, 1]
+    avail = [0, 1] if tier1_machine_ready() or has_sig else [0]  # cùng luật với `schema`
+    if params.tier is None and not has_sig:
+        params = replace(params, tier=0)  # máy sẵn sàng nhưng job chưa chạy t1: mặc định Tầng 0
+    elif params.tier == 1 and 1 in avail and not has_sig:
+        raise ValueError("tier_unavailable: job chưa có tín hiệu Tầng 1, hãy chạy Tầng 1 trước")
     r, warnings = resolve(params, cfg, avail)
+    if r.tier == 1 and has_sig:  # plan 09 D2: tín hiệu Tầng 1 không có nov thật ⇒ β = 0
+        mf = job / "t1" / "signals.parquet.manifest.json"
+        try:
+            nov_src = json.loads(mf.read_text(encoding="utf-8")).get("nov_source")
+        except (OSError, ValueError):
+            nov_src = None
+        if nov_src == "none":
+            a, g = r.alpha, r.gamma
+            tot = a + g
+            a, g = (a / tot, g / tot) if tot > 0 else (1.0, 0.0)
+            r = replace(r, alpha=a, beta=0.0, gamma=g)
+            warnings = list(warnings) + [
+                "Lạ với model không khả dụng (chưa có seed): β đặt về 0, α và γ chuẩn hoá lại"]
     fp = _fingerprint(job)
     sid = hashlib.sha1(f"lidar|{json.dumps(asdict(r), sort_keys=True)}|{fp}".encode()) \
         .hexdigest()[:12]

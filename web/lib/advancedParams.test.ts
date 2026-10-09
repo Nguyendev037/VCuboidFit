@@ -8,6 +8,7 @@ import {
   type AdvancedDraft,
   weightPercents,
   draftFromSchema,
+  gateTier1,
   isAdvancedPanelInitiallyOpen,
   normalizeAdvancedParams,
   tier0LockNote,
@@ -167,11 +168,12 @@ describe("panel ngôn ngữ thường", () => {
     expect(render({ tier: 1 })).not.toContain("Đã khoá");
   });
 
-  it("tier 0 không có Tầng 1: ghi chú trỏ docs/run-local.md mục 5", () => {
+  it("tier 0 không có Tầng 1: ghi chú không nhắc docs (plan 09)", () => {
     const sch = JSON.parse(JSON.stringify(mock)) as ParamsSchema;
     sch.tierAvailable = [0];
     const html = render({ tier: 0 }, sch);
-    expect(html).toContain("job này chưa có, xem docs/run-local.md mục 5.");
+    expect(html).toContain("lần chạy này chưa có.");
+    expect(html).not.toContain("docs/");
     expect(html).not.toContain("Chọn Tầng 1 ở trên");
     expect(html.match(/<label[^>]*title="Đã khoá: tiêu chí này cần tín hiệu Tầng 1[^"]*"/g)?.length).toBe(2);
   });
@@ -226,5 +228,50 @@ describe("panel ngôn ngữ thường", () => {
       expect(sanitizeDraft(old, tier0)).toEqual(draftFromSchema(tier0));
       expect(sanitizeDraft(old, schema)).toBe(old);
     });
+  });
+});
+
+describe("gateTier1 (plan 09: máy có model, job chưa có tín hiệu)", () => {
+  const withOptions: ParamsSchema = {
+    ...schema,
+    fields: schema.fields.map((f) =>
+      f.key === "tier" ? { ...f, options: [{ value: 0, label: "Cơ bản" }, { value: 1, label: "Nâng cao" }] } : f,
+    ),
+  };
+  const t1 = (state: "ready" | "running" | "done" | "skipped" | "failed", reason: string | null = null) =>
+    ({ state, reason, canRun: true, novSource: null });
+
+  it("không có khối tier1 (worker cũ) hoặc done ⇒ giữ nguyên schema", () => {
+    expect(gateTier1(withOptions, undefined)).toBe(withOptions);
+    expect(gateTier1(withOptions, t1("done"))).toBe(withOptions);
+  });
+
+  it("skipped ⇒ khoá Tầng 1, lý do lấy từ reason, draft về Tầng 0", () => {
+    const g = gateTier1(withOptions, t1("skipped", "Thiếu frame seed có lidar."))!;
+    expect(g.tierAvailable).toEqual([0]);
+    const tier = g.fields.find((f) => f.key === "tier")!;
+    expect(tier.options?.find((o) => o.value === 1)?.disabledReason).toBe("Thiếu frame seed có lidar.");
+    expect(draftFromSchema(g).tier).toBe(0);
+    expect(sanitizeSelectParams({ tier: 1 as const, alpha: 0.5, beta: 0.25, gamma: 0.25 }, g).tier).toBe(0);
+  });
+
+  it("running không có reason ⇒ câu mặc định theo trạng thái", () => {
+    const g = gateTier1(withOptions, t1("running"))!;
+    expect(g.fields.find((f) => f.key === "tier")!.options![1].disabledReason).toBe("Tầng 1 đang chạy, hãy đợi.");
+  });
+});
+
+describe("draftFromSchema Tầng 1 khi worker trả mặc định 1/0/0 (plan 09 §10)", () => {
+  it("dùng preset balanced 0.5/0.25/0.25 thay vì 100/0/0", () => {
+    const sch: ParamsSchema = {
+      ...schema,
+      fields: schema.fields.map((f) =>
+        f.key === "alpha" ? { ...f, default: 1 } : f.key === "beta" || f.key === "gamma" ? { ...f, default: 0 } : f,
+      ),
+    };
+    const d = draftFromSchema(sch);
+    expect(d.tier).toBe(1);
+    expect([d.alpha, d.beta, d.gamma]).toEqual([0.5, 0.25, 0.25]);
+    expect(weightPercents(d)).toEqual({ alpha: 50, beta: 25, gamma: 25 });
   });
 });

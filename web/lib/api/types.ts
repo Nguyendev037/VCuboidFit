@@ -66,6 +66,22 @@ export interface StageInfo {
   state: string;
   durationSec: number;
   peakVramMb: number;
+  reason?: string | null;
+}
+/** Plan 09 §3: trạng thái Tầng 1 của một job LiDAR (máy có model hay chưa nằm ở params-schema). */
+export type Tier1State = "ready" | "queued" | "running" | "done" | "skipped" | "failed";
+export interface Tier1Info {
+  state: Tier1State;
+  reason: string | null;
+  canRun: boolean;
+  novSource: "seed" | "none" | null;
+}
+/** Plan 09 §8: tóm tắt Tầng 0 (hình học) của một job LiDAR. */
+export interface Tier0Info {
+  state: string;
+  nTotal: number | null;
+  nKeep: number | null;
+  durationSec: number | null;
 }
 export interface JobStatus {
   jobId: string;
@@ -77,6 +93,8 @@ export interface JobStatus {
   etaSec: number;
   stages: StageInfo[];
   error?: { code: string; message: string };
+  tier0?: Tier0Info | null;
+  tier1?: Tier1Info | null;
 }
 
 export interface JobSummary {

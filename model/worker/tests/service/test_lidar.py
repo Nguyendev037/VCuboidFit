@@ -67,7 +67,11 @@ def test_job_runs_lidar_stages_only(env):
     st = env["status"]
     assert st["pipeline"] == "lidar"
     assert [s["name"] for s in st["stages"]] == ["lidar_index", "t0", "t1"]
-    assert all(s["state"] == "done" for s in st["stages"])
+    for s in st["stages"]:  # plan 09 D3: t1 có thể `skipped` nhưng PHẢI kèm lý do, không im lặng
+        if s["name"] == "t1" and s["state"] == "skipped":
+            assert s.get("reason"), s
+        else:
+            assert s["state"] == "done", s
     job = env["settings"].jobs / env["jid"]
     assert (job / "lidar" / "index.parquet").is_file()
     assert (job / "lidar" / "z0.npy").is_file() and (job / "lidar" / "filter.parquet").is_file()

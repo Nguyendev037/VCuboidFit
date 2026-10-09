@@ -15,7 +15,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from service.errors import ApiError
-from service.models import DatasetReport, JobList, JobStatus, JobSummary
+from service.models import DatasetReport, JobList, JobStatus, JobSummary, Tier0Info, Tier1Info
 from service.settings import Settings
 
 ACTIVE = ("queued", "running")
@@ -96,7 +96,79 @@ class JobQueue:
             job = JobStatus(job_id=job_id, state=meta["state"])
         if job.pipeline is None:  # runner cũ không ghi pipeline ⇒ lấy từ job.json
             job = job.model_copy(update={"pipeline": meta.get("pipeline") or "camera"})
+        if job.pipeline == "lidar":
+            job = job.model_copy(update={"tier0": self._tier0(job_id, job),
+                                         "tier1": self._tier1(job_id, job)})
         return job
+
+    def _tier0(self, job_id: str, job: JobStatus) -> Tier0Info:
+        """Khối `tier0`: trạng thái stage `t0` + số frame giữ lại (manifest `lidar/filter`)."""
+        stage = next((x for x in job.stages if x.name == "t0"), None)
+        man = _read_json(self._dir(job_id) / "lidar" / "filter.parquet.manifest.json")
+        man = man if isinstance(man, dict) else {}
+        num = lambda k: man[k] if isinstance(man.get(k), int) else None  # noqa: E731
+        # chạy lại t1 ⇒ stage t0 ghi 0 s; thời gian thật nằm ở marker
+        mark = _read_json(self._dir(job_id) / "progress" / "t0.done.json")
+        dur = mark.get("durationSec") if isinstance(mark, dict) else None
+        return Tier0Info(state=stage.state if stage else "queued", n_total=num("n_total"),
+                         n_keep=num("n_keep"),
+                         duration_sec=dur if isinstance(dur, (int, float)) else
+                         (stage.duration_sec if stage else None))
+
+    def _tier1(self, job_id: str, job: JobStatus) -> Tier1Info:
+        """Khối `tier1` (plan 09 §3): state từ stage `t1`, lý do từ status/`logs/t1.log`."""
+        from c4.jobs.runner import tier1_reason  # nhập muộn như _default_runner
+        from c4.lidar.pipeline import tier1_machine_ready
+        d = self._dir(job_id)
+        machine = tier1_machine_ready()
+        can_run = machine and (d / "lidar" / "index.parquet").is_file()
+        stage = next((x for x in job.stages if x.name == "t1"), None)
+        has_signals = (d / "t1" / "signals.parquet").is_file()
+        raw = stage.state if stage else "queued"
+        reason = None
+        if raw in ("queued", "running") and job.state in ACTIVE:
+            state = raw
+        elif has_signals:
+            state = "done"
+        elif raw in ("skipped", "failed"):
+            state = raw
+            reason = tier1_reason(d / "logs" / "t1.log") or stage.reason  # log mới nhất thắng
+            if raw == "failed" and not reason:
+                reason = "Tầng 1 chạy lỗi."
+        elif not machine:
+            state, reason = "skipped", "Máy này chưa có model Tầng 1."
+        else:
+            state = "ready"
+        nov = None
+        manifest = _read_json(d / "t1" / "signals.parquet.manifest.json")
+        if isinstance(manifest, dict) and manifest.get("nov_source") in ("seed", "none"):
+            nov = manifest["nov_source"]
+        return Tier1Info(state=state, reason=reason, can_run=can_run, nov_source=nov)
+
+    def run_t1(self, job_id: str) -> dict:
+        """Xếp job vào hàng đợi để chạy lại chỉ Tầng 1 (các stage đã xong tự bỏ qua nhờ marker)."""
+        meta = self._meta(job_id)
+        if meta is None:
+            raise ApiError(404, "not_found", "Không tìm thấy job.")
+        with self._cv:
+            if meta.get("state") in ACTIVE or job_id in self._cancels or job_id in self._queue:
+                raise ApiError(409, "busy", "Job đang chạy, hãy đợi xong rồi chạy Tầng 1.")
+            t1 = self.status(job_id).tier1 if meta.get("pipeline") == "lidar" else None
+            if t1 is None or not t1.can_run:
+                raise ApiError(409, "busy", "Chưa thể chạy Tầng 1 cho job này: máy chưa có model "
+                               "Tầng 1 hoặc job chưa phân tích xong phần cơ bản.")
+            sp = self._dir(job_id) / "status.json"
+            st = _read_json(sp) or dict(jobId=job_id, pipeline="lidar", done=0, total=1,
+                                        stages=[])
+            st.update(state="queued", stage="t1", error=None)
+            for x in st.get("stages", []):
+                if x.get("name") == "t1":
+                    x.update(state="queued", reason=None)
+            _write_json(sp, st)
+            self._set_meta(job_id, state="queued")
+            self._queue.append(job_id)
+            self._cv.notify()
+        return dict(state="queued")
 
     def cancel(self, job_id: str) -> JobStatus:
         if self._meta(job_id) is None:
@@ -280,6 +352,11 @@ def get_jobs(request: Request):
 @router.get("/jobs/{job_id}", response_model=JobStatus, response_model_by_alias=True)
 def get_job(job_id: str, request: Request):
     return request.app.state.queue.status(job_id)
+
+
+@router.post("/jobs/{job_id}/t1/run", status_code=202)
+def run_job_t1(job_id: str, request: Request):
+    return request.app.state.queue.run_t1(job_id)
 
 
 @router.post("/jobs/{job_id}/cancel", response_model=JobStatus, response_model_by_alias=True)

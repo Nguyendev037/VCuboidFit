@@ -3,15 +3,14 @@
 
 Mã thoát: 0 ok hoặc skip có lý do · 2 vi phạm contract · 4 thiếu lidar/index.parquet · 5 Docker lỗi.
 """
+import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-import pandas as pd
-
 from c4.cli.build_index import make_parser
-from c4.contracts import ContractError, read_table, write_table
+from c4.contracts import ContractError, read_table
 
 WORKER = Path(__file__).resolve().parents[2]  # .../model/worker
 
@@ -30,7 +29,8 @@ def main(argv=None) -> int:
         print("skip: VCF_T1_EXP chưa đặt")
         return 0
     exp = Path(exp_s)
-    for rel in (("index.parquet",), ("t1", "cfg", "pp_seed.yaml"), ("t1", "ckpt", "seed_latest.pth")):
+    for rel in (("index.parquet",), ("t1", "cfg", "pp_seed.yaml"),
+                ("t1", "ckpt", "seed_latest.pth")):
         p = exp.joinpath(*rel)
         if not p.is_file():
             print(f"skip: thiếu {p}")
@@ -43,45 +43,41 @@ def main(argv=None) -> int:
     except ContractError as e:
         print(f"vi phạm contract: {e}", file=sys.stderr)
         return 2
-    exp_idx = pd.read_parquet(exp / "index.parquet")
-    missing = set(job_idx["sample_token"]) - set(exp_idx["sample_token"])
-    if missing:
-        print(f"skip: {len(missing)} frame của job không có trong thí nghiệm seed")
-        return 0
-    exp_sig = exp / "t1" / "signals.parquet"
-    if not (args.resume and exp_sig.is_file()):
-        compose = WORKER.parent / "docker" / "tier1" / "docker-compose.yml"
-        env = dict(os.environ, NUSC=str(args.data_root), EXP=str(exp))
-        try:
-            rc = subprocess.run(["docker", "compose", "-f", str(compose), "run", "--rm", "infer"],
-                                env=env).returncode
-        except OSError as e:
-            print(f"docker lỗi ({e})", file=sys.stderr)
-            return 5
-        if rc != 0:
-            print(f"docker lỗi ({rc})", file=sys.stderr)
-            return 5
+    # D2: suy luận trên pool của job (không cần ⊆ index thí nghiệm); novelty do infer_t1 quyết định
+    (job / "t1").mkdir(parents=True, exist_ok=True)
+    compose = WORKER.parent / "docker" / "tier1" / "docker-compose.yml"
+    env = dict(os.environ, NUSC=str(Path(args.data_root).resolve()), EXP=str(exp.resolve()),
+               JOB=str(job.resolve()))
     try:
-        sig = read_table(exp_sig, "t1_signals")
+        rc = subprocess.run(["docker", "compose", "-f", str(compose), "run", "--rm", "infer"],
+                            env=env).returncode
+    except OSError as e:
+        print(f"docker lỗi ({e})", file=sys.stderr)
+        return 5
+    if rc == 2:
+        print("vi phạm contract trong infer_t1 (xem log phía trên)", file=sys.stderr)
+        return 2
+    if rc != 0:
+        print(f"docker lỗi ({rc})", file=sys.stderr)
+        return 5
+    try:
+        sig = read_table(str(out), "t1_signals")
     except FileNotFoundError as e:
         print(f"docker lỗi: không có {e}", file=sys.stderr)
         return 5
     except ContractError as e:
         print(f"vi phạm contract: {e}", file=sys.stderr)
         return 2
-    sig = sig.drop_duplicates("sample_token").set_index("sample_token")
-    toks = job_idx["sample_token"].tolist()
-    if any(t not in sig.index for t in toks):
-        print("vi phạm contract: thiếu sample_token trong signals", file=sys.stderr)
+    if list(sig["sample_token"]) != job_idx["sample_token"].tolist():
+        print("vi phạm contract: signals không khớp pool của job", file=sys.stderr)
         return 2
-    sig = sig.reindex(toks).reset_index()
-    (job / "t1").mkdir(parents=True, exist_ok=True)
+    nov = "?"
     try:
-        write_table(sig, str(out), "t1_signals")
-    except ContractError as e:
-        print(f"vi phạm contract: {e}", file=sys.stderr)
-        return 2
-    print(f"t1: {len(sig)} frame → {out}")
+        nov = json.loads((job / "t1" / "signals.parquet.manifest.json").read_text(
+            encoding="utf-8")).get("nov_source", "?")
+    except (OSError, ValueError):
+        pass
+    print(f"t1: {len(sig)} frame · nov_source={nov} → {out}")
     return 0
 
 

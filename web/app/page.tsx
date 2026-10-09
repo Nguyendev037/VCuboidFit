@@ -14,6 +14,7 @@ import {
   getParamsSchema,
   getT1Remote,
   createT1Remote,
+  runTier1,
   cancelJob,
   deleteJob,
   deleteAllJobs,
@@ -36,12 +37,14 @@ import { PRESETS } from "@/lib/api/types";
 import { recallRows, stageLabel } from "@/lib/constants";
 import { isDatasetUsable, datasetValidationMessage } from "@/lib/datasetValidation";
 import { AdvancedParamsPanel } from "@/components/AdvancedParamsPanel";
+import { isAnalysisReady, isT1OnlyRunning } from "@/lib/tierStatus";
 import { clearRunBookmark, readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "@/lib/runRecovery";
 import { METRICS, RARITY_COMPARISON, SETTINGS, gtTagLabel, reasonText } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   draftFromSchema,
+  gateTier1,
   hasTier1,
   isAdvancedPanelInitiallyOpen,
   normalizeAdvancedParams,
@@ -312,7 +315,9 @@ export default function Home() {
   const showAdvanced = useSyncExternalStore(subscribeAdvancedPanel, getAdvancedPanelOpen, () => false);
   const [advancedDraft, setAdvancedDraft] = useState<AdvancedDraft | null>(null);
   const [advancedParams, setAdvancedParams] = useState<AdvancedSubmitParams | null>(null);
-  const done = job.data?.state === "done";
+  // Plan 09 D4: chỉ còn Tầng 1 chạy nền thì kết quả Tầng 0 vẫn xem/chọn được
+  const done = isAnalysisReady(job.data);
+  const t1Background = isT1OnlyRunning(job.data);
   const activePipeline = pipeline;
   const analysisSteps = activePipeline === "lidar" ? LIDAR_ANALYSIS_STEPS : ANALYSIS_STEPS;
 
@@ -322,8 +327,10 @@ export default function Home() {
     enabled: !!jobId && done && activePipeline === "lidar",
     staleTime: 60_000,
   });
-  const currentAdvancedDraft = sanitizeDraft(advancedDraft, paramsSchema.data);
-  const noTier1 = !!paramsSchema.data && !hasTier1(paramsSchema.data);
+  // Plan 09: máy có model nhưng job chưa có tín hiệu Tầng 1 ⇒ khoá Tầng 1 kèm lý do từ job.tier1
+  const uiSchema = gateTier1(paramsSchema.data, job.data?.tier1);
+  const currentAdvancedDraft = sanitizeDraft(advancedDraft, uiSchema);
+  const noTier1 = !!uiSchema && !hasTier1(uiSchema);
 
   // A7: Tầng 1 chạy từ xa trên Colab (chỉ hỏi khi job chưa có Tầng 1)
   const t1Remote = useQuery({
@@ -338,9 +345,22 @@ export default function Home() {
     onSuccess: () => void t1Remote.refetch(),
     onError: () => void t1Remote.refetch(),
   });
+  // Chạy Tầng 1 ngay trên máy worker (Docker + GPU), rồi poll job tới khi tier1 đổi trạng thái
+  const t1Local = useMutation({
+    mutationFn: () => runTier1(jobId!),
+    onSettled: () => void job.refetch(),
+  });
+  const tier1JobState = job.data?.tier1?.state;
+  useEffect(() => {
+    if (tier1JobState === "done") void paramsSchema.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tier1JobState]);
   const t1State = t1Remote.data?.task?.state;
   useEffect(() => {
-    if (t1State === "done" && noTier1) void paramsSchema.refetch();
+    if (t1State === "done" && noTier1) {
+      void paramsSchema.refetch();
+      void job.refetch(); // tier1.state của job đổi sang done khi có tín hiệu
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t1State, noTier1]);
 
@@ -445,7 +465,7 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const selectParams = activePipeline === "lidar" ? sanitizeSelectParams(debounced, paramsSchema.data) : debounced;
+  const selectParams = activePipeline === "lidar" ? sanitizeSelectParams(debounced, uiSchema) : debounced;
   const selection = useQuery({
     queryKey: ["select", jobId, selectParams, demo],
     queryFn: () => restored && paramsEqual(debounced, restored.params)
@@ -612,7 +632,12 @@ export default function Home() {
             {jobId ? `Job ${jobId}` : "Chưa có job"}
           </span>
           <span role="status" aria-live="polite">
-          {done ? (
+          {t1Background ? (
+            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-violet-50 text-violet-700 border border-violet-200 flex items-center gap-1.5 animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+              Tầng 1 đang chạy
+            </span>
+          ) : done ? (
             <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Hoàn tất
@@ -1359,7 +1384,7 @@ export default function Home() {
 
             <AdvancedParamsPanel
               open={showAdvanced}
-              schema={paramsSchema.data}
+              schema={uiSchema}
               draft={currentAdvancedDraft}
               applied={!!advancedParams}
               onToggle={() => setAdvancedPanelOpen(!getAdvancedPanelOpen())}
@@ -1368,8 +1393,19 @@ export default function Home() {
               onReset={handleResetAdvanced}
               schemaError={paramsSchema.isError ? (paramsSchema.error instanceof Error ? paramsSchema.error.message : "Hãy thử lại.") : null}
               onRetrySchema={() => void paramsSchema.refetch()}
+              tierStatus={
+                job.data?.tier0 || job.data?.tier1
+                  ? {
+                      tier0: job.data.tier0,
+                      tier1: job.data.tier1,
+                      runBusy: t1Local.isPending,
+                      runError: t1Local.isError ? (t1Local.error instanceof Error ? t1Local.error.message : "Không chạy được Tầng 1.") : null,
+                      onRunTier1: demo ? undefined : () => t1Local.mutate(),
+                    }
+                  : undefined
+              }
               colab={
-                noTier1 && t1Remote.data?.enabled
+                noTier1 && t1Remote.data?.enabled && !["queued", "running"].includes(job.data?.tier1?.state ?? "")
                   ? {
                       enabled: true,
                       task: t1Remote.data.task,

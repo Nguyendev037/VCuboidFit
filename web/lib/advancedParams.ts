@@ -1,4 +1,4 @@
-import type { ParamsSchema } from "@/lib/api/types";
+import type { ParamsSchema, Tier1Info, Tier1State } from "@/lib/api/types";
 
 export interface AdvancedDraft {
   tier: 0 | 1;
@@ -27,6 +27,9 @@ const FALLBACK_DRAFT: AdvancedDraft = {
   gamma: 0,
 };
 
+/** Trọng số preset "balanced" của worker (configs/lidar.yaml presets.balanced). */
+export const TIER1_BALANCED = { alpha: 0.5, beta: 0.25, gamma: 0.25 } as const;
+
 export function isAdvancedPanelInitiallyOpen(storage?: Storage | null): boolean {
   try {
     return storage?.getItem("vcf-advanced-open") === "1";
@@ -47,6 +50,18 @@ export function draftFromSchema(schema?: ParamsSchema | null): AdvancedDraft {
   };
   const tierDefault = numberDefault("tier", schema?.tierAvailable.includes(1) ? 1 : 0);
   const tier = tierDefault === 1 && schema?.tierAvailable.includes(1) ? 1 : 0;
+  // Worker trả mặc định trọng số của Tầng 0 (1/0/0); Tầng 1 khi đó dùng preset "balanced" (lidar.yaml)
+  const tier1FromSchema = numberDefault("beta", 0) + numberDefault("gamma", 0) > 0;
+  if (tier === 1 && !tier1FromSchema) {
+    return {
+      tier,
+      k: numberDefault("k", FALLBACK_DRAFT.k),
+      lam: numberDefault("lam", FALLBACK_DRAFT.lam),
+      maxPerScene: numberDefault("maxPerScene", numberDefault("m", FALLBACK_DRAFT.maxPerScene)),
+      quotaOff: boolDefault("quotaOff", FALLBACK_DRAFT.quotaOff),
+      ...TIER1_BALANCED,
+    };
+  }
   return {
     tier,
     k: numberDefault("k", FALLBACK_DRAFT.k),
@@ -106,7 +121,7 @@ export function tier0LockNote(opts: { basicNote?: string; tier1Available: boolea
   const lead = opts.basicNote?.trim() || "Đang ở Tầng 0: chỉ dùng tiêu chí Hiếm trong dữ liệu.";
   const tail = opts.tier1Available
     ? "Chọn Tầng 1 ở trên để chỉnh 2 tiêu chí còn lại."
-    : "Lạ với model và Model chưa chắc chắn cần tín hiệu Tầng 1 (model seed) — job này chưa có, xem docs/run-local.md mục 5.";
+    : "Lạ với model và Model chưa chắc chắn cần tín hiệu Tầng 1 (model seed), lần chạy này chưa có.";
   return `${lead} ${tail}`;
 }
 
@@ -115,6 +130,31 @@ export function tier0LockTitle(tier1Available: boolean): string {
   return tier1Available
     ? "Đã khoá ở Tầng 0 (chỉ có tín hiệu hình học). Chọn Tầng 1 để chỉnh tiêu chí này."
     : "Đã khoá: tiêu chí này cần tín hiệu Tầng 1 (model seed), job này chưa có.";
+}
+
+const TIER1_STATE_TEXT: Record<Tier1State, string> = {
+  ready: "Tầng 1 sẵn sàng, sẽ chạy khi phân tích.",
+  queued: "Tầng 1 đang chờ chạy.",
+  running: "Tầng 1 đang chạy, hãy đợi.",
+  done: "",
+  skipped: "Lần chạy này chưa có Tầng 1.",
+  failed: "Tầng 1 chạy lỗi.",
+};
+
+/** Plan 09 D1/D3: máy có model (tierAvailable chứa 1) nhưng job chưa có tín hiệu Tầng 1 ⇒ khoá Tầng 1
+ *  cho job này, kèm lý do từ `tier1.reason`. Worker cũ không trả `tier1` ⇒ giữ nguyên schema. */
+export function gateTier1(schema: ParamsSchema | undefined, tier1?: Tier1Info | null): ParamsSchema | undefined {
+  if (!schema || !tier1 || tier1.state === "done" || !schema.tierAvailable.includes(1)) return schema;
+  const reason = tier1.reason?.trim() || TIER1_STATE_TEXT[tier1.state];
+  return {
+    ...schema,
+    tierAvailable: schema.tierAvailable.filter((t) => t !== 1),
+    fields: schema.fields.map((f) =>
+      f.key !== "tier" || !f.options
+        ? f
+        : { ...f, default: 0, options: f.options.map((o) => (o.value === 1 ? { ...o, disabledReason: reason } : o)) },
+    ),
+  };
 }
 
 /** Job có dùng được Tầng 1 không (chưa tải schema ⇒ chưa biết ⇒ coi như có, để không khoá nhầm). */

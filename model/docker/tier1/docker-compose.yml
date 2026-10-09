@@ -44,7 +44,15 @@ services:
   infer:
     <<: *gpu
     profiles: ["run"]
-    command: python -m c4.lidar.tier1.infer_t1 --exp /exp --batch ${BATCH:-2}
+    # JOB = thư mục job (có lidar/index.parquet); suy luận trên pool của job, ghi JOB/t1/signals.parquet
+    volumes:
+      - ${NUSC:-.}:/nusc:ro
+      - ${EXP:-.}:/exp
+      - ${JOB:-.}:/job
+      - ../../worker:/work/worker
+    command: >-
+      python -m c4.lidar.tier1.infer_t1 --exp /exp --job /job
+      --index /job/lidar/index.parquet --nusc /nusc --batch ${BATCH:-2}
 
   tier1:
     <<: *gpu

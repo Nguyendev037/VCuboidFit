@@ -11,6 +11,7 @@ ghi sau khi stage thoát 0) thì bỏ qua.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -79,6 +80,37 @@ def _last_line(path: Path) -> str:
     except OSError:
         return ""
     return next((ln.strip() for ln in reversed(lines) if ln.strip()), "")
+
+
+# Thông điệp của lidar_t1 / infer_t1 → câu cho người dùng (không lộ biến môi trường, đường dẫn).
+_T1_REASONS = (
+    (re.compile(r"VCF_T1_EXP chưa đặt"), "Lúc phân tích, máy chưa bật model Tầng 1."),
+    (re.compile(r"^skip: thiếu "), "Model Tầng 1 trên máy chưa đủ file."),
+    (re.compile(r"cần GPU"), "Máy không có GPU NVIDIA cho Tầng 1."),
+    (re.compile(r"docker lỗi|docker: |Cannot connect to the Docker|dockerDesktopLinuxEngine",
+                re.IGNORECASE),
+     "Không chạy được Docker cho Tầng 1. Hãy bật Docker Desktop rồi chạy lại."),
+    (re.compile(r"vi phạm contract|thiếu đầu vào"), "Dữ liệu Tầng 1 không khớp lần chạy này."),
+)
+
+
+def tier1_reason(log: Path, rc: int | None = None) -> str | None:
+    """Lý do tiếng Việt cho stage `t1` skipped/failed, đọc từ `logs/t1.log` (plan 09 D3)."""
+    try:
+        lines = [ln.strip() for ln in log.read_text(encoding="utf-8", errors="replace").splitlines()
+                 if ln.strip()]
+    except OSError:
+        lines = []
+    for ln in reversed(lines[-40:]):  # docker in nhiều dòng sau thông điệp gốc ⇒ dò ngược
+        for pat, text in _T1_REASONS:
+            if pat.search(ln):
+                return text
+    tail = re.sub(r"^skip:\s*", "", lines[-1]) if lines else ""
+    tail = re.sub(r"VCF_[A-Z0-9_]+", "cấu hình model Tầng 1", tail)
+    tail = re.sub(r"([A-Za-z]:)?[\\/][^\s]+", "…", tail)[:160]  # bỏ đường dẫn
+    if rc not in (None, 0):
+        return f"Tầng 1 lỗi (mã {rc}): {tail}" if tail else f"Tầng 1 lỗi (mã {rc})."
+    return tail or None
 
 
 def _marker(job: Path, stage: str) -> Path:
@@ -164,7 +196,8 @@ def _run_stage(job: Path, st: _Status, stage: str, cmd: list[str], env: dict,
     log_path = job / "logs" / f"{stage}.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     t_wall, t_mono = time.time(), time.monotonic()
-    s.update(state="running", startedAt=_now(), finishedAt=None, durationSec=0, skipped=False)
+    s.update(state="running", startedAt=_now(), finishedAt=None, durationSec=0, skipped=False,
+             reason=None)
     st.set(stage=stage, done=0, total=1, etaSec=None)
     proc = None
     cancelled = False
@@ -200,7 +233,8 @@ def _run_stages(job: Path, data_root: Path, profile: str, st: _Status, env: dict
         s = st.stage(stage)
         if _is_done(job, stage):
             mark = _read_json(_marker(job, stage)) or {}
-            s.update(state="done", skipped=True, durationSec=0,
+            # giữ thời gian thật của lần chạy trước (UI "Bước 2" hết hiện 0.0 s khi chạy lại t1)
+            s.update(state="done", skipped=True, durationSec=float(mark.get("durationSec", 0)),
                      peakVramMb=int(mark.get("peakVramMb", 0)))
             st.set(stage=stage, done=1, total=1)
             continue
@@ -211,6 +245,7 @@ def _run_stages(job: Path, data_root: Path, profile: str, st: _Status, env: dict
             s["state"] = "cancelled"
             return st.finish("cancelled")
         if rc != 0 and stage in OPTIONAL_STAGES:
+            s["reason"] = tier1_reason(job / "logs" / f"{stage}.log", rc)
             s["state"] = "failed"  # không finish, không ghi marker: job vẫn done, lần sau thử lại
             st.write()
             continue
@@ -218,7 +253,14 @@ def _run_stages(job: Path, data_root: Path, profile: str, st: _Status, env: dict
             s["state"] = "failed"
             msg = _failure_message(stage, rc, job / "logs" / f"{stage}.log")
             return st.finish("failed", dict(code=rc, message=msg))
+        if stage in OPTIONAL_STAGES and not all((job / p).is_file() for p in OUTPUTS[stage]):
+            # CLI thoát 0 nhưng không ra output = skip có lý do: KHÔNG im lặng, không ghi marker
+            s["state"] = "skipped"
+            s["reason"] = tier1_reason(job / "logs" / f"{stage}.log")
+            st.write()
+            continue
         s["state"] = "done"
+        s.pop("reason", None)
         if not (job / "progress" / f"{stage}.json").is_file():
             st.d.update(done=1, total=1)  # index/merge không báo tiến độ: xong = 1/1
         _atomic_json(dict(durationSec=s["durationSec"], peakVramMb=s["peakVramMb"],

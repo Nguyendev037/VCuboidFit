@@ -1,8 +1,19 @@
 import importlib.util
+import os
 
 import pytest
 
 from tests.fixtures.make_fixture import make_fixture, write_job_dir
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _clean_vcf_env():
+    """Máy dev có thể đặt sẵn VCF_T1_EXP/VCF_REMOTE_TOKEN/VCF_PORT trong env người dùng. Xoá ở mức
+    session (trước cả fixture scope=module chạy job); test nào cần thì tự đặt bằng monkeypatch."""
+    old = {k: os.environ.pop(k) for k in ("VCF_T1_EXP", "VCF_REMOTE_TOKEN", "VCF_PORT")
+           if k in os.environ}
+    yield
+    os.environ.update(old)
 
 
 @pytest.fixture

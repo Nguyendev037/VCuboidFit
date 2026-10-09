@@ -187,8 +187,9 @@ def test_rerun_skips_every_stage_without_spawning(done_job, monkeypatch):
     st = run_job(done_job["job"], done_job["root"], "local-4060", env=done_job["env"])
     assert time.monotonic() - t0 < 5
     assert st["state"] == "done"
-    assert all(s["state"] == "done" and s["skipped"] and s["durationSec"] == 0
-               for s in st["stages"])
+    assert all(s["state"] == "done" and s["skipped"] for s in st["stages"])
+    # thời gian lấy lại từ marker của lần chạy trước (plan 09 §10), không reset về 0
+    assert st["stages"][1]["durationSec"] == done_job["status"]["stages"][1]["durationSec"]
     assert st["stages"][1]["peakVramMb"] == done_job["status"]["stages"][1]["peakVramMb"]
 
 
@@ -301,7 +302,8 @@ def test_lidar_pipeline_runs_lidar_index_then_t0(tmp_path, ws, monkeypatch):
     st = run_job(job, tmp_path, "local-4060", env=ws)
     assert st["state"] == "done" and st["error"] is None and st["pipeline"] == "lidar"
     assert seen == ["lidar_index", "t0", "t1"]
-    assert [s["name"] for s in st["stages"]] == runner.PIPELINES["lidar"] == ["lidar_index", "t0", "t1"]
+    names = [s["name"] for s in st["stages"]]
+    assert names == runner.PIPELINES["lidar"] == ["lidar_index", "t0", "t1"]
     assert (job / "progress" / "lidar_index.done.json").is_file()
     assert (job / "progress" / "t0.done.json").is_file()
     assert runner.MODULES["lidar_index"] == "lidar_index" and runner.MODULES["t0"] == "lidar_t0"

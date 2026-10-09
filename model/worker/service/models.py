@@ -46,6 +46,23 @@ class StageStatus(ApiModel):
     state: str
     duration_sec: float | None = None
     peak_vram_mb: int | None = None
+    reason: str | None = None  # lý do tiếng Việt khi stage `skipped`/`failed` (plan 09 D3)
+
+
+class Tier1Info(ApiModel):
+    """Trạng thái Tầng 1 của MỘT job (plan 09 §3): máy sẵn sàng hay chưa nằm ở params-schema."""
+    state: Literal["ready", "queued", "running", "done", "skipped", "failed"]
+    reason: str | None = None
+    can_run: bool = False
+    nov_source: Literal["seed", "none"] | None = None
+
+
+class Tier0Info(ApiModel):
+    """Tóm tắt Tầng 0 (hình học) của MỘT job lidar: số frame đủ điểm LiDAR, thời gian chạy."""
+    state: str
+    n_total: int | None = None
+    n_keep: int | None = None
+    duration_sec: float | None = None
 
 
 class JobError(ApiModel):
@@ -63,6 +80,8 @@ class JobStatus(ApiModel):
     eta_sec: float | None = None
     stages: list[StageStatus] = Field(default_factory=list)
     error: JobError | None = None
+    tier0: Tier0Info | None = None  # chỉ job lidar
+    tier1: Tier1Info | None = None  # chỉ job lidar
 
 
 class JobSummary(ApiModel):

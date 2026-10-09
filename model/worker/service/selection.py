@@ -138,6 +138,13 @@ def list_selections(settings: Settings, job_id: str) -> list[SelectionInfo]:
             for m, sid, params in found]
 
 
+def t1_only_running(st) -> bool:
+    """Plan 09 D4: t1 không chặn job. Khi chỉ còn stage `t1` đang chạy (t0 đã xong), vẫn chọn được
+    theo Tầng 0; Tầng 1 tự bị từ chối vì job chưa có signals."""
+    return (st.pipeline == "lidar" and st.state in ("queued", "running") and st.stage == "t1"
+            and any(x.name == "t0" and x.state == "done" for x in st.stages))
+
+
 router = APIRouter()
 
 
@@ -145,7 +152,7 @@ router = APIRouter()
 def select(job_id: str, params: SelectParamsIn, request: Request):
     app = request.app
     st = app.state.queue.status(job_id)  # 404 nếu job không có
-    if st.state != "done":
+    if st.state != "done" and not t1_only_running(st):
         raise ApiError(409, "busy", "Job chưa xong, hãy đợi hoàn tất rồi chọn lại.")
     job_dir = app.state.settings.jobs / job_id
     try:
