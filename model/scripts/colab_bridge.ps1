@@ -78,8 +78,7 @@ try {
     Invoke-WebRequest "http://127.0.0.1:$Port/remote/t1/t1_000000000000/bundle" -UseBasicParsing `
         -Headers @{ Authorization = "Bearer $Token" } -TimeoutSec 5 | Out-Null
 } catch {
-    $body = ""
-    try { $body = (New-Object IO.StreamReader($_.Exception.Response.GetResponseStream())).ReadToEnd() } catch { }
+    $body = "$($_.ErrorDetails.Message)"   # PS 5.1: nội dung lỗi nằm ở ErrorDetails, stream đã bị đọc
     if ($body -notmatch "not_found") { throw "Worker ở cổng $Port không nhận TOKEN ($body). Có worker khác đang chạy? Tắt nó rồi chạy lại script." }
 }
 Write-Host "[2/4] Worker OK (cổng $Port, token OK)"
