@@ -3,3 +3,4 @@
 *.ps1 text eol=crlf
 *.zip binary
 *.pdf binary
+*.pth filter=lfs diff=lfs merge=lfs -text
