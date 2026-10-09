@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 
 import pytest
 from fastapi.testclient import TestClient
@@ -42,9 +43,13 @@ def client(settings):
     fake_sel(settings, "job_new", "aaaaaaaaaaaa", 1_700_000_000)
     fake_sel(settings, "job_new", "bbbbbbbbbbbb", 1_700_000_500, {"budget": 0.1})
     fake_sel(settings, "job_new", "../evil", 1_700_009_999)
-    app = create_app(settings, runner=lambda *a, **k: {})
+    # create_app xếp lại job `running` còn sót trên đĩa và luồng nền chạy ngay runner: runner giả
+    # trả về tức thì sẽ đẩy job_run sang done và làm test thua cuộc đua. Giữ nó ở trạng thái chạy.
+    gate = threading.Event()
+    app = create_app(settings, runner=lambda *a, **k: gate.wait(5) and {})
     with TestClient(app) as c:
         yield c
+        gate.set()
 
 
 def test_jobs_listed_newest_first_with_dataset_fields(client):

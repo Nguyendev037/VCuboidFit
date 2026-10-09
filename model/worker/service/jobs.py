@@ -41,10 +41,18 @@ def _write_json(path: Path, obj) -> None:
 
 
 def _read_json(path: Path):
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
+    """Đọc JSON; None nếu thiếu/hỏng. Windows: đọc đúng lúc `_write_json` đang `os.replace` file đích
+    báo PermissionError tạm thời — thử lại thay vì coi như file không tồn tại (job biến mất khỏi
+    danh sách /jobs)."""
+    for attempt in range(20):
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except PermissionError:
+            if attempt == 19:
+                return None
+            time.sleep(0.05)
+        except (OSError, ValueError):
+            return None
 
 
 def _default_runner(*args, **kwargs):

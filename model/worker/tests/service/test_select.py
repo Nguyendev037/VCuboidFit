@@ -80,11 +80,15 @@ def test_select_params_flow_through(app_ctx):
 
 def test_select_on_unfinished_job_is_409(settings):
     make_job(settings, "j2", state="running")
-    app = create_app(settings, runner=lambda *a, **k: {})
+    # create_app xếp lại job `running` còn sót; runner trả về tức thì sẽ làm nó xong trước khi
+    # request tới (cuộc đua). Giữ runner chờ tới khi test xong.
+    gate = threading.Event()
+    app = create_app(settings, runner=lambda *a, **k: gate.wait(5) and {})
     with TestClient(app) as c:
         r = c.post("/jobs/j2/select", json={})
         assert r.status_code == 409 and r.json()["error"]["code"] == "busy"
         assert c.post("/jobs/none/select", json={}).status_code == 404
+        gate.set()
 
 
 def test_select_bad_params_is_400(app_ctx):
