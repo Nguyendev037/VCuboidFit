@@ -55,6 +55,7 @@ if [ "$CPU_ONLY" = 1 ]; then
 elif [ -f "$VCF_HOME/OpenPCDet/.built" ] && [ "$(cat "$VCF_HOME/OpenPCDet/BUILD_COMMIT" 2>/dev/null)" = "$PCDET_COMMIT" ]; then
   echo "cache: OpenPCDet da build o $VCF_HOME/OpenPCDet"
 else
+  if [ "$(cat "$VCF_HOME/OpenPCDet/BUILD_COMMIT" 2>/dev/null)" != "$PCDET_COMMIT" ]; then
   T=$(mktemp -d)
   rm -rf "$VCF_HOME/OpenPCDet"
   "$PY" - "$T/pcdet.tgz" "$PCDET_COMMIT" <<'PYEOF'
@@ -66,6 +67,7 @@ PYEOF
   rm -rf "$T"
   echo "$PCDET_COMMIT" > "$VCF_HOME/OpenPCDet/BUILD_COMMIT"
   "$PY" "$REPO/model/docker/tier1/patch_pcdet.py" "$VCF_HOME/OpenPCDet"
+  fi
   # nvcc phai cung CUDA major voi torch, khong thi torch tu choi build extension.
   command -v nvcc >/dev/null 2>&1 || export PATH=/usr/local/cuda/bin:$PATH
   NVCC_VER=$(nvcc --version 2>/dev/null | sed -n 's/.*release \([0-9]*\.[0-9]*\).*/\1/p')
@@ -87,13 +89,17 @@ PYEOF
   "$PY" -m pip -q install SharedArray || echo "CANH BAO: khong cai duoc SharedArray (chi dung cho Waymo) - bo qua"
   # Build extension CUDA tai cho (khong 'setup.py develop', khong cai pcdet thanh goi): PYTHONPATH tro vao day.
   BLOG="$VCF_HOME/pcdet_build.log"
+  if ls "$VCF_HOME"/OpenPCDet/pcdet/ops/iou3d_nms/iou3d_nms_cuda*.so >/dev/null 2>&1; then
+    echo "da co extension build tu lan truoc - bo qua build"
+  else
   echo "build CUDA extension (5-10 phut), log: $BLOG"
   if ! (cd "$VCF_HOME/OpenPCDet" && TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9" "$PY" setup.py build_ext --inplace > "$BLOG" 2>&1); then
     echo "LOI build OpenPCDet - 60 dong cuoi cua log:" >&2
     tail -60 "$BLOG" >&2
     exit 1
   fi
-  (cd "$VCF_HOME/OpenPCDet" && "$PY" -c "import pcdet.ops.iou3d_nms.iou3d_nms_cuda, pcdet.ops.roiaware_pool3d.roiaware_pool3d_cuda; print('pcdet CUDA ops OK')")     || { echo "LOI: build xong nhung khong import duoc pcdet ops" >&2; exit 1; }
+  fi
+  (cd "$VCF_HOME/OpenPCDet" && "$PY" -c "import torch, pcdet.ops.iou3d_nms.iou3d_nms_cuda, pcdet.ops.roiaware_pool3d.roiaware_pool3d_cuda; print('pcdet CUDA ops OK')")     || { echo "LOI: build xong nhung khong import duoc pcdet ops" >&2; exit 1; }
   touch "$VCF_HOME/OpenPCDet/.built"
 fi
 
