@@ -1,26 +1,55 @@
-# Môi trường PointPillars (Tầng 1) — image vcuboidfit_pointpillars:0.1, container VCuboidFit_PointPillars.
-# Từ gốc repo:
-#   docker compose -f model/docker/tier1/docker-compose.yml build
-#   docker compose -f model/docker/tier1/docker-compose.yml run --rm pointpillars   # selfcheck (REPRO OK)
-#   NUSC=<nuScenes> EXP=<thí nghiệm> docker compose -f model/docker/tier1/docker-compose.yml up pointpillars
+# Môi trường PointPillars (Tầng 1) — project `vcuboidfit-tier1`, image vcuboidfit_pointpillars:0.1.
+# Chạy từ gốc repo (PowerShell: đặt biến bằng $env:NUSC="H:\" ... trước lệnh):
+#   docker compose -f model/docker/tier1/docker-compose.yml build                      # ~15 phút lần đầu, ~18.9 GB
+#   docker compose -f model/docker/tier1/docker-compose.yml run --rm pointpillars       # selfcheck GPU: phải in "REPRO OK"
+#   NUSC=<nuScenes root> EXP=<thư mục thí nghiệm có index.parquet> \
+#     docker compose -f model/docker/tier1/docker-compose.yml run --rm train            # train seed  -> <EXP>/t1/ckpt
+#   NUSC=... EXP=... docker compose -f model/docker/tier1/docker-compose.yml run --rm infer   # suy luận -> <EXP>/t1/signals.parquet
+#   NUSC=... EXP=... docker compose -f model/docker/tier1/docker-compose.yml run --rm tier1   # train + infer liền một lượt
+# Tham số: SWEEPS (10), EPOCHS (20), BATCH (2 — vừa 8 GB VRAM; hết VRAM thì BATCH=1, rồi SWEEPS=1), WORKERS (4).
 # KHÔNG khai `ports`: container chạy batch, không nghe cổng nào (SPEC-P01 §2b).
+name: vcuboidfit-tier1
+
+x-gpu: &gpu
+  image: ${VCF_TIER1_IMAGE:-vcuboidfit_pointpillars:0.1}
+  shm_size: 8g
+  working_dir: /work/worker
+  volumes:
+    - ${NUSC:-.}:/nusc:ro
+    - ${EXP:-.}:/exp
+    - ../../worker:/work/worker
+  environment:
+    PYTHONPATH: /work/worker:/opt/OpenPCDet
+  deploy:
+    resources:
+      reservations:
+        devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+
 services:
   pointpillars:
-    image: ${VCF_TIER1_IMAGE:-vcuboidfit_pointpillars:0.1}
+    <<: *gpu
     container_name: VCuboidFit_PointPillars
     build:
       context: .
       dockerfile: Dockerfile
-    shm_size: 8g
-    working_dir: /work/worker
-    volumes:
-      - ${NUSC:-.}:/nusc:ro
-      - ${EXP:-.}:/exp
-      - ../../worker:/work/worker
-    environment:
-      PYTHONPATH: /work/worker:/opt/OpenPCDet
-    deploy:
-      resources:
-        reservations:
-          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
     command: python -m c4.lidar.tier1.selfcheck
+
+  train:
+    <<: *gpu
+    profiles: ["run"]
+    command: >-
+      python -m c4.lidar.tier1.train_seed --exp /exp --nusc /nusc
+      --sweeps ${SWEEPS:-10} --epochs ${EPOCHS:-20} --batch ${BATCH:-2} --workers ${WORKERS:-4}
+
+  infer:
+    <<: *gpu
+    profiles: ["run"]
+    command: python -m c4.lidar.tier1.infer_t1 --exp /exp --batch ${BATCH:-2}
+
+  tier1:
+    <<: *gpu
+    profiles: ["run"]
+    command: >-
+      bash -c "python -m c4.lidar.tier1.train_seed --exp /exp --nusc /nusc
+      --sweeps ${SWEEPS:-10} --epochs ${EPOCHS:-20} --batch ${BATCH:-2} --workers ${WORKERS:-4}
+      && python -m c4.lidar.tier1.infer_t1 --exp /exp --batch ${BATCH:-2}"

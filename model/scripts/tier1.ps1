@@ -1,7 +1,8 @@
 ﻿# Tầng 1 trên Windows + Docker Desktop (L2 · RTX 4060) — tương đương scripts/tier1.sh.
-#   .\scripts\tier1.ps1 -Data H:\ -Exp .\workspace\experiments\mini [-Sweeps 10] [-Epochs 20] [-Batch 2]
+#   .\model\scripts\tier1.ps1 -Data H:\ -Exp .\model\workspace\experiments\mini [-Sweeps 10] [-Epochs 20] [-Batch 2]
 # Yêu cầu: <Exp>\index.parquet đã có (chạy Tầng 0 trước) và image vcuboidfit_pointpillars đã build:
-#   docker compose -f docker/tier1/docker-compose.yml build
+#   docker compose -f model/docker/tier1/docker-compose.yml build
+# Cách tương đương bằng compose: xem đầu file model/docker/tier1/docker-compose.yml (service train / infer / tier1).
 param(
     [Parameter(Mandatory = $true)][string]$Data,
     [Parameter(Mandatory = $true)][string]$Exp,

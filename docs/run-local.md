@@ -85,6 +85,12 @@ docker compose -f model\docker\tier1\docker-compose.yml run --rm pointpillars   
 model\scripts\tier1.ps1 -Data D:\nuscenes -Exp model\workspace\experiments\mini -Sweeps 10 -Epochs 20 -Batch 2
 # rồi chạy lại bước 4: ma trận có thêm hybrid_mmr, t1_*_mmr, entropy_only
 ```
+Hoặc chỉ dùng compose (project `vcuboidfit-tier1`; service `train`, `infer`, `tier1` = train + infer):
+```powershell
+$env:NUSC = "D:\nuscenes"; $env:EXP = "$PWD\model\workspace\experiments\mini"
+$env:EPOCHS = "20"; $env:SWEEPS = "10"; $env:BATCH = "2"          # mặc định; hết VRAM: BATCH=1 rồi SWEEPS=1
+docker compose -f model\docker\tier1\docker-compose.yml run --rm tier1   # -> <EXP>\t1\signals.parquet
+```
 Dùng image khác (bản cũ, máy thuê, thử nghiệm): đặt `$env:VCF_TIER1_IMAGE = "<tên-image>"` — `tier1.ps1` và
 mọi compose (`tier1`, `cloud`, `worker`) đều đọc biến này. Hết VRAM: `-Batch 1`, rồi `-Sweeps 1` (dùng cùng
 số sweeps cho downstream). Image không dùng apt/git (mọi gói qua pip/HTTPS). Muốn web dùng Tầng 1: chép
