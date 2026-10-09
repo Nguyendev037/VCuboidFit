@@ -60,6 +60,14 @@ def schema(job: Path, cfg=None) -> dict:
     return params_schema(cfg or load_lidar_config(), avail)
 
 
+def machine_schema(cfg=None) -> dict:
+    """Lược đồ khi CHƯA có job (plan 09 D1): tầng khả dụng theo máy + lý do nếu Tầng 1 chưa có."""
+    reason = tier1_machine_reason()
+    out = params_schema(cfg or load_lidar_config(), [0] if reason else [0, 1])
+    out["tier1Reason"] = reason
+    return out
+
+
 def _fingerprint(job: Path) -> str:
     parts = []
     for p in ("lidar/z0.npy", "lidar/filter.parquet", "t1/signals.parquet"):

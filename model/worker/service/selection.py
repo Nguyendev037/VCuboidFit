@@ -10,7 +10,7 @@ from fastapi import APIRouter, Request
 
 from c4.config import load_config
 from c4.contracts import ContractError
-from c4.lidar.pipeline import run_selection_lidar
+from c4.lidar.pipeline import machine_schema, run_selection_lidar
 from c4.lidar.pipeline import schema as lidar_params_schema
 from c4.pipeline import run_selection
 from service.errors import ApiError
@@ -173,6 +173,12 @@ def select(job_id: str, params: SelectParamsIn, request: Request):
     except ContractError as e:
         raise ApiError(500, "contract", f"Dữ liệu job vi phạm contract: {e}") from e
     return to_selection_result(job_id, job_dir, result)
+
+
+@router.get("/params-schema")
+def machine_params_schema():
+    """Lược đồ trước khi có job: web hiển thị đúng Tầng 1 của máy ngay từ đầu (plan 09 D1)."""
+    return machine_schema()
 
 
 @router.get("/jobs/{job_id}/params-schema")

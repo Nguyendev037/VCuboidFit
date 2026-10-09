@@ -37,6 +37,9 @@ describe("TierStatus (plan 09 §8)", () => {
     expect(out).not.toContain("Chạy Tầng 1 trên máy này");
     expect(out).toContain("Colab");
     expect(html(t1({ state: "done", novSource: "none" }))).toContain("Lạ với model chưa khả dụng");
+    const ready = html(t1({ state: "ready", canRun: false }));
+    expect(ready).toContain("Tầng 1 chạy cùng lúc khi phân tích");
+    expect(ready).not.toContain("Colab");
   });
 });
 

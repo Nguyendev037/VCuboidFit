@@ -140,10 +140,10 @@ export function select(jobId: string, params: SelectParams): Promise<SelectionRe
   return request("POST", `/api/jobs/${seg(jobId)}/select`, apiParams);
 }
 
-export function getParamsSchema(jobId: string): Promise<ParamsSchema> {
-  return isMock()
-    ? mockApi.getParamsSchema(jobId)
-    : request("GET", `/api/jobs/${seg(jobId)}/params-schema`);
+/** `jobId` rỗng ⇒ lược đồ theo máy (chưa có job, plan 09 D1). */
+export function getParamsSchema(jobId?: string | null): Promise<ParamsSchema> {
+  if (isMock()) return mockApi.getParamsSchema(jobId ?? "");
+  return request("GET", jobId ? `/api/jobs/${seg(jobId)}/params-schema` : "/api/params-schema");
 }
 
 /** Việc Tầng 1 trên Colab của job. Chế độ dữ liệu mẫu: coi như tính năng tắt. */

@@ -4,8 +4,9 @@ import { workerFetch } from "@/lib/server/worker";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Chỉ hai tiền tố này được chuyển cho worker; mọi thứ khác 404 (upload/media/login có route riêng). */
-const ALLOWED_PREFIXES = new Set(["datasets", "jobs"]);
+/** Chỉ các tiền tố này được chuyển cho worker; mọi thứ khác 404 (upload/media/login có route riêng).
+ *  `params-schema` = lược đồ theo máy khi chưa có job (plan 09 D1), chỉ GET. */
+const ALLOWED_PREFIXES = new Set(["datasets", "jobs", "params-schema"]);
 /** Header của worker được trả về trình duyệt (không rò hop-by-hop, cookie…). */
 const FORWARD_HEADERS = ["content-type", "content-disposition", "cache-control", "etag", "last-modified"];
 
@@ -19,7 +20,7 @@ async function handle(req: Request, ctx: Ctx): Promise<Response> {
   if (path.some(unsafeSegment)) {
     return errorResponse(400, "bad_path", "Đường dẫn yêu cầu không hợp lệ.");
   }
-  if (!ALLOWED_PREFIXES.has(path[0])) {
+  if (!ALLOWED_PREFIXES.has(path[0]) || (path[0] === "params-schema" && (path.length > 1 || req.method !== "GET"))) {
     return errorResponse(404, "not_found", "Không tìm thấy tài nguyên được yêu cầu.");
   }
 

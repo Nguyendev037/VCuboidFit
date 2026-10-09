@@ -233,3 +233,15 @@ def test_missing_checkpoint_reports_incomplete_model(client, tmp_path, monkeypat
     assert tier1_machine_reason() == t1["reason"]
     assert tier1_machine_ready() is False
     assert c.get("/jobs/ffffffffffff/params-schema").json()["tierAvailable"] == [0]
+
+
+def test_machine_params_schema_without_job(client, tmp_path, monkeypatch):
+    """Plan 09 D1 phía web: chưa có job vẫn biết máy có Tầng 1 hay chưa, kèm lý do."""
+    c, s = client
+    r = c.get("/params-schema")
+    assert r.status_code == 200 and r.json()["tierAvailable"] == [0]
+    assert r.json()["tier1Reason"] == "Máy này chưa có model Tầng 1."
+    monkeypatch.setenv("VCF_T1_EXP", str(_exp(tmp_path)))
+    body = c.get("/params-schema").json()
+    assert body["tierAvailable"] == [0, 1] and body["tier1Reason"] is None
+    assert any(f["key"] == "tier" for f in body["fields"])

@@ -271,6 +271,8 @@ export interface ParamsSchema {
   fields: ParamsSchemaField[];
   tierAvailable: number[];
   groups?: Record<string, ParamsSchemaGroup>;
+  /** Chỉ có ở lược đồ theo máy (`GET /params-schema`): lý do Tầng 1 chưa chạy được, null khi sẵn sàng. */
+  tier1Reason?: string | null;
 }
 
 // ---- Tầng 1 chạy từ xa (Colab) — 01-CONTRACTS §2.2 ----

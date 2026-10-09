@@ -321,10 +321,12 @@ export default function Home() {
   const activePipeline = pipeline;
   const analysisSteps = activePipeline === "lidar" ? LIDAR_ANALYSIS_STEPS : ANALYSIS_STEPS;
 
+  // Chưa có job hoặc job chưa xong ⇒ lược đồ theo máy (biết ngay Tầng 1 có sẵn hay không, plan 09 D1)
+  const schemaJobId = jobId && done && activePipeline === "lidar" ? jobId : null;
   const paramsSchema = useQuery({
-    queryKey: ["params-schema", jobId, demo],
-    queryFn: () => getParamsSchema(jobId!),
-    enabled: !!jobId && done && activePipeline === "lidar",
+    queryKey: ["params-schema", schemaJobId, demo],
+    queryFn: () => getParamsSchema(schemaJobId),
+    enabled: !jobId || activePipeline === "lidar",
     staleTime: 60_000,
   });
   // Plan 09: máy có model nhưng job chưa có tín hiệu Tầng 1 ⇒ khoá Tầng 1 kèm lý do từ job.tier1
@@ -1394,7 +1396,18 @@ export default function Home() {
               schemaError={paramsSchema.isError ? (paramsSchema.error instanceof Error ? paramsSchema.error.message : "Hãy thử lại.") : null}
               onRetrySchema={() => void paramsSchema.refetch()}
               tierStatus={
-                job.data?.tier0 || job.data?.tier1
+                !jobId && paramsSchema.data
+                  ? {
+                      // Chưa có job: Tầng 0 chờ dữ liệu; Tầng 1 theo máy
+                      tier0: { state: "queued", nTotal: null, nKeep: null, durationSec: null },
+                      tier1: {
+                        state: paramsSchema.data.tierAvailable.includes(1) ? "ready" : "skipped",
+                        reason: paramsSchema.data.tier1Reason ?? null,
+                        canRun: false,
+                        novSource: null,
+                      },
+                    }
+                  : job.data?.tier0 || job.data?.tier1
                   ? {
                       tier0: job.data.tier0,
                       tier1: job.data.tier1,

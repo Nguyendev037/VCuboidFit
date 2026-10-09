@@ -116,7 +116,7 @@ function Tier1Card({ tier1, runBusy, runError, onRunTier1 }: Omit<TierStatusProp
           {state === "failed" ? "Chạy lại Tầng 1 trên máy này" : "Chạy Tầng 1 trên máy này"}
         </button>
       )}
-      {!tier1?.canRun && state !== "done" && !active && (
+      {!tier1?.canRun && (state === "skipped" || state === "failed") && (
         <p className="text-[10px] text-slate-500">Máy này chưa chạy được Tầng 1. Có thể dùng Colab bên dưới nếu đã bật cầu nối.</p>
       )}
     </section>
