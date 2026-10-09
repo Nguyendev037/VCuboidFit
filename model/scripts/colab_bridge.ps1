@@ -42,8 +42,17 @@ if (-not $env:VCF_REMOTE_TOKEN) {
 }
 $Token = $env:VCF_REMOTE_TOKEN
 
-# 3. Worker có token
+# 3. Worker có token. Worker cũ (không token) đang giữ cổng sẽ che mất worker mới -> tắt trước.
 $env:VCF_PORT = "$Port"
+$owners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty OwningProcess -Unique
+foreach ($procId in $owners) {
+    $p = Get-Process -Id $procId -ErrorAction SilentlyContinue
+    if ($p -and $p.ProcessName -like "python*") {
+        Write-Host "[2/4] Tắt worker Python cũ đang giữ cổng $Port (PID $procId)"
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+    }
+}
 if ($Python) {
     Write-Host "[2/4] Khởi động worker (Python) ở cửa sổ mới..."
     $env:WORKSPACE = $Ws
@@ -65,7 +74,15 @@ foreach ($i in 1..30) {
     Start-Sleep 1
 }
 if (-not $ok) { throw "Worker không trả lời ở cổng $Port sau 30 s." }
-Write-Host "[2/4] Worker OK (cổng $Port)"
+try {
+    Invoke-WebRequest "http://127.0.0.1:$Port/remote/t1/t1_000000000000/bundle" -UseBasicParsing `
+        -Headers @{ Authorization = "Bearer $Token" } -TimeoutSec 5 | Out-Null
+} catch {
+    $body = ""
+    try { $body = (New-Object IO.StreamReader($_.Exception.Response.GetResponseStream())).ReadToEnd() } catch { }
+    if ($body -notmatch "not_found") { throw "Worker ở cổng $Port không nhận TOKEN ($body). Có worker khác đang chạy? Tắt nó rồi chạy lại script." }
+}
+Write-Host "[2/4] Worker OK (cổng $Port, token OK)"
 
 # 4. Tunnel
 Stop-Tunnel
@@ -97,3 +114,4 @@ Write-Host "TOKEN      = $Token" -ForegroundColor Yellow
 Write-Host "===========================================================================" -ForegroundColor Green
 if (-not $reach) { Write-Host "Lưu ý: tunnel chưa trả lời /health — đợi thêm 30 s rồi mới Run all trên Colab." -ForegroundColor Red }
 Write-Host "(Đã chép vào clipboard.) Tunnel chạy nền; giữ máy bật. Tắt: .\model\scripts\colab_bridge.ps1 -Stop"
+Write-Host "ĐỪNG khởi động lại worker bằng lệnh khác khi Colab đang chạy: worker mới không có TOKEN -> Colab báo 'worker chua bat VCF_REMOTE_TOKEN'. Cần khởi động lại thì chạy lại script này." -ForegroundColor Cyan
