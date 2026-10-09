@@ -28,13 +28,14 @@ kiểm tra sau mỗi bước.
 `delta_t`→`redundancy_window_s`, `combine`→`combine_scores`, `stack`→`stack_block_vectors`,
 `embed`→`embed_descriptors`, `signals`→`compute_t1_signals`, `scores_for`→`score_pool`.
 
-Notebook: ba file (`vcf_tier01_kaggle_colab`, `vcf_colab_agent`, `vcf_dev_setup_colab`) được gộp thành
-**một** `model/notebooks/run_on_colab.ipynb`. Lý do: `vcf_dev_setup_colab` đã chứa Tầng 0, Tầng 1 và chế
-độ agent, `vcf_colab_agent` chỉ là bản rút gọn của chính ô đó, và notebook thí nghiệm lặp lại phần cài
-môi trường; ba tên cũng khó phân biệt. Notebook mới nạp dữ liệu bằng `SOURCE_URL` (Colab tự tải, không
-phải upload từ máy), file trong `Drive/vcf_upload` hoặc nút upload; cài môi trường bằng
-`scripts/colab_setup.sh` (cache bản build OpenPCDet trên Drive); chế độ agent là phần 9. README và
-`docs/` đã cập nhật. Nút "Open in Colab" ở README trỏ vào nhánh `main` nên chỉ mở được sau khi merge.
+Notebook: ba file (`vcf_tier01_kaggle_colab`, `vcf_colab_agent`, `vcf_dev_setup_colab`) được gộp rồi tách lại
+theo **nền tảng** thành hai file, `run_on_colab.ipynb` và `run_on_kaggle.ipynb`. Lý do gộp: `vcf_dev_setup_colab`
+đã chứa Tầng 0, Tầng 1 và chế độ agent, `vcf_colab_agent` chỉ là bản rút gọn của chính ô đó, và notebook
+thí nghiệm lặp lại phần cài môi trường. Lý do tách: một notebook trộn hai nền tảng phải dò môi trường và
+nửa Kaggle bị bỏ dở (ô nạp dữ liệu dùng `google.colab`), nên mỗi nền tảng một file, không còn nhánh `ENV`.
+Cả hai nạp dữ liệu bằng `SOURCE_URL` (nền tảng tự tải, không phải upload từ máy) hoặc file có sẵn; cài môi
+trường bằng `scripts/colab_setup.sh`; chế độ agent chỉ có ở bản Colab. Nút "Open in Colab" ở README trỏ vào
+nhánh `main` nên chỉ mở được sau khi merge.
 
 Chưa đổi (có chủ ý): `pct_rank`, `criterion`, `fmt_table`, `oracle`, `reasons`, `budget`, `Truth`, `Pool`,
 `index.py`, `params.py`, tên CLI `lidar_t0`/`lidar_g1`, (nhóm C).

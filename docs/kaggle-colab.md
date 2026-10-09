@@ -15,7 +15,7 @@ sweeps) — ghi rõ trong báo cáo và dùng cùng giá trị cho downstream.
 | Đĩa | `/kaggle/working` 20 GB, input dataset riêng tư lớn hơn | ~100–200 GB tạm + Google Drive |
 | Dữ liệu | upload keyframe LIDAR_TOP + meta thành Kaggle Dataset riêng tư | để trên Drive, copy vào `/content` |
 
-**Notebook làm sẵn toàn bộ các bước dưới đây:** [`notebooks/run_on_colab.ipynb`](../model/notebooks/run_on_colab.ipynb).
+**Notebook làm sẵn toàn bộ các bước dưới đây:** [`run_on_colab.ipynb`](../model/notebooks/run_on_colab.ipynb) (Google Colab) hoặc [`run_on_kaggle.ipynb`](../model/notebooks/run_on_kaggle.ipynb) (Kaggle).
 
 **Ô lệnh chung** (Colab / Kaggle, CUDA 12.x có sẵn):
 ```bash
