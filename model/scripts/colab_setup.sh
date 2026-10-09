@@ -24,7 +24,12 @@ if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
 else
   echo "CANH BAO: khong thay GPU (nvidia-smi) - van cai phan CPU"
 fi
-if [ "$CUDA_MAJOR" -ge 12 ]; then SPCONV=spconv-cu120; else SPCONV=spconv-cu118; fi
+# Chon spconv theo CUDA cua TORCH (khong theo driver: Colab driver bao CUDA 13 nhung torch la cu12x).
+# spconv-cu120 chi co wheel toi Python 3.11; spconv-cu126 2.3.8 co wheel Python 3.9-3.13.
+TORCH_CUDA=$("$PY" -c 'import torch; print((torch.version.cuda or "").split(".")[0])' 2>/dev/null || true)
+[ -n "$TORCH_CUDA" ] && CUDA_MAJOR=$TORCH_CUDA
+echo "Python: $("$PY" -c 'import sys; print(sys.version.split()[0])') | torch CUDA: ${TORCH_CUDA:-?}"
+if [ "$CUDA_MAJOR" -ge 12 ]; then SPCONV=spconv-cu126; else SPCONV=spconv-cu118; fi
 
 echo "== [2/5] pip pinned set"
 PINS="$SPCONV|numpy<2|nuscenes-devkit|easydict|tensorboardX|kornia==0.6.12|scikit-learn|joblib|pyarrow|pandas|pyyaml|opencv-python-headless|requests"
