@@ -33,7 +33,7 @@ theo **nền tảng** thành hai file, `run_on_colab.ipynb` và `run_on_kaggle.i
 đã chứa Tầng 0, Tầng 1 và chế độ agent, `vcf_colab_agent` chỉ là bản rút gọn của chính ô đó, và notebook
 thí nghiệm lặp lại phần cài môi trường. Lý do tách: một notebook trộn hai nền tảng phải dò môi trường và
 nửa Kaggle bị bỏ dở (ô nạp dữ liệu dùng `google.colab`), nên mỗi nền tảng một file, không còn nhánh `ENV`.
-Cả hai nạp dữ liệu bằng `SOURCE_URL` (nền tảng tự tải, không phải upload từ máy) hoặc file có sẵn; cài môi
+Bản Colab nạp dữ liệu bằng nút **upload trực tiếp từ máy** (mặc định, không cần Drive) hoặc `SOURCE_URL`; Drive chỉ còn để lưu kết quả và cache, bật/tắt bằng `USE_DRIVE`. Bản Kaggle dùng Dataset đã gắn hoặc `SOURCE_URL`; cài môi
 trường bằng `scripts/colab_setup.sh`; chế độ agent chỉ có ở bản Colab. Nút "Open in Colab" ở README trỏ vào
 nhánh `main` nên chỉ mở được sau khi merge.
 
