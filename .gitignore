@@ -29,3 +29,5 @@ model/dist/
 # dấu hiệu bản đóng gói tự sinh
 .vcf-package
 web/test-results/
+dataset/**/*.tgz
+dataset/**/*.tar
