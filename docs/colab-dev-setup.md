@@ -13,27 +13,22 @@ Có 2 cách. **Cách 1** là cách chính: máy bạn chạy web, Colab chỉ l�
 Máy bạn: web :3000 + worker :8001 + cloudflared  ──https://<tên>.trycloudflare.com──►  Colab (GPU T4)
 ```
 
-### Bước 1 — Máy bạn (PowerShell, ở thư mục gốc repo)
+### Bước 1 — Máy bạn: MỘT lệnh
 
+Bật Docker Desktop, rồi ở thư mục gốc repo (PowerShell):
 ```powershell
-winget install --id Cloudflare.cloudflared                         # một lần
-python -c "import secrets;print(secrets.token_urlsafe(32))"        # in ra TOKEN, chép lại
+powershell -ExecutionPolicy Bypass -File .\model\scripts\colab_bridge.ps1
 ```
-Chạy worker **có token** (chọn một trong hai):
-```powershell
-# a) Docker
-$env:WORKSPACE_DIR = "$PWD\model\workspace"; $env:VCF_PORT = "8001"; $env:VCF_REMOTE_TOKEN = "<TOKEN>"
-docker compose -f model\docker\worker\docker-compose.yml up -d --force-recreate worker
-# b) Python
-$env:WORKSPACE = "$PWD\model\workspace"; $env:VCF_REMOTE_TOKEN = "<TOKEN>"
-cd model\worker; .venv\Scripts\python -m uvicorn service.main:create_app --factory --port 8001
+Script tự làm hết: tải `cloudflared` (không cần cài), tạo TOKEN, khởi động lại worker có token, mở tunnel,
+rồi in ra và chép sẵn vào clipboard:
+```text
+SERVER_URL = https://<tên-ngẫu-nhiên>.trycloudflare.com
+TOKEN      = <chuỗi dài>
 ```
-Chạy web như thường (`cd web; npm run dev`, xem [getting-started.md](getting-started.md)), rồi mở tunnel ở cửa sổ khác:
-```powershell
-cloudflared tunnel --url http://127.0.0.1:8001
-```
-Trong output có khung `Your quick Tunnel has been created!` kèm dòng `https://<tên-ngẫu-nhiên>.trycloudflare.com`
-→ đó là **URL**. Giữ cửa sổ này mở. Mỗi lần chạy lại cloudflared URL sẽ đổi.
+- Worker chạy bằng Python thay vì Docker: thêm `-Python`.
+- Tắt tunnel: `powershell -ExecutionPolicy Bypass -File .\model\scripts\colab_bridge.ps1 -Stop`.
+- Chạy web như thường ở cửa sổ khác: `cd web; npm run dev` ([getting-started.md](getting-started.md)).
+- Mỗi lần chạy lại script, URL đổi → dán lại vào Colab.
 
 ### Bước 2 — Colab: điền 2 ô rồi Run all
 
@@ -63,11 +58,11 @@ URL tunnel là công khai, token là lớp bảo vệ duy nhất — đừng chi
 
 | Ô báo | Sửa |
 |---|---|
-| `SERVER_URL chưa đúng` | Dán URL thật trong khung cloudflared, không dán ví dụ `xxxx` |
+| `SERVER_URL chưa đúng` | Dán đúng dòng `SERVER_URL` do `colab_bridge.ps1` in ra, không dán ví dụ `xxxx` |
 | `Chưa có GPU` | Runtime → Change runtime type → T4 GPU → Save, Run all lại |
-| `Không gọi được ...` | cloudflared đã tắt hoặc URL đổi; lấy URL mới, đợi 30 s |
+| `Không gọi được ...` | Tunnel đã tắt hoặc URL đổi: chạy lại `colab_bridge.ps1`, dán URL mới |
 | `Sai TOKEN` | TOKEN phải trùng `VCF_REMOTE_TOKEN` lúc khởi động worker |
-| `Worker chưa bật cầu nối` | Khởi động lại worker kèm `VCF_REMOTE_TOKEN` (Docker: `--force-recreate`) |
+| `Worker chưa bật cầu nối` | Chạy lại `colab_bridge.ps1` (nó khởi động lại worker có token) |
 | `Lỗi khi chạy: bash .../colab_setup.sh` | Xem log ngay trên; chạy lại ô 3 (đã cài phần nào thì bỏ qua phần đó) |
 | Không thấy nút "Chạy Tầng 1 trên Colab" | Worker chưa có token, hoặc lần chạy đã có Tầng 1 |
 | Hết quota GPU Colab | Thử lại sau vài giờ |
