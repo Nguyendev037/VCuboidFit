@@ -41,9 +41,9 @@ def _write_json(path: Path, obj) -> None:
 
 
 def _read_json(path: Path):
-    """Đọc JSON; None nếu thiếu/hỏng. Windows: đọc đúng lúc `_write_json` đang `os.replace` file đích
-    báo PermissionError tạm thời — thử lại thay vì coi như file không tồn tại (job biến mất khỏi
-    danh sách /jobs)."""
+    """Đọc JSON; None nếu thiếu/hỏng. Windows: đọc đúng lúc `_write_json` đang `os.replace` file
+    đích báo PermissionError tạm thời — thử lại thay vì coi như file không tồn tại (job biến mất
+    khỏi danh sách /jobs)."""
     for attempt in range(20):
         try:
             return json.loads(path.read_text(encoding="utf-8"))
