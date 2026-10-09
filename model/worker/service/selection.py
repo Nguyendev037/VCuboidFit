@@ -10,8 +10,8 @@ from fastapi import APIRouter, Request
 
 from c4.config import load_config
 from c4.contracts import ContractError
-from c4.lidar.pipeline import run_selection_lidar
-from c4.lidar.pipeline import schema as lidar_params_schema
+from c4.lidar.web_run import run_lidar_selection
+from c4.lidar.web_selection import params_schema_for_job as lidar_params_schema
 from c4.pipeline import run_selection
 from service.errors import ApiError
 from service.models import (
@@ -151,7 +151,7 @@ def select(job_id: str, params: SelectParamsIn, request: Request):
     try:
         with app.state.job_locks.of(job_id):
             if st.pipeline == "lidar":
-                result = run_selection_lidar(job_dir, params.to_lidar_params())
+                result = run_lidar_selection(job_dir, params.to_lidar_params())
             else:
                 result = run_selection(job_dir, params.to_select_params(), cfg=load_config(),
                                        encoder=LazyEncoder(app.state.encoders))

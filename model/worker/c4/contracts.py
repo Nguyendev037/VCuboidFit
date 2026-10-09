@@ -58,7 +58,7 @@ LIDAR_INDEX = dict(
 
 LIDAR_FILTER = dict(sample_token="string", n_points="int32", keep="bool", reason="string")
 
-GT_RARE_LIDAR = dict(  # CHỈ c4.lidar.gt ghi, CHỈ c4.lidar.eval đọc
+GT_RARE_LIDAR = dict(  # CHỈ c4.lidar.gt ghi, CHỈ c4.lidar.evaluation đọc
     sample_token="string", is_rare="bool", A_env="bool", B_few="bool", Bp_medium="bool",
     C_sensor="bool", n_boxes="int32", rare_cells="string")
 

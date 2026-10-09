@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 
-def delta_t() -> float:
+def redundancy_window_s() -> float:
     """Δt (giây) của Redundancy — chốt trong configs/gt.yaml (thuộc định nghĩa metric, PDF §4.5)."""
     from c4.lidar import load_gt_config
 
@@ -72,7 +72,7 @@ def metrics(tokens, truth: Truth, B: int, dt: float) -> dict:
         byGroup={k: (len(s & g) / len(g) if g else 0.0) for k, g in truth.groups.items()})
 
 
-def first_B(sel: pd.DataFrame, B: int) -> list[str]:
+def top_b_tokens(sel: pd.DataFrame, B: int) -> list[str]:
     return sel.sort_values("rank").loc[lambda d: d["rank"] <= B, "sample_token"].tolist()
 
 
@@ -88,7 +88,7 @@ def aggregate(ms: list[dict]) -> dict:
 def evaluate_runs(runs: dict[str, pd.DataFrame], truth: Truth, B: int, dt: float) -> dict:
     """runs: tên → lidar_selected. Các run `random_<seed>` / `random_quota_<seed>` gộp mean±std.
     coverageGain của mỗi run = coverage − coverage trung bình của random."""
-    per = {k: metrics(first_B(v, B), truth, B, dt) for k, v in runs.items()}
+    per = {k: metrics(top_b_tokens(v, B), truth, B, dt) for k, v in runs.items()}
     rand = [m for k, m in per.items() if k.startswith("random_") and "quota" not in k]
     rq = [m for k, m in per.items() if k.startswith("random_quota_")]
     base_cov = float(np.mean([m["coverage"] for m in rand])) if rand else 0.0
@@ -118,7 +118,7 @@ def bootstrap_ci(run_fn, index: pd.DataFrame, truth_fn, B_frac: float, dt: float
     """CI 95% cho recall bằng lấy mẫu lại scene KHÔNG hoàn lại (m-out-of-n, 80% scene) — lặp
     lại scene sẽ tạo láng giềng khoảng cách 0 làm hỏng Rarity, nên không dùng có hoàn lại.
     run_fn(sub_index) → list token đã chọn; truth_fn(sub_index) → Truth."""
-    from c4.lidar.select import budget
+    from c4.lidar.selectors import budget
 
     rng = np.random.default_rng(seed)
     scenes = index["scene_token"].unique()

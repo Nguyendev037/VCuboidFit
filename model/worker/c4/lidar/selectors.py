@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from c4.contracts import validate
-from c4.mining.mmr import mmr_select
+from c4.lidar.mmr import mmr_select
 
 COMPONENTS = [("r_rar", "rarity"), ("r_nov", "novelty"), ("r_unc", "uncertainty")]
 
@@ -17,7 +17,7 @@ def budget(n_pool: int, frac: float) -> int:
     return max(1, math.ceil(frac * n_pool))
 
 
-def l2n(z: np.ndarray) -> np.ndarray:
+def l2_normalize(z: np.ndarray) -> np.ndarray:
     z = np.asarray(z, np.float32)
     return z / np.maximum(np.linalg.norm(z, axis=1, keepdims=True), 1e-12)
 
@@ -68,10 +68,13 @@ def minmax_score(sc: pd.DataFrame, weights=(1.0, 0.0, 0.0)) -> np.ndarray:
 
 
 def select_mmr(sc: pd.DataFrame, z: np.ndarray, B: int, lam: float, m: int | None,
-               weights=(1.0, 0.0, 0.0), method="mmr", col="s",
-               score_norm: str = "rank") -> tuple[pd.DataFrame, list[str]]:
+               weights=(1.0, 0.0, 0.0), method="mmr", col="s", *,
+               score_norm: str) -> tuple[pd.DataFrame, list[str]]:
     """MMR tham lam: f* = argmax λ·s(f) − (1−λ)·max_g cos(z(f), z(g)), quota m frame/scene.
-    Quota không đủ chỗ cho B frame ⇒ tự nâng m (cảnh báo)."""
+    Quota không đủ chỗ cho B frame ⇒ tự nâng m (cảnh báo).
+
+    `score_norm` BẮT BUỘC (lấy từ `cfg["mmr_score"]`): không có mặc định để không chỗ nào âm thầm
+    rơi về "rank" trong khi run chính dùng "minmax" (Q4)."""
     keep = sc["keep"].to_numpy(bool)
     scene = _scene_codes(sc)
     warnings: list[str] = []
@@ -89,7 +92,7 @@ def select_mmr(sc: pd.DataFrame, z: np.ndarray, B: int, lam: float, m: int | Non
         sc = sc.assign(**{col: minmax_score(sc, weights)})
     elif score_norm != "rank":
         raise ValueError(f"score_norm không hợp lệ: {score_norm}")
-    picks = mmr_select(sc[col].to_numpy(np.float32), l2n(z), scene,
+    picks = mmr_select(sc[col].to_numpy(np.float32), l2_normalize(z), scene,
                        sc["frame_idx"].to_numpy(), keep, B, B, lam=lam, m=m_eff, min_gap=1)
     if len(picks) < B:
         warnings.append(f"Chỉ chọn được {len(picks)} / {B} frame hợp lệ")

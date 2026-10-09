@@ -65,3 +65,21 @@ def test_run_train_does_not_pick_up_other_tag_checkpoints(tmp_path, monkeypatch)
     monkeypatch.setattr(ts.subprocess, "run", lambda *a, **k: R())
     ckpt, status, _ = ts.run_train(tmp_path / "pp_seed.yaml", "seed_new", 20, 2, 0, out)
     assert ckpt is None and "exit 1" in status
+
+
+def test_index_infos_carry_no_labels_but_test_infos_keep_them(tmp_path):
+    import pandas as pd
+    infos = [dict(token=f"t{i}", lidar_path="x", gt_boxes=[1], gt_names=["car"],
+                  num_lidar_pts=[3], valid_flag=[True]) for i in range(3)]
+    allp = tmp_path / "infos_all_1sweeps.pkl"
+    allp.write_bytes(pickle.dumps(infos))
+    index = pd.DataFrame(dict(sample_token=["t0", "t1", "t2"], split=["S", "P", "T"]))
+    p_seed, p_ord, p_test, seed = ts.split_infos(allp, index, 1)
+    assert seed == ["t0"]
+    ts.verify_index_label_free(p_ord)  # không ném lỗi
+    assert all("gt_boxes" not in i for i in pickle.loads(p_ord.read_bytes()))
+    assert all("gt_boxes" in i for i in pickle.loads(p_test.read_bytes()))
+    assert all("gt_boxes" in i for i in pickle.loads(p_seed.read_bytes()))
+    p_ord.write_bytes(pickle.dumps(infos))  # file có nhãn ⇒ phải bị chặn
+    with pytest.raises(ValueError):
+        ts.verify_index_label_free(p_ord)

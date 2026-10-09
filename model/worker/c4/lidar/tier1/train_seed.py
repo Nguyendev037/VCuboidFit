@@ -13,6 +13,7 @@ import pickle
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -41,7 +42,17 @@ def data_root(exp: Path, nusc: Path, version: str) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     link = root / version
     if not link.exists():
-        link.symlink_to(nusc, target_is_directory=True)
+        try:
+            link.symlink_to(nusc, target_is_directory=True)
+        except OSError:
+            # Google Drive (Colab) không hỗ trợ symlink ⇒ dựng thư mục tạm cục bộ.
+            tag = hashlib.sha1(str(exp).encode()).hexdigest()[:8]
+            tmp = Path(tempfile.gettempdir()) / f"vcf_pcdet_data_{tag}"
+            tmp.mkdir(parents=True, exist_ok=True)
+            tlink = tmp / version
+            if not tlink.exists():
+                tlink.symlink_to(nusc, target_is_directory=True)
+            return tmp
     return root
 
 
@@ -64,6 +75,16 @@ def build_infos(exp: Path, nusc: Path, version: str, sweeps: int) -> Path:
     return out
 
 
+LABEL_KEYS = ("gt_boxes", "gt_names", "gt_boxes_velocity", "gt_boxes_token", "num_lidar_pts",
+              "num_radar_pts", "valid_flag")
+
+
+def strip_labels(info: dict) -> dict:
+    """Bản sao info không còn khoá nhãn. Suy luận (infos_index) không cần nhãn; để lại sẽ đưa nhãn
+    của pool vào vùng Tầng 1 dù không dùng để train."""
+    return {k: v for k, v in info.items() if k not in LABEL_KEYS}
+
+
 def split_infos(all_path: Path, index: pd.DataFrame, sweeps: int) -> tuple[Path, Path, Path, list]:
     with open(all_path, "rb") as f:
         infos = pickle.load(f)
@@ -74,13 +95,11 @@ def split_infos(all_path: Path, index: pd.DataFrame, sweeps: int) -> tuple[Path,
     seed_infos = [by_tok[t] for t in index["sample_token"] if t in seed and t in by_tok]
     if not seed_infos or not {i["token"] for i in seed_infos} <= seed:
         raise ValueError("info seed rỗng hoặc chứa token ngoài S")
-    ordered = []
-    for t in index["sample_token"]:
-        info = copy.deepcopy(by_tok[t]) if t in by_tok else None
-        if info is not None:
-            ordered.append(info)
+    ordered = [strip_labels(by_tok[t]) for t in index["sample_token"] if t in by_tok]
     test = set(index.loc[index["split"] == "T", "sample_token"])
-    test_infos = [i for i in ordered if i["token"] in test]
+    # T là tập chấm model seed (vùng chấm điểm) nên giữ nhãn; mọi frame ngoài S và T thì không
+    test_infos = [copy.deepcopy(by_tok[t]) for t in index["sample_token"] if t in test
+                  and t in by_tok]
     d = all_path.parent
     p_seed, p_ord = d / f"infos_seed_{sweeps}sweeps.pkl", d / f"infos_index_{sweeps}sweeps.pkl"
     p_test = d / f"infos_T_{sweeps}sweeps.pkl"
@@ -165,6 +184,15 @@ def verify_written(p_train: Path, cfg_path: Path, allowed: set) -> None:
         raise ValueError(f"{cfg_path.name}: còn gt_sampling")
 
 
+def verify_index_label_free(p_index: Path) -> None:
+    """Đo trên file ĐÃ GHI: infos_index (dùng suy luận trên mọi frame) không chứa khoá nhãn nào."""
+    with open(p_index, "rb") as f:
+        infos = pickle.load(f)
+    bad = sum(1 for i in infos if any(k in i for k in LABEL_KEYS))
+    if bad:
+        raise ValueError(f"{p_index.name}: {bad} info còn khoá nhãn")
+
+
 def run_key(tokens, sweeps: int, epochs: int, cbgs: bool) -> str:
     """Khoá chạy: đổi tập train / sweeps / epochs / CBGS ⇒ thư mục output mới, không bao giờ tự
     resume checkpoint của cấu hình khác (OpenPCDet train.py tự resume ckpt mới nhất)."""
@@ -230,7 +258,7 @@ def main(argv=None) -> int:
         index = pd.read_parquet(a.exp / "index.parquet")
         root = data_root(a.exp, a.nusc, version)
         p_all = build_infos(a.exp, a.nusc, version, a.sweeps)
-        p_seed, _, p_test, seed_toks = split_infos(p_all, index, a.sweeps)
+        p_seed, p_ord, p_test, seed_toks = split_infos(p_all, index, a.sweeps)
         cfg_path, seed_stats = make_cfg(a.exp, root, version, p_seed, p_test, a.sweeps,
                                         a.epochs)
     except FileNotFoundError as e:
@@ -242,6 +270,7 @@ def main(argv=None) -> int:
     try:
         verify_written(p_seed, cfg_path, set(seed_toks) & set(
             index.loc[index["split"] == "S", "sample_token"]))
+        verify_index_label_free(p_ord)
     except ValueError as e:
         print(f"vi phạm bất biến: {e}", file=sys.stderr)
         return 2

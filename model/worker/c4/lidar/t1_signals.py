@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from c4.contracts import ContractError, validate
-from c4.lidar.score import novelty, pct_rank
+from c4.lidar.scoring import novelty, pct_rank
 
 EPS = 1e-6
 
@@ -59,7 +59,7 @@ def _thr(p: dict, thr: float) -> dict:
                 scores=np.asarray(p["scores"])[k])
 
 
-def signals(index: pd.DataFrame, preds_orig, preds_flip, z1: np.ndarray, seed_mask: np.ndarray,
+def compute_t1_signals(index: pd.DataFrame, preds_orig, preds_flip, z1: np.ndarray, seed_mask: np.ndarray,
             cfg: dict) -> pd.DataFrame:
     """t1_signals cho mọi dòng index. Nov đo tới các frame seed (seed_mask)."""
     t = cfg["t1"]

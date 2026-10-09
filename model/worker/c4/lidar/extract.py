@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 
 from c4.contracts import read_table, validate, write_table
-from c4.lidar.descriptor import BLOCKS, embed, frame_descriptor, stack
+from c4.lidar.descriptor import (BLOCKS, embed_descriptors, frame_descriptor,
+                                  stack_block_vectors)
 
 BATCH = 256
 
@@ -62,7 +63,7 @@ def extract_all(index: pd.DataFrame, data_root, out_dir, cfg: dict, n_jobs: int 
             results.extend(chunk)
             if progress:
                 progress.advance(len(chunk))
-    raw, keep = stack(results, cfg)
+    raw, keep = stack_block_vectors(results, cfg)
     filt = validate(pd.DataFrame(dict(
         sample_token=tokens, n_points=[r["n_points"] for r in results], keep=keep,
         reason=[r["reason"] for r in results])), "lidar_filter")
@@ -94,4 +95,4 @@ def load_filter(out_dir, index: pd.DataFrame) -> np.ndarray:
 
 
 def embed_split(raw, keep, cfg, drop_blocks=()) -> np.ndarray:
-    return embed(raw, keep, cfg["pca_dim"], drop_blocks)
+    return embed_descriptors(raw, keep, cfg["pca_dim"], drop_blocks)

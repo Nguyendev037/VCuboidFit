@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from c4.contracts import SELECTED, validate
-from c4.mining.mmr import mmr_select
+from c4.lidar.mmr import mmr_select
 
 ABLATION = {"novelty": "S_nov", "uncertainty": "S_unc", "query": "S_qry"}
 

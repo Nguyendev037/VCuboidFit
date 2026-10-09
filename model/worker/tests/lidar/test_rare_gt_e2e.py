@@ -9,7 +9,7 @@ import pytest
 from c4.contracts import read_table
 from c4.lidar import load_gt_config, load_lidar_config
 from c4.lidar.experiment import prepare, run_split
-from c4.lidar.select import budget
+from c4.lidar.selectors import budget
 from tests.fixtures.make_nuscenes import make_nuscenes
 
 N_SCENES, FRAMES = 5, 12

@@ -29,11 +29,11 @@ class LidarResolved:
     gamma: float
 
 
-def resolve(p: LidarParams, cfg: dict, tier_available: list[int]) -> tuple[LidarResolved, list]:
+def resolve(p: LidarParams, cfg: dict, available_tiers: list[int]) -> tuple[LidarResolved, list]:
     d = cfg["defaults"]
     warnings = []
-    tier = p.tier if p.tier is not None else max(tier_available)
-    if tier not in tier_available:
+    tier = p.tier if p.tier is not None else max(available_tiers)
+    if tier not in available_tiers:
         raise ValueError(f"tier_unavailable: tầng {tier} chưa có (cần chạy model seed)")
     if p.preset not in cfg["presets"]:
         raise ValueError(f"Chiến lược không hợp lệ: {p.preset}")
@@ -62,17 +62,17 @@ def resolve(p: LidarParams, cfg: dict, tier_available: list[int]) -> tuple[Lidar
                          m=m, alpha=w[0] / s, beta=w[1] / s, gamma=w[2] / s), warnings
 
 
-def params_schema(cfg: dict, tier_available: list[int]) -> dict:
+def params_schema(cfg: dict, available_tiers: list[int]) -> dict:
     """Lược đồ cho panel "Tham số nâng cao" của web. Hợp đồng (01-CONTRACTS §4) giữ `key`, `type`,
     `min`, `max`, `step`, `default`; các trường hiển thị là lời thường cho người dùng, KHÔNG dùng ký
     hiệu toán (người dùng 2026-10-08): `label`, `help`, `minLabel`/`maxLabel` (hai đầu thanh trượt),
     `display` ("choice" | "count" | "percent" | "toggle"), `unit`, `options` (lựa chọn rời rạc),
     `group` (trường cùng nhóm hiển thị chung)."""
     d = cfg["defaults"]
-    basic_only = tier_available == [0]
+    basic_only = available_tiers == [0]
     f = [
         dict(key="tier", label="Cách đánh giá frame", type="int", min=0, max=1, step=1,
-             default=max(tier_available), display="choice",
+             default=max(available_tiers), display="choice",
              help="Cơ bản chỉ nhìn hình dạng point cloud, chạy nhanh, không cần model. Nâng cao "
                   "dùng thêm model AI đã học để tìm frame model còn lạ hoặc chưa chắc chắn.",
              options=[
@@ -110,4 +110,4 @@ def params_schema(cfg: dict, tier_available: list[int]) -> dict:
         label="Mức quan trọng của từng tiêu chí",
         help="Tự quy đổi để tổng luôn là 100%.",
         basicNote="Chế độ Cơ bản chỉ dùng tiêu chí Hiếm trong dữ liệu."))
-    return dict(fields=f, groups=groups, tierAvailable=tier_available)
+    return dict(fields=f, groups=groups, tierAvailable=available_tiers)

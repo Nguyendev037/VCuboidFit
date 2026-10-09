@@ -53,7 +53,7 @@ def pct_rank(x: np.ndarray, mask: np.ndarray) -> np.ndarray:
     return s.rank(pct=True, method="average").fillna(0.0).to_numpy(np.float32)
 
 
-def combine(index: pd.DataFrame, keep, rar, nov, unc, alpha, beta, gamma) -> pd.DataFrame:
+def combine_scores(index: pd.DataFrame, keep, rar, nov, unc, alpha, beta, gamma) -> pd.DataFrame:
     keep = np.asarray(keep, bool)
     n = len(index)
     zero = np.zeros(n, np.float32)

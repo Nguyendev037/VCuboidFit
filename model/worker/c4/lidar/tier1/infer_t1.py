@@ -112,7 +112,7 @@ def main(argv=None) -> int:
     from pcdet.models import build_network
 
     from c4.lidar import load_lidar_config
-    from c4.lidar.uncertainty import signals
+    from c4.lidar.t1_signals import compute_t1_signals
 
     t1 = a.exp / "t1"
     cfg_p, ckpt = t1 / "cfg" / "pp_seed.yaml", t1 / "ckpt" / "seed_latest.pth"
@@ -157,7 +157,7 @@ def main(argv=None) -> int:
         with open(t1 / name, "wb") as f:
             pickle.dump(obj, f, protocol=4)
     np.save(t1 / "z1.npy", z1)
-    sig = signals(index, preds_o, preds_f, z1, (index["split"] == "S").to_numpy(), lcfg)
+    sig = compute_t1_signals(index, preds_o, preds_f, z1, (index["split"] == "S").to_numpy(), lcfg)
     write_table(sig, str(t1 / "signals.parquet"), "t1_signals",
                 missing=len([t for t in tokens if t not in po]))
     ev = seed_eval(dataset, annos, t1)

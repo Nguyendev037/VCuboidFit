@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-from c4.lidar.pipeline import tier_available
+from c4.lidar.web_selection import available_tiers
 from service.main import create_app
 from service.settings import Settings
 
@@ -35,8 +35,12 @@ def env(tmp_path):
     job = s.jobs / JOB
     (job / "lidar").mkdir(parents=True)
     (job / "job.json").write_text(json.dumps(dict(jobId=JOB, datasetId="d1", state="done")))
-    pd.DataFrame(dict(sample_token=TOKENS)).to_parquet(job / "lidar" / "index.parquet")
+    pd.DataFrame(dict(sample_token=TOKENS, split=["S", "P", "P", "P", "T"])).to_parquet(
+        job / "lidar" / "index.parquet")
     (s.datasets / "d1" / "data" / "samples").mkdir(parents=True)
+    (s.datasets / "d1" / "data" / "v1.0-mini").mkdir(parents=True)
+    (s.datasets / "d1" / "data" / "v1.0-mini" / "sample_annotation.json").write_text(
+        json.dumps([dict(token=f"a{i}", sample_token=t) for i, t in enumerate(TOKENS)]))
     (s.datasets / "d1" / "data" / "samples" / "x.bin").write_bytes(b"1234567")
     app = create_app(s)
     with TestClient(app) as c:
@@ -70,13 +74,13 @@ def test_2_lifecycle(env):
     hb = c.post(f"/remote/t1/{t['taskId']}/heartbeat", headers=AUTH,
                 json={"stage": "train", "progress": 0.5})
     assert hb.status_code == 200, hb.text
-    assert tier_available(s.jobs / JOB) == [0]
+    assert available_tiers(s.jobs / JOB) == [0]
     r = c.post(f"/remote/t1/{t['taskId']}/result", headers=AUTH,
                files={"signals": ("signals.parquet", _signals(TOKENS))},
                data={"meta": json.dumps({"trainSec": 1.0, "inferSec": 2.0, "gpu": "T4"})})
     assert r.status_code == 200, r.text
     assert r.json()["state"] == "done"
-    assert tier_available(s.jobs / JOB) == [0, 1]
+    assert available_tiers(s.jobs / JOB) == [0, 1]
     assert json.loads((s.jobs / JOB / "t1" / "remote_meta.json").read_text())["gpu"] == "T4"
     assert c.get(f"/jobs/{JOB}/t1-remote").json()["state"] == "done"
 
@@ -151,6 +155,9 @@ def test_9_bundle(env):
         names = tf.getnames()
         assert "index.parquet" in names and "data/samples/x.bin" in names
         assert tf.extractfile("data/samples/x.bin").read() == b"1234567"
+        # nhãn của pool (P) không rời máy: chỉ còn nhãn S và T
+        ann = json.loads(tf.extractfile("data/v1.0-mini/sample_annotation.json").read())
+        assert sorted(a["sample_token"] for a in ann) == ["tok0", "tok4"]
     # chưa lease thì 409
     other = c.post(f"/remote/t1/{t['taskId']}/fail", headers=AUTH, json={"error": "x"}).json()
     assert other["state"] == "queued"

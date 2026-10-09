@@ -1,6 +1,6 @@
 """M3 · descriptor hình học Tầng 0 (PDF §4.1): khối A–E → z-score → chia √d khối → PCA.
 
-Không model, không nhãn, chạy CPU. Một frame = một dict {khối: vector}; ghép và PCA ở `embed`
+Không model, không nhãn, chạy CPU. Một frame = một dict {khối: vector}; ghép và PCA ở `embed_descriptors`
 trên đúng tập đang chọn (PCA không dùng nhãn nên fit trên chính tập đó là hợp lệ).
 """
 from pathlib import Path
@@ -157,7 +157,7 @@ def block_dims(cfg) -> dict[str, int]:
                 D=len(b["cluster_size_bins"]) + len(b["cluster_bev_bins_m2"]) + 2, E=3)
 
 
-def stack(results: list[dict], cfg) -> tuple[dict[str, np.ndarray], np.ndarray]:
+def stack_block_vectors(results: list[dict], cfg) -> tuple[dict[str, np.ndarray], np.ndarray]:
     """Ghép kết quả từng frame thành {khối: (N, d)} + mặt nạ keep. Frame hỏng = dòng 0."""
     dims = block_dims(cfg)
     keep = np.array([r["blocks"] is not None for r in results], bool)
@@ -169,7 +169,7 @@ def stack(results: list[dict], cfg) -> tuple[dict[str, np.ndarray], np.ndarray]:
     return raw, keep
 
 
-def embed(raw: dict[str, np.ndarray], fit_mask: np.ndarray, dim: int,
+def embed_descriptors(raw: dict[str, np.ndarray], fit_mask: np.ndarray, dim: int,
           drop_blocks: tuple[str, ...] = ()) -> np.ndarray:
     """z-score (theo fit_mask) → chia √d khối → ghép → PCA fit trên fit_mask, chiếu mọi dòng."""
     fit_mask = np.asarray(fit_mask, bool)

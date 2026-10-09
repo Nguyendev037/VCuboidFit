@@ -16,11 +16,11 @@ import pandas as pd
 import yaml
 
 from c4.contracts import read_table, write_table
-from c4.lidar import eval as ev
+from c4.lidar import evaluation as ev
 from c4.lidar.extract import embed_split, extract_all, load_filter, load_raw
-from c4.lidar.score import combine, pct_rank, rarity
-from c4.lidar.select import budget, select_coreset, select_mmr, select_random, select_topk
-from c4.lidar.uncertainty import load_signals, unc_score
+from c4.lidar.scoring import combine_scores, pct_rank, rarity
+from c4.lidar.selectors import budget, select_coreset, select_mmr, select_random, select_topk
+from c4.lidar.t1_signals import load_signals, unc_score
 
 
 def git_sha() -> str:
@@ -112,13 +112,13 @@ def load_pool(out: Path, split: str, cfg: dict) -> Pool:
     return p
 
 
-def scores_for(pool: Pool, k: int, weights, rar_space="z0", drop=()) -> pd.DataFrame:
+def score_pool(pool: Pool, k: int, weights, rar_space="z0", drop=()) -> pd.DataFrame:
     a, b, g = weights
     nov = unc = None
     if pool.sig is not None:
         nov = pool.sig["nov"].to_numpy(np.float32)
         unc = unc_score(pool.sig, pool.keep)
-    return combine(pool.index, pool.keep, pool.rar(k, rar_space, drop), nov, unc, a, b, g)
+    return combine_scores(pool.index, pool.keep, pool.rar(k, rar_space, drop), nov, unc, a, b, g)
 
 
 def run_matrix(pool: Pool, params: dict, cfg: dict, truth: ev.Truth | None) -> dict:
@@ -127,13 +127,13 @@ def run_matrix(pool: Pool, params: dict, cfg: dict, truth: ev.Truth | None) -> d
     k, lam, m = params["k"], params["lam"], params["m"]
     runs = {}
     for s in cfg["random_seeds"]:
-        runs[f"random_{s}"] = select_random(scores_for(pool, k, (1, 0, 0)), B, s)
-        runs[f"random_quota_{s}"] = select_random(scores_for(pool, k, (1, 0, 0)), B, s, m=m or B)
-    t0 = scores_for(pool, k, (1, 0, 0))
+        runs[f"random_{s}"] = select_random(score_pool(pool, k, (1, 0, 0)), B, s)
+        runs[f"random_quota_{s}"] = select_random(score_pool(pool, k, (1, 0, 0)), B, s, m=m or B)
+    t0 = score_pool(pool, k, (1, 0, 0))
     z = pool.z0()
     runs["coreset_z0"] = select_coreset(t0, z, B)
     runs["t0_rar_topk"] = select_topk(t0, B, method="t0_rar_topk")
-    norm = cfg.get("mmr_score", "rank")
+    norm = cfg["mmr_score"]
     runs["t0_rar_mmr"], _ = select_mmr(t0, z, B, lam, m, method="t0_rar_mmr", score_norm=norm)
     # Q4: luôn báo cáo phương án còn lại để nhóm chốt bằng số (không thay kết quả chính)
     alt = "minmax" if norm == "rank" else "rank"
@@ -141,15 +141,17 @@ def run_matrix(pool: Pool, params: dict, cfg: dict, truth: ev.Truth | None) -> d
                                               score_norm=alt)
     if pool.sig is not None:
         if pool.z1 is not None:
-            r1 = scores_for(pool, k, (1, 0, 0), rar_space="z1")
-            runs["t1_rar_mmr"], _ = select_mmr(r1, z, B, lam, m, method="t1_rar_mmr")
+            r1 = score_pool(pool, k, (1, 0, 0), rar_space="z1")
+            runs["t1_rar_mmr"], _ = select_mmr(r1, z, B, lam, m, method="t1_rar_mmr",
+                                               score_norm=norm)
         for name, w in (("t1_nov_mmr", (0, 1, 0)), ("t1_unc_mmr", (0, 0, 1))):
-            runs[name], _ = select_mmr(scores_for(pool, k, w), z, B, lam, m, w, method=name)
+            runs[name], _ = select_mmr(score_pool(pool, k, w), z, B, lam, m, w, method=name,
+                                       score_norm=norm)
         ent = t0.assign(s=pct_rank(pool.sig["ent"].to_numpy(), pool.keep))
         runs["entropy_only"] = select_topk(ent, B, method="entropy_only")
         w = tuple(params.get("weights", cfg["presets"]["balanced"]))
-        runs["hybrid_mmr"], _ = select_mmr(scores_for(pool, k, w), z, B, lam, m, w,
-                                           method="hybrid_mmr")
+        runs["hybrid_mmr"], _ = select_mmr(score_pool(pool, k, w), z, B, lam, m, w,
+                                           method="hybrid_mmr", score_norm=norm)
     if truth is not None:
         toks = ev.oracle(truth, B)
         pos = {t: i for i, t in enumerate(pool.index["sample_token"])}
@@ -171,11 +173,12 @@ def criterion(m: dict, truth: ev.Truth, B: int) -> float:
 def tune(pool: Pool, cfg: dict, truth: ev.Truth, log=print) -> tuple[dict, list[dict]]:
     """Lưới Tầng 0: k × λ × m (48 cấu hình); nếu có Tầng 1: lưới α,β,γ bước 0.25 (15)."""
     B = budget(len(pool.index), cfg["defaults"]["budget"])
-    g, dt = cfg["grid"], ev.delta_t()
+    g, dt = cfg["grid"], ev.redundancy_window_s()
     rows = []
     for k, lam, m in itertools.product(g["k"], g["lam"], g["m"]):
-        sel, _ = select_mmr(scores_for(pool, k, (1, 0, 0)), pool.z0(), B, lam, m)
-        met = ev.metrics(ev.first_B(sel, B), truth, B, dt)
+        sel, _ = select_mmr(score_pool(pool, k, (1, 0, 0)), pool.z0(), B, lam, m,
+                            score_norm=cfg["mmr_score"])
+        met = ev.metrics(ev.top_b_tokens(sel, B), truth, B, dt)
         rows.append(dict(tier=0, k=k, lam=lam, m=m, weights=[1, 0, 0],
                          crit=criterion(met, truth, B), recall=met["recall"]))
     d = cfg["defaults"]
@@ -195,9 +198,9 @@ def tune(pool: Pool, cfg: dict, truth: ev.Truth, log=print) -> tuple[dict, list[
             if c < -1e-9:
                 continue
             w = (float(a), float(b), float(max(c, 0)))
-            sel, _ = select_mmr(scores_for(pool, params["k"], w), pool.z0(), B, params["lam"],
-                                params["m"], w)
-            met = ev.metrics(ev.first_B(sel, B), truth, B, dt)
+            sel, _ = select_mmr(score_pool(pool, params["k"], w), pool.z0(), B, params["lam"],
+                                params["m"], w, score_norm=cfg["mmr_score"])
+            met = ev.metrics(ev.top_b_tokens(sel, B), truth, B, dt)
             rows.append(dict(tier=1, k=params["k"], lam=params["lam"], m=params["m"],
                              weights=list(w), crit=criterion(met, truth, B), recall=met["recall"]))
         b1 = max((r for r in rows if r["tier"] == 1), key=lambda r: (r["crit"], r["recall"]))
@@ -212,9 +215,10 @@ def ablation_blocks(pool: Pool, params: dict, cfg: dict, truth: ev.Truth) -> dic
     B = budget(len(pool.index), cfg["defaults"]["budget"])
     out = {}
     for blk in ["A", "B", "C", "D", "E"]:
-        sc = scores_for(pool, params["k"], (1, 0, 0), drop=(blk,))
-        sel, _ = select_mmr(sc, pool.z0((blk,)), B, params["lam"], params["m"])
-        out[f"-{blk}"] = ev.metrics(ev.first_B(sel, B), truth, B, ev.delta_t())
+        sc = score_pool(pool, params["k"], (1, 0, 0), drop=(blk,))
+        sel, _ = select_mmr(sc, pool.z0((blk,)), B, params["lam"], params["m"],
+                            score_norm=cfg["mmr_score"])
+        out[f"-{blk}"] = ev.metrics(ev.top_b_tokens(sel, B), truth, B, ev.redundancy_window_s())
     return out
 
 
@@ -298,7 +302,7 @@ def run_split(out: Path, split: str, cfg: dict, params: dict | None, do_tune: bo
     B = budget(len(pool.index), cfg["defaults"]["budget"])
     sdir = out / split
     write_runs(sdir, runs, params, split, cfg)
-    res = ev.evaluate_runs(runs, truth, B, ev.delta_t()) if truth is not None else {}
+    res = ev.evaluate_runs(runs, truth, B, ev.redundancy_window_s()) if truth is not None else {}
     if truth is not None:
         abl = ablation_blocks(pool, params, cfg, truth)
         if boot_n:
@@ -306,11 +310,11 @@ def run_split(out: Path, split: str, cfg: dict, params: dict | None, do_tune: bo
                 m = pool.index["sample_token"].isin(set(sub_index["sample_token"])).to_numpy()
                 sp = pool.sub(m)
                 Bs = budget(len(sp.index), cfg["defaults"]["budget"])
-                sel, _ = select_mmr(scores_for(sp, params["k"], (1, 0, 0)), sp.z0(), Bs,
-                                    params["lam"], params["m"])
-                return ev.first_B(sel, Bs)
+                sel, _ = select_mmr(score_pool(sp, params["k"], (1, 0, 0)), sp.z0(), Bs,
+                                    params["lam"], params["m"], score_norm=cfg["mmr_score"])
+                return ev.top_b_tokens(sel, Bs)
             ci = ev.bootstrap_ci(run_fn, pool.index, lambda s: ev.Truth(gt, s),
-                                 cfg["defaults"]["budget"], ev.delta_t(), boot_n,
+                                 cfg["defaults"]["budget"], ev.redundancy_window_s(), boot_n,
                                  cfg["bootstrap"]["seed"])
         res.update(params=params, ci95_t0=ci, ablation_blocks=abl, tune=tune_rows)
         (sdir / "metrics.json").write_text(json.dumps(res, indent=1, ensure_ascii=False),

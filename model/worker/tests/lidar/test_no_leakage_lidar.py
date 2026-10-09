@@ -1,11 +1,11 @@
-"""Bất biến I1 (planning/04): chỉ gt.py đọc nhãn, chỉ eval.py đọc gt_rare_lidar."""
+"""Bất biến I1 (planning/04): chỉ gt.py đọc nhãn, chỉ evaluation.py đọc gt_rare_lidar."""
 import ast
 from pathlib import Path
 
 LIDAR = Path(__file__).resolve().parents[2] / "c4" / "lidar"
-LABEL_FREE = ["pcd.py", "descriptor.py", "extract.py", "index.py", "splits.py", "score.py",
-              "select.py", "uncertainty.py"]
-FORBIDDEN_IMPORTS = {"c4.lidar.gt", "c4.lidar.eval", "c4.data.rare_gt", "c4.data.project"}
+LABEL_FREE = ["pcd.py", "descriptor.py", "extract.py", "index.py", "splits.py", "scoring.py",
+              "selectors.py", "t1_signals.py", "mmr.py", "web_selection.py", "web_run.py"]
+FORBIDDEN_IMPORTS = {"c4.lidar.gt", "c4.lidar.evaluation", "c4.data.rare_gt", "c4.data.project"}
 FORBIDDEN_STRINGS = ["sample_annotation", "gt_rare", "description", "num_lidar_pts", "\"gt\"",
                      "'gt'", "gt/"]
 
@@ -35,4 +35,4 @@ def test_label_free_modules_never_touch_labels():
 def test_gt_rare_lidar_read_only_by_eval_and_experiment():
     readers = sorted(p.name for p in LIDAR.glob("*.py")
                      if '"gt_rare_lidar"' in p.read_text(encoding="utf-8"))
-    assert set(readers) <= {"gt.py", "eval.py", "experiment.py", "pipeline.py"}, readers
+    assert set(readers) <= {"gt.py", "evaluation.py", "experiment.py", "web_scoring.py"}, readers

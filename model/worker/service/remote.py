@@ -233,11 +233,37 @@ def _tar_entry(src: Path, arcname: str):
         yield b"\0" * pad
 
 
-def bundle_stream(index: Path, data: Path):
+def _tar_bytes(arcname: str, payload: bytes):
+    ti = tarfile.TarInfo(arcname)
+    ti.size, ti.mode = len(payload), 0o644
+    yield ti.tobuf(tarfile.GNU_FORMAT)
+    yield payload
+    pad = -len(payload) % tarfile.BLOCKSIZE
+    if pad:
+        yield b"\0" * pad
+
+
+def _label_tokens(index: Path) -> set[str]:
+    """Frame được phép mang nhãn khỏi máy: seed S (để train) và T (chấm model seed)."""
+    import pandas as pd
+
+    df = pd.read_parquet(index, columns=["sample_token", "split"])
+    return set(df.loc[df["split"].isin(["S", "T"]), "sample_token"])
+
+
+def bundle_stream(index: Path, data: Path, label_tokens: set[str] | None = None):
+    """label_tokens ≠ None ⇒ `sample_annotation.json` chỉ giữ nhãn của các frame đó: nhãn của pool
+    không rời máy (vùng nhãn seed chỉ gồm S)."""
     yield from _tar_entry(index, "index.parquet")
     if data.is_dir():
         for p in _iter_files(data):
-            yield from _tar_entry(p, "data/" + p.relative_to(data).as_posix())
+            arc = "data/" + p.relative_to(data).as_posix()
+            if label_tokens is not None and p.name == "sample_annotation.json":
+                rows = json.loads(p.read_text(encoding="utf-8"))
+                kept = [a for a in rows if a.get("sample_token") in label_tokens]
+                yield from _tar_bytes(arc, json.dumps(kept).encode("utf-8"))
+            else:
+                yield from _tar_entry(p, arc)
     yield b"\0" * (tarfile.BLOCKSIZE * 2)
 
 
@@ -320,7 +346,8 @@ def bundle(task_id: str, request: Request):
     index = s.jobs / rec["jobId"] / "lidar" / "index.parquet"
     if not index.is_file() or index.is_symlink():
         raise ApiError(404, "not_found", "Không tìm thấy chỉ mục.")
-    return StreamingResponse(bundle_stream(index, s.datasets / ds / "data"),
+    return StreamingResponse(bundle_stream(index, s.datasets / ds / "data",
+                                           _label_tokens(index)),
                              media_type="application/x-tar")
 
 

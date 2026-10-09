@@ -8,11 +8,11 @@ import pytest
 
 from c4.cli import lidar_experiment
 from c4.contracts import read_table, write_table
-from c4.lidar import eval as ev
+from c4.lidar import evaluation as ev
 from c4.lidar import load_gt_config, load_lidar_config
 from c4.lidar.experiment import prepare, run_split
-from c4.lidar.select import budget
-from c4.lidar.uncertainty import signals
+from c4.lidar.selectors import budget
+from c4.lidar.t1_signals import compute_t1_signals
 from tests.fixtures.make_nuscenes import make_nuscenes
 
 N_SCENES, FRAMES = 4, 8
@@ -54,7 +54,7 @@ def _fake_t1(out, cfg):
         return res
     z1 = rng.normal(size=(len(index), 16)).astype(np.float32)
     seed = index["frame_idx"].to_numpy() == 0
-    sig = signals(index, preds(), preds(), z1, seed, cfg)
+    sig = compute_t1_signals(index, preds(), preds(), z1, seed, cfg)
     (out / "t1").mkdir(exist_ok=True)
     write_table(sig, str(out / "t1" / "signals.parquet"), "t1_signals")
     np.save(out / "t1" / "z1.npy", z1)

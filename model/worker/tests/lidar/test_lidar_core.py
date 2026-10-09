@@ -6,14 +6,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from c4.lidar import eval as ev
+from c4.lidar import evaluation as ev
 from c4.lidar import load_gt_config, load_lidar_config, nusc_splits
-from c4.lidar.descriptor import block_dims, embed, frame_descriptor
+from c4.lidar.descriptor import block_dims, embed_descriptors, frame_descriptor
 from c4.lidar.pcd import remove_close, voxel_downsample
-from c4.lidar.score import combine, pct_rank, rarity
-from c4.lidar.select import budget, select_coreset, select_mmr, select_random, select_topk
+from c4.lidar.scoring import combine_scores, pct_rank, rarity
+from c4.lidar.selectors import budget, select_coreset, select_mmr, select_random, select_topk
 from c4.lidar.splits import plan_splits
-from c4.lidar.uncertainty import entropy, inconsistency, load_preds, match_count
+from c4.lidar.t1_signals import entropy, inconsistency, load_preds, match_count
 
 
 @pytest.fixture
@@ -63,10 +63,10 @@ def test_embed_pca_shape_drop_and_keep():
            for k, d in dict(A=9, B=16, C=100, D=14, E=3).items()}
     keep = np.ones(30, bool)
     keep[3] = False
-    z = embed(raw, keep, 64)
+    z = embed_descriptors(raw, keep, 64)
     assert z.shape == (30, 28)  # min(64, n_fit-1=28, D)
-    assert np.array_equal(z, embed(raw, keep, 64))
-    zd = embed(raw, keep, 8, drop_blocks=("C",))
+    assert np.array_equal(z, embed_descriptors(raw, keep, 64))
+    zd = embed_descriptors(raw, keep, 8, drop_blocks=("C",))
     assert zd.shape == (30, 8)
 
 
@@ -87,7 +87,7 @@ def test_pct_rank_masks_and_combine_weights():
     assert not pct_rank(np.zeros(4), m).any()  # tín hiệu hằng không mang thông tin ⇒ hạng 0
     idx = pd.DataFrame(dict(sample_token=list("abcd"), scene_token=["s0", "s0", "s1", "s1"],
                             split="V", frame_idx=[0, 1, 0, 1]))
-    sc = combine(idx, m, x, None, None, 1, 0, 0)
+    sc = combine_scores(idx, m, x, None, None, 1, 0, 0)
     assert sc["s"].tolist() == pytest.approx([1 / 3, 2 / 3, 1.0, 0.0], rel=1e-5)
 
 
@@ -98,18 +98,18 @@ def _scores(n_scenes=5, per=10, seed=0):
                             scene_token=[f"s{i // per}" for i in range(n)], split="V",
                             frame_idx=[i % per for i in range(n)]))
     keep = np.ones(n, bool)
-    return combine(idx, keep, rng.random(n).astype(np.float32), None, None, 1, 0, 0), \
+    return combine_scores(idx, keep, rng.random(n).astype(np.float32), None, None, 1, 0, 0), \
         rng.normal(size=(n, 8)).astype(np.float32)
 
 
 def test_select_mmr_quota_and_budget():
     sc, z = _scores()
     B = budget(len(sc), 0.2)
-    sel, warn = select_mmr(sc, z, B, lam=0.7, m=2)
+    sel, warn = select_mmr(sc, z, B, lam=0.7, m=2, score_norm="rank")
     assert len(sel) == B == 10 and not warn
     assert sel.groupby("scene_token").size().max() <= 2
     assert sel["reason"].str.startswith("rarity p").all()
-    sel2, warn2 = select_mmr(sc, z, 15, lam=0.7, m=2)  # 5 scene × 2 < 15 ⇒ tự nâng m
+    sel2, warn2 = select_mmr(sc, z, 15, lam=0.7, m=2, score_norm="rank")  # 5 scene × 2 < 15 ⇒ tự nâng m
     assert len(sel2) == 15 and warn2
 
 
@@ -189,12 +189,12 @@ def test_gt_config_groups_disjoint():
 
 def test_q4_minmax_score_keeps_magnitude_and_default_is_minmax():
     """Q4 (Đ15): min-max giữ biên độ Rar, hạng % thì nén; mặc định = minmax."""
-    from c4.lidar.select import minmax_score
+    from c4.lidar.selectors import minmax_score
 
     idx = pd.DataFrame(dict(sample_token=list("abcd"), scene_token=["s0", "s0", "s1", "s1"],
                             split="V", frame_idx=[0, 1, 0, 1]))
     rar = np.array([1.0, 1.1, 1.2, 4.0], np.float32)
-    sc = combine(idx, np.ones(4, bool), rar, None, None, 1, 0, 0)
+    sc = combine_scores(idx, np.ones(4, bool), rar, None, None, 1, 0, 0)
     mm = minmax_score(sc)
     assert mm[3] == pytest.approx(1.0) and mm[2] < 0.1  # khe 1.0 → 0.07 (min-max)
     assert sc["s"].iloc[3] - sc["s"].iloc[2] == pytest.approx(0.25)  # hạng %: khe chỉ 0.25
@@ -205,3 +205,19 @@ def test_q4_minmax_score_keeps_magnitude_and_default_is_minmax():
     assert len(a) == len(b) == 2 and "d" in set(b["sample_token"])
     with pytest.raises(ValueError):
         select_mmr(sc, z, 2, 0.7, None, score_norm="zscore")
+
+
+def test_every_select_mmr_call_passes_score_norm():
+    """Q4: chuẩn hoá điểm MMR phải đi từ cfg["mmr_score"] ở MỌI chỗ gọi (tune, ablation,
+    bootstrap, ma trận run, web) — không chỗ nào được rơi về mặc định ngầm."""
+    import ast
+    from pathlib import Path
+
+    import c4.lidar as pkg
+    missing = []
+    for f in Path(pkg.__file__).parent.rglob("*.py"):
+        for n in ast.walk(ast.parse(f.read_text(encoding="utf-8"))):
+            if (isinstance(n, ast.Call) and getattr(n.func, "id", "") == "select_mmr"
+                    and not any(k.arg == "score_norm" for k in n.keywords)):
+                missing.append(f"{f.name}:{n.lineno}")
+    assert not missing, missing
