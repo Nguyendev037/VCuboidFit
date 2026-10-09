@@ -109,7 +109,8 @@ def test_select_mmr_quota_and_budget():
     assert len(sel) == B == 10 and not warn
     assert sel.groupby("scene_token").size().max() <= 2
     assert sel["reason"].str.startswith("rarity p").all()
-    sel2, warn2 = select_mmr(sc, z, 15, lam=0.7, m=2, score_norm="rank")  # 5 scene × 2 < 15 ⇒ tự nâng m
+    # 5 scene × 2 < 15 ⇒ tự nâng m
+    sel2, warn2 = select_mmr(sc, z, 15, lam=0.7, m=2, score_norm="rank")
     assert len(sel2) == 15 and warn2
 
 
@@ -221,3 +222,24 @@ def test_every_select_mmr_call_passes_score_norm():
                     and not any(k.arg == "score_norm" for k in n.keywords)):
                 missing.append(f"{f.name}:{n.lineno}")
     assert not missing, missing
+
+
+def test_index_drops_scenes_whose_lidar_files_are_mostly_missing(tmp_path):
+    """Tải thiếu: scene chỉ còn vài frame có file bị bỏ nguyên scene, không thành scene 1 frame."""
+    from c4.data.nusc import NuscTables
+    from c4.lidar.index import build_lidar_index
+    from tests.fixtures.make_nuscenes import make_nuscenes
+
+    root = make_nuscenes(tmp_path, n_scenes=3, frames_per_scene=6)
+    t = NuscTables.load(root)
+    full = build_lidar_index(t, root)
+    assert full["scene_name"].nunique() == 3
+    by_scene = full.groupby("scene_name")["lidar_path"].apply(list)
+    victim, ok = by_scene.index[0], by_scene.index[1]
+    for rel in by_scene[victim][1:]:  # còn đúng 1/6 frame
+        (root / rel).unlink()
+    for rel in by_scene[ok][:2]:       # thiếu 2/6 vẫn giữ (>= 50 %), chỉ bỏ 2 frame
+        (root / rel).unlink()
+    idx = build_lidar_index(t, root)
+    assert victim not in set(idx["scene_name"])
+    assert (idx["scene_name"] == ok).sum() == 4

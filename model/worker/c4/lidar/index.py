@@ -20,15 +20,22 @@ def lidar_keyframes(t: NuscTables) -> dict[str, dict]:
             if sd["is_key_frame"] and chan[sd["calibrated_sensor_token"]] == "LIDAR_TOP"}
 
 
+MIN_SCENE_COVERAGE = 0.5  # scene có < 50 % keyframe LiDAR có file bị bỏ (tải thiếu / bộ cắt dở)
+
+
 def build_lidar_index(t: NuscTables, data_root) -> pd.DataFrame:
+    """Chỉ mục keyframe LIDAR_TOP. Frame thiếu file bị bỏ; scene mà phần lớn frame thiếu file bị
+    bỏ nguyên scene (một scene 1 frame vẫn làm sai chia tập theo scene và Rarity khác scene)."""
     root = Path(data_root)
     lid = lidar_keyframes(t)
     rows = []
     for sc_tok, sc in t.scene.items():
-        for idx, s in enumerate(t.scene_samples(sc_tok)):
-            sd = lid.get(s["token"])
-            if sd is None or not (root / sd["filename"]).is_file():
-                continue
+        samples = t.scene_samples(sc_tok)
+        have = [(idx, s, lid[s["token"]]) for idx, s in enumerate(samples)
+                if s["token"] in lid and (root / lid[s["token"]]["filename"]).is_file()]
+        if not samples or len(have) / len(samples) < MIN_SCENE_COVERAGE:
+            continue
+        for idx, s, sd in have:
             pose = t.ego_pose[sd["ego_pose_token"]]
             rows.append(dict(sample_token=s["token"], scene_token=sc_tok, scene_name=sc["name"],
                              split="pool", frame_idx=idx, timestamp=sd["timestamp"],

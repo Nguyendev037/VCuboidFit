@@ -9,9 +9,9 @@ from c4.cli import lidar_index, lidar_t0
 from c4.contracts import read_table, write_table
 from c4.lidar import load_lidar_config
 from c4.lidar.params import LidarParams
+from c4.lidar.t1_signals import compute_t1_signals
 from c4.lidar.web_run import run_lidar_selection
 from c4.lidar.web_selection import available_tiers, params_schema_for_job
-from c4.lidar.t1_signals import compute_t1_signals
 from tests.fixtures.make_nuscenes import make_nuscenes
 
 
