@@ -15,7 +15,8 @@ kiểm tra sau mỗi bước.
 | 2.3 Nhãn Tầng 1 | Xong, chưa thử trên GPU | `infos_index` không còn khoá nhãn (`strip_labels`, `verify_index_label_free`, có test). Bundle gửi Colab (`service/remote.py`) chỉ giữ `sample_annotation.json` của frame S và T, có test. Lưu ý: file này được đọc cả vào RAM nên với trainval đầy đủ sẽ nặng; chưa chạy thử với OpenPCDet thật |
 | 2.4 Tách chọn mẫu và chấm điểm | Xong | `web_selection.py` (label-free, nằm trong danh sách của test chống rò rỉ), `web_scoring.py` (đọc nhãn), `web_run.py` (ghép hai phần) |
 | 2.5 Quyết định của bạn | Chưa làm | Hiển thị metric trên giao diện; xoá mã camera |
-| 3.2, 3.3, 3.4 | Chưa làm | Agent ra khỏi `scripts/`, mã camera, tài liệu |
+| 3.4 Thư mục tài liệu | Xong | `docss/` → `docs/design/` với tên file mới; các tham chiếu `planning/`, `SPEC-P0x` trong comment **chưa** sửa vì không có tài liệu nguồn để trỏ tới |
+| 3.2, 3.3 | Chưa làm | Agent ra khỏi `scripts/`, mã camera |
 | 4 Đổi tên | Xong nhóm A và hầu hết nhóm B | Xem danh sách dưới |
 
 Đã đổi tên: `pipeline.py`→`web_selection.py`, `eval.py`→`evaluation.py`, `select.py`→`selectors.py`,
@@ -26,12 +27,12 @@ kiểm tra sau mỗi bước.
 `embed`→`embed_descriptors`, `signals`→`compute_t1_signals`, `scores_for`→`score_pool`.
 
 Chưa đổi (có chủ ý): `pct_rank`, `criterion`, `fmt_table`, `oracle`, `reasons`, `budget`, `Truth`, `Pool`,
-`index.py`, `params.py`, tên CLI `lidar_t0`/`lidar_g1`, thư mục `docss/` (nhóm C hoặc cần bạn xác nhận).
+`index.py`, `params.py`, tên CLI `lidar_t0`/`lidar_g1`, (nhóm C).
 Trường `tier_available` trong `service/models.py` được **giữ nguyên** vì nó sinh ra khoá JSON
 `tierAvailable` của hợp đồng với web; lần đổi tên đầu tiên đã làm vỡ khoá này và test bắt được.
 
-Căn cứ đối chiếu: `docss/T07_Buildphase_Document_final.pdf` (thiết kế chi tiết) và
-`docss/thiet keTang0_Tang1_VCuboidFIT.pdf` (bản thuyết trình Tầng 0/Tầng 1), so với code trong
+Căn cứ đối chiếu: `docs/design/c4-design-detail.pdf` (trước là `docss/T07_Buildphase_Document_final.pdf`, thiết kế chi tiết) và
+`docs/design/tier0-tier1-overview.pdf` (trước là `docss/thiet keTang0_Tang1_VCuboidFIT.pdf`, bản thuyết trình Tầng 0/Tầng 1), so với code trong
 `model/worker/c4/lidar`, `model/worker/service`, `model/worker/configs`.
 
 ---

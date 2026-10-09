@@ -42,6 +42,7 @@ VCuboidFit/
 ├── dataset/             zip nuScenes-mini để thử upload (zip bị gitignore)
 ├── tools/vcf-pack/      CLI chia nuScenes thành part zip <= 50 MB + manifest
 └── docs/                hướng dẫn chạy, thuê GPU, Colab, quy trình model, thuật ngữ
+    └── design/          PDF thiết kế: tier0-tier1-overview.pdf, c4-design-detail.pdf
 ```
 
 | Thư mục | Nội dung |
