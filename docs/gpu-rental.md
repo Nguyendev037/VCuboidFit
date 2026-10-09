@@ -16,7 +16,7 @@ Thiếu Tầng 1 thì mọi thứ vẫn chạy với α = 1.
 > Chạy ở máy cá nhân (CPU / RTX 4060 Docker): xem [run-local.md](run-local.md). Kaggle / Colab: [kaggle-colab.md](kaggle-colab.md).
 
 Image Tầng 1 dùng chung cho cả ba nơi chạy GPU: **`vcuboidfit_pointpillars:0.1`** (container
-`VCuboidFit_PillPoint`). Đổi tên image bằng biến `VCF_TIER1_IMAGE` — `model/scripts/tier1.ps1` và các
+`VCuboidFit_PointPillars`). Đổi tên image bằng biến `VCF_TIER1_IMAGE` — `model/scripts/tier1.ps1` và các
 compose (`model/docker/tier1`, `model/docker/cloud`, `model/docker/worker`) đều đọc biến này.
 
 ## 3. C · gói GPU thuê
