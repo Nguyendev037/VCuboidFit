@@ -305,3 +305,100 @@ def test_12_agent_retry_resends_full_file_and_lease(tmp_path):
                lease="L1")
     assert [len(b) for b, _ in seen] == [1000, 1000]
     assert all(h == {"X-Lease-Id": "L1"} for _, h in seen)
+
+
+def _seed_exp(s, data=b"W" * 1000, sweeps=10):
+    t1 = s.workspace / "experiments" / "e80" / "t1"
+    (t1 / "ckpt").mkdir(parents=True)
+    (t1 / "ckpt" / "seed_latest.pth").write_bytes(data)
+    (t1 / "train_config.yaml").write_text(f"sweeps: {sweeps}\nepochs: 80\n")
+    return data
+
+
+def test_15_seed_checkpoint_attached_and_served(env):
+    import hashlib
+    c, s, app = env
+    data = _seed_exp(s)
+    _create(c, sweeps=1, epochs=20)
+    t = c.get("/remote/t1/next", headers=AUTH).json()
+    assert t["seed"] == {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+                         "sweeps": 10}
+    assert t["params"]["sweeps"] == 10  # suy luận phải cùng sweeps với lúc train trọng số
+    assert "path" not in json.dumps(t)  # không lộ đường dẫn trên máy worker
+    assert c.get(f"/remote/t1/{t['taskId']}/seed").status_code == 401
+    r = c.get(f"/remote/t1/{t['taskId']}/seed", headers=AUTH)
+    assert r.status_code == 200 and r.content == data
+
+
+def test_16_no_seed_when_disabled_or_missing(env):
+    c, s, app = env
+    _create(c, sweeps=1)
+    t = c.get("/remote/t1/next", headers=AUTH).json()  # chưa có thí nghiệm nào
+    assert "seed" not in t and t["params"]["sweeps"] == 1
+    assert c.get(f"/remote/t1/{t['taskId']}/seed", headers=AUTH).status_code == 404
+    c.delete(f"/jobs/{JOB}/t1-remote")
+    _seed_exp(s)
+    app.state.settings.t1_exp = "none"  # tắt hẳn
+    _create(c, sweeps=1)
+    t2 = c.get("/remote/t1/next", headers=AUTH).json()
+    assert "seed" not in t2
+
+
+def test_17_agent_fetch_seed_checks_sha_and_caches(tmp_path):
+    import hashlib
+    agent = _load_agent()
+    data = b"weights" * 100
+    calls = []
+
+    class Raw(io.BytesIO):
+        pass
+
+    class Resp:
+        def __init__(self, body):
+            self.raw = Raw(body)
+
+        def close(self):
+            pass
+
+    class C:
+        body = data
+
+        def call(self, method, path, **kw):
+            calls.append(path)
+            return Resp(self.body)
+
+    task = {"taskId": "t1_aaaaaaaaaaaa", "seed": {"bytes": len(data), "sha256":
+            hashlib.sha256(data).hexdigest(), "sweeps": 10}}
+    c = C()
+    p = agent.fetch_seed(c, task, tmp_path)
+    assert p.read_bytes() == data and calls == ["/remote/t1/t1_aaaaaaaaaaaa/seed"]
+    assert agent.fetch_seed(c, task, tmp_path) == p and len(calls) == 1  # cache theo sha256
+    assert agent.fetch_seed(c, {"taskId": "x"}, tmp_path, use_default=False) is None
+    p.unlink()
+    c.body = b"hong"
+    with pytest.raises(agent.TaskRejected):
+        agent.fetch_seed(c, task, tmp_path)
+
+
+def test_18_agent_default_seed_from_github(tmp_path, monkeypatch):
+    import hashlib
+    agent = _load_agent()
+    data = b"github-weights" * 50
+
+    class Resp:
+        raw = io.BytesIO(data)
+
+        def raise_for_status(self):
+            pass
+
+        def close(self):
+            pass
+
+    urls = []
+    monkeypatch.setattr(agent.requests, "get", lambda url, **kw: urls.append(url) or Resp(),
+                        raising=False)
+    monkeypatch.setattr(agent, "DEFAULT_SEED", {**agent.DEFAULT_SEED, "bytes": len(data),
+                        "sha256": hashlib.sha256(data).hexdigest()})
+    p = agent.fetch_seed(None, {"taskId": "t1_aaaaaaaaaaaa"}, tmp_path)  # worker không gửi
+    assert p.read_bytes() == data and urls == [agent.DEFAULT_SEED["url"]]
+    assert "media.githubusercontent.com" in urls[0] and urls[0].endswith(".pth")

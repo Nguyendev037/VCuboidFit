@@ -40,6 +40,14 @@ TOKEN      = <chuỗi dài>
    - Ô 3 cài môi trường: lần đầu mỗi phiên ~10–15 phút, kết thúc bằng `SETUP OK` / `✅ Cài xong`.
    - Ô 4 chạy liên tục, chờ việc.
 
+**Không cần train:** mặc định Colab dùng **trọng số PointPillars có sẵn** (80 epoch, seed nuScenes-mini) thay vì
+train lại — một lượt chỉ còn tải dữ liệu + suy luận (~7–20 phút thay vì 20–35 phút). Thứ tự lấy trọng số:
+1. Worker gửi kèm việc nếu máy bạn có thí nghiệm riêng (`VCF_T1_EXP`, hoặc tự dò trong `model/workspace/experiments`).
+2. Không có thì tải bản mặc định trên GitHub (Git LFS, ~70 MB, kiểm sha256, cache trong phiên).
+
+Muốn train lại trên Colab (vd dữ liệu trainval mới): ở ô 4 thêm `"--train"` vào danh sách lệnh của `colab_agent.py`.
+Dữ liệu khác hẳn mini (trainval) nên train lại một lần rồi đặt thí nghiệm đó làm `VCF_T1_EXP` cho các lần sau.
+
 ### Bước 3 — Web: giao việc
 
 Mở lần chạy trên web → **Tham số nâng cao** → **"Chạy Tầng 1 trên Colab"**. Log ô 4:
@@ -49,6 +57,7 @@ Mở lần chạy trên web → **Tham số nâng cao** → **"Chạy Tầng 1 t
 | `khong co viec` | Đang chờ (chưa bấm nút trên web) |
 | `nhan viec t1_...` | Đã nhận việc |
 | `cache miss: da tai data/` | Đang tải dữ liệu từ máy bạn qua tunnel (lần đầu có thể lâu) |
+| `da tai trong so seed tu GitHub` / `tu worker` | Đã có trọng số, bước train sẽ bỏ qua (`dùng trọng số có sẵn ... bỏ qua train`) |
 | `da gui ket qua t1_...` | **Xong** — web tự mở khoá Tầng 1 |
 
 Dừng: bấm ■ ở ô 4. Tắt cầu nối: đóng cloudflared, chạy lại worker không có `VCF_REMOTE_TOKEN`.

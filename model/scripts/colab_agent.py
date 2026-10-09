@@ -9,6 +9,7 @@ Token KHONG BAO GIO duoc in ra log.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -151,6 +152,58 @@ def fetch_bundle(c: Client, task: dict, work: Path) -> tuple[Path, Path]:
     return exp, data
 
 
+# Trong so seed mac dinh (PointPillars 80 epoch tren seed nuScenes-mini, sweeps 10) luu tren
+# GitHub qua Git LFS: may nao chay Colab cung dung duoc, khong can train.
+DEFAULT_SEED = {
+    "url": "https://media.githubusercontent.com/media/Nguyendev037/VCuboidFit/main/model/workspace/"
+           "experiments/mini-e80/t1/pcdet_output/exp/t1/cfg/pp_seed/seed_c6b39360/ckpt/"
+           "checkpoint_epoch_80.pth",
+    "sha256": "47c982c5f8551f1f33830fcebf25eb8b24fc6a2f254eb4ed45c7e45ac57df0dc",
+    "bytes": 73172427,
+    "sweeps": 10,
+}
+
+
+def fetch_seed(c: Client, task: dict, work: Path, use_default: bool = True) -> Path | None:
+    """Trong so seed de bo buoc train: uu tien ban worker gui kem viec, khong co thi tai ban
+    mac dinh tren GitHub (use_default). Cache theo sha256, luon kiem sha256."""
+    info, src = task.get("seed"), "worker"
+    if not info:
+        if not use_default:
+            return None
+        info, src = DEFAULT_SEED, "GitHub"
+    dst = work / "cache" / f"seed_{info['sha256'][:16]}.pth"
+    if dst.is_file() and _sha256(dst) == info["sha256"]:
+        log("cache hit: trong so seed - bo qua tai")
+        return dst
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_suffix(".part")
+    if src == "worker":
+        r = c.call("GET", f"/remote/t1/{task['taskId']}/seed", stream=True, timeout=(30, 300))
+    else:
+        r = requests.get(info["url"], stream=True, timeout=(30, 300))
+        r.raise_for_status()
+    try:
+        with open(tmp, "wb") as f:
+            shutil.copyfileobj(r.raw, f, 1 << 20)
+    finally:
+        r.close()
+    if _sha256(tmp) != info["sha256"]:
+        tmp.unlink(missing_ok=True)
+        raise TaskRejected("trong so seed tai ve sai sha256")
+    os.replace(tmp, dst)
+    log(f"da tai trong so seed tu {src} ({info['bytes'] // (1 << 20)} MB) - se bo qua train")
+    return dst
+
+
+def _sha256(p: Path) -> str:
+    h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 class Heartbeat(threading.Thread):
     def __init__(self, c: Client, tid: str, interval: float, lease: str | None = None):
         super().__init__(daemon=True)
@@ -214,6 +267,9 @@ def process(c: Client, task: dict, a) -> None:
     hb = None
     try:
         exp, data = fetch_bundle(c, task, work)
+        ckpt = None if a.dry_run else fetch_seed(c, task, work, use_default=not a.train)
+        if ckpt is not None:
+            sw = (task.get("seed") or DEFAULT_SEED)["sweeps"]  # suy luan cung sweeps luc train
         hb = Heartbeat(c, tid, a.heartbeat_sec, lease)
         hb.start()
         t0 = time.monotonic()
@@ -224,9 +280,10 @@ def process(c: Client, task: dict, a) -> None:
         else:
             env = dict(os.environ)
             py = sys.executable
+            seed_args = ["--init-ckpt", str(ckpt)] if ckpt else []
             run_stage([py, "-m", "c4.lidar.tier1.train_seed", "--exp", str(exp), "--nusc",
-                       str(data), "--sweeps", str(sw), "--epochs", str(ep), "--batch", str(ba)],
-                      env, work)
+                       str(data), "--sweeps", str(sw), "--epochs", str(ep), "--batch", str(ba),
+                       *seed_args], env, work)
             train_s = time.monotonic() - t0
             hb.stage, hb.progress = "infer", 0.7
             t1 = time.monotonic()
@@ -325,6 +382,8 @@ def main(argv=None) -> int:
                     help="mac dinh lay tu bien VCF_REMOTE_TOKEN")
     ap.add_argument("--work", default="/content/vcf", help="thu muc lam viec + cache")
     ap.add_argument("--once", action="store_true", help="xu ly toi da 1 viec roi thoat")
+    ap.add_argument("--train", action="store_true",
+                    help="train lai seed tren Colab thay vi dung trong so co san (cham hon nhieu)")
     ap.add_argument("--dry-run", action="store_true",
                     help="bo train/infer, ghi signals.parquet gia (test khong GPU)")
     ap.add_argument("--heartbeat-sec", type=float, default=60, help=argparse.SUPPRESS)

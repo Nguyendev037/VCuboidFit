@@ -18,6 +18,9 @@ class Settings:
         default_factory=lambda: int(os.environ.get("VCF_REMOTE_LEASE_SEC", "5400")))
     remote_max_result_mb: int = field(
         default_factory=lambda: int(os.environ.get("VCF_REMOTE_MAX_RESULT_MB", "200")))
+    # Thí nghiệm có trọng số seed (t1/ckpt/seed_latest.pth): Colab dùng lại, bỏ bước train.
+    # Trống = tự dò thư mục mới nhất trong <workspace>/experiments; "none" = tắt.
+    t1_exp: str = field(default_factory=lambda: os.environ.get("VCF_T1_EXP", "").strip())
 
     def __post_init__(self):
         self.workspace = Path(self.workspace)

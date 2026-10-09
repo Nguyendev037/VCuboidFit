@@ -4,7 +4,7 @@ Chọn **5 % keyframe LiDAR đáng gán nhãn 3D nhất** từ một bộ dữ l
 ego pose và timestamp (không camera, không nhãn). Có engine Python (CPU, thêm tầng PointPillars
 tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tham số, xem kết quả, soi từng frame.
 
-> **Repo này là ROOT duy nhất của dự án** (bản hoàn chỉnh nhất, phiên bản hiện tại v0.6.4). Mọi thay đổi
+> **Repo này là ROOT duy nhất của dự án** (bản hoàn chỉnh nhất, phiên bản hiện tại v0.6.5). Mọi thay đổi
 > code, tài liệu, Docker, notebook đều làm, commit và push thẳng tại đây — không sinh lại từ nơi khác.
 
 ## Kiến trúc
@@ -104,6 +104,7 @@ Chi tiết từng bước và xử lý lỗi: [docs/run-local.md](docs/run-local
 | `VCF_REMOTE_TOKEN` | worker | rỗng (tắt) | Bật cầu nối Colab; thiếu biến thì mọi `/remote/*` trả 404 `remote_disabled` |
 | `VCF_REMOTE_LEASE_SEC` | worker | `5400` | Hạn giữ việc Tầng 1 từ xa trước khi trả về hàng đợi |
 | `VCF_REMOTE_MAX_RESULT_MB` | worker | `200` | Dung lượng tối đa của `signals.parquet` Colab tải lên |
+| `VCF_T1_EXP` | worker | tự dò `model/workspace/experiments` | Thí nghiệm có trọng số seed gửi kèm việc Colab (bỏ train); `none` = tắt. Không có thì Colab dùng trọng số mặc định trên GitHub |
 
 Chi tiết đầy đủ: `model/worker/.env.example` và `web/.env.example`.
 

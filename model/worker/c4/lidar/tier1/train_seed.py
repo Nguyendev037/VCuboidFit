@@ -216,6 +216,8 @@ def main(argv=None) -> int:
     ap.add_argument("--epochs", type=int, default=20)
     ap.add_argument("--batch", type=int, default=2)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--init-ckpt", type=Path, default=None,
+                    help="trọng số seed có sẵn: chỉ chuẩn bị infos/cfg, KHÔNG train")
     a = ap.parse_args(argv)
     import torch
 
@@ -250,8 +252,15 @@ def main(argv=None) -> int:
     tag = f"seed_{run_key(seed_toks, a.sweeps, a.epochs, cbgs)}"
     print(f"seed: {len(seed_toks)} frame · sweeps {a.sweeps} · epochs {a.epochs} · "
           f"CBGS {cbgs} · thiếu lớp {seed_stats['missing_classes']} · tag {tag}", flush=True)
-    ckpt, post_eval, _ = run_train(cfg_path, tag, a.epochs, a.batch, a.workers,
-                                   link_output(a.exp))
+    if a.init_ckpt is not None:
+        if not a.init_ckpt.is_file():
+            print(f"thiếu đầu vào: {a.init_ckpt}", file=sys.stderr)
+            return 4
+        ckpt, post_eval = a.init_ckpt, "init-ckpt (bỏ qua train)"
+        print(f"dùng trọng số có sẵn {a.init_ckpt.name} - bỏ qua train", flush=True)
+    else:
+        ckpt, post_eval, _ = run_train(cfg_path, tag, a.epochs, a.batch, a.workers,
+                                       link_output(a.exp))
     if ckpt is None:
         print(f"{post_eval} (OOM? thử --batch 1 --sweeps 1)", file=sys.stderr)
         return 3

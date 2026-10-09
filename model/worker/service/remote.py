@@ -3,6 +3,7 @@
 Hàng đợi = file JSON trong workspace/remote/, khóa bằng threading.Lock + ghi nguyên tử.
 Chỉ một worker, tải rất thấp, tạm thời — KHÔNG DB/Redis.
 """
+import hashlib
 import hmac
 import json
 import os
@@ -14,7 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import ValidationError
 from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
@@ -77,6 +78,39 @@ def _write_json(path: Path, obj) -> None:
     os.replace(tmp, path)
 
 
+def seed_ckpt(settings: Settings) -> Path | None:
+    """Trọng số seed để Colab dùng lại (bỏ train): VCF_T1_EXP, hoặc thí nghiệm mới nhất có ckpt."""
+    if settings.t1_exp.lower() == "none":
+        return None
+    if settings.t1_exp:
+        cands = [Path(settings.t1_exp)]
+    else:
+        root = settings.workspace / "experiments"
+        cands = sorted((d for d in root.iterdir() if d.is_dir()), key=lambda d: d.stat().st_mtime,
+                       reverse=True) if root.is_dir() else []
+    for exp in cands:
+        ck = exp / "t1" / "ckpt" / "seed_latest.pth"
+        if ck.is_file() and not ck.is_symlink():
+            return ck
+    return None
+
+
+def seed_info(settings: Settings) -> dict | None:
+    ck = seed_ckpt(settings)
+    if ck is None:
+        return None
+    h = hashlib.sha256()
+    with open(ck, "rb") as f:
+        for chunk in iter(lambda: f.read(CHUNK), b""):
+            h.update(chunk)
+    sweeps = 10
+    cfg = ck.parent.parent / "train_config.yaml"
+    if cfg.is_file():
+        import yaml
+        sweeps = int((yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}).get("sweeps", 10))
+    return dict(path=str(ck), bytes=ck.stat().st_size, sha256=h.hexdigest(), sweeps=sweeps)
+
+
 def _public(rec: dict) -> dict:
     """RemoteTask = bản ghi trừ bundleSha256, camelCase."""
     return RemoteTask.model_validate(rec).model_dump(by_alias=True)
@@ -137,8 +171,12 @@ class RemoteQueue:
             for r in self._all():
                 if r["jobId"] == job_id and r["state"] in ("queued", "leased"):
                     raise TaskExists(r["taskId"])
+            seed = seed_info(self.settings)
+            if seed:  # trọng số được train với số sweeps này: suy luận phải cùng sweeps
+                params = {**params, "sweeps": seed["sweeps"]}
             rec = dict(taskId=f"t1_{uuid.uuid4().hex[:12]}", jobId=job_id,
                        datasetId=meta.get("datasetId", ""), state="queued", params=params,
+                       seed=seed,
                        createdAt=self._iso(self._now()), leasedAt=None, leaseUntil=None,
                        attempts=0, error=None, bundleSha256=None, leaseId=None)
             return self._save(rec)
@@ -381,7 +419,20 @@ def next_task(request: Request):
     rec = _q(request).claim()
     if rec is None:
         return Response(status_code=204)
-    return {**_public(rec), "leaseId": rec["leaseId"]}  # chỉ claim trả leaseId
+    out = {**_public(rec), "leaseId": rec["leaseId"]}  # chỉ claim trả leaseId
+    if rec.get("seed"):  # có trọng số seed: agent tải /seed rồi bỏ train
+        out["seed"] = {k: rec["seed"][k] for k in ("bytes", "sha256", "sweeps")}
+    return out
+
+
+@router.get("/remote/t1/{task_id}/seed", dependencies=[Depends(require_token)])
+def seed(task_id: str, request: Request):
+    rec = _q(request).leased(task_id)
+    info = rec.get("seed")
+    ck = Path(info["path"]) if info else None
+    if ck is None or not ck.is_file() or ck.is_symlink():
+        raise ApiError(404, "not_found", "Việc này không kèm trọng số seed.")
+    return FileResponse(ck, media_type="application/octet-stream", filename="seed_latest.pth")
 
 
 @router.get("/remote/t1/{task_id}/bundle", dependencies=[Depends(require_token)])
