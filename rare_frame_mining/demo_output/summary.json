@@ -1,0 +1,137 @@
+{
+  "counts": {
+    "frames_V": 100,
+    "frames_T": 300,
+    "candidates_T": 919
+  },
+  "outlier_gate": {
+    "enabled": true,
+    "counts": {
+      "V": {
+        "valid": 99,
+        "suspect": 1,
+        "outlier": 0
+      },
+      "T": {
+        "valid": 298,
+        "suspect": 2,
+        "outlier": 0
+      },
+      "PILOT": {
+        "valid": 0,
+        "suspect": 0,
+        "outlier": 0
+      }
+    },
+    "knn_thr_out": 6.869492678241692,
+    "knn_thr_near": 6.481535550054118,
+    "median_points": 9853.0,
+    "median_dt": 0.5,
+    "geometry_thr": 0.0,
+    "temporal_thr": 0.0,
+    "domain_shift_warning": false,
+    "share_isolated_T": 0.007,
+    "corruption_test": {
+      "sparse": {
+        "n": 20,
+        "valid": 0,
+        "suspect": 0,
+        "outlier": 20,
+        "leak_rate": 0.0
+      },
+      "nan": {
+        "n": 20,
+        "valid": 0,
+        "suspect": 0,
+        "outlier": 20,
+        "leak_rate": 0.0
+      },
+      "below": {
+        "n": 20,
+        "valid": 4,
+        "suspect": 0,
+        "outlier": 16,
+        "leak_rate": 0.2
+      },
+      "ghost": {
+        "n": 20,
+        "valid": 0,
+        "suspect": 16,
+        "outlier": 4,
+        "leak_rate": 0.0
+      }
+    }
+  },
+  "top10_preview": [
+    {
+      "rank": 1,
+      "fid": "scene_005_f0008",
+      "slice": "rare_class",
+      "s_frame": 1.0,
+      "reasons": "có vật lớp hiếm (bicycle/motorcycle); mưa (1.00); có vật xa >30 m hoặc <10 điểm; obj_agg 0.82"
+    },
+    {
+      "rank": 2,
+      "fid": "scene_005_f0009",
+      "slice": "rare_class",
+      "s_frame": 1.0,
+      "reasons": "có vật lớp hiếm (bicycle/motorcycle); mưa (1.00); có vật xa >30 m hoặc <10 điểm; obj_agg 0.83"
+    },
+    {
+      "rank": 3,
+      "fid": "scene_005_f0000",
+      "slice": "rain",
+      "s_frame": 0.9187,
+      "reasons": "mưa (1.00); có vật xa >30 m hoặc <10 điểm; obj_agg 0.78"
+    },
+    {
+      "rank": 4,
+      "fid": "scene_003_f0045",
+      "slice": "rare_class",
+      "s_frame": 0.9025,
+      "reasons": "có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.82"
+    },
+    {
+      "rank": 5,
+      "fid": "scene_006_f0048",
+      "slice": "rare_class",
+      "s_frame": 0.89,
+      "reasons": "có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.90"
+    },
+    {
+      "rank": 6,
+      "fid": "scene_001_f0035",
+      "slice": "far_few",
+      "s_frame": 0.8792,
+      "reasons": "có vật xa >30 m hoặc <10 điểm; obj_agg 0.84"
+    },
+    {
+      "rank": 7,
+      "fid": "scene_005_f0047",
+      "slice": "rare_class",
+      "s_frame": 0.8529,
+      "reasons": "có vật lớp hiếm (bicycle/motorcycle); mưa (0.75); có vật xa >30 m hoặc <10 điểm; obj_agg 0.89"
+    },
+    {
+      "rank": 8,
+      "fid": "scene_003_f0039",
+      "slice": "rare_class",
+      "s_frame": 0.8321,
+      "reasons": "có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.89"
+    },
+    {
+      "rank": 9,
+      "fid": "scene_001_f0033",
+      "slice": "far_few",
+      "s_frame": 0.8158,
+      "reasons": "có vật xa >30 m hoặc <10 điểm; obj_agg 0.77"
+    },
+    {
+      "rank": 10,
+      "fid": "scene_000_f0032",
+      "slice": "rare_class",
+      "s_frame": 0.8137,
+      "reasons": "có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.84"
+    }
+  ]
+}

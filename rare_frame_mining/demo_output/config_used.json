@@ -1,0 +1,158 @@
+{
+  "roi": {
+    "min_range": 1.0,
+    "max_range": 50.0,
+    "z_min": -2.0,
+    "z_max": 3.5
+  },
+  "cluster": {
+    "ground_cell": 1.0,
+    "ground_h_thresh": 0.25,
+    "eps": 0.8,
+    "min_samples": 4,
+    "min_cluster_points": 5
+  },
+  "detector": {
+    "backend": "heuristic",
+    "config_path": "",
+    "checkpoint": "",
+    "score_thresh": 0.25,
+    "device": "cuda:0"
+  },
+  "model": {
+    "mode": "frozen",
+    "provenance": "nuscenes_train",
+    "seed_manifest": "",
+    "retrain": false,
+    "explore_frac": 0.0
+  },
+  "tta": {
+    "enabled": true,
+    "rots_deg": [
+      0.0,
+      15.0
+    ],
+    "flips": [
+      false
+    ],
+    "jitter_std": 0.0,
+    "match_radius": 1.5
+  },
+  "obj": {
+    "w_shape": 0.35,
+    "w_unc": 0.15,
+    "w_slice": 0.3,
+    "w_vru": 0.2,
+    "hard_boost": 0.05,
+    "far_m": 30.0,
+    "few_points": 10,
+    "far_few_scope": "vru",
+    "min_pts_shape": 10,
+    "vru_h": [
+      0.6,
+      2.0
+    ],
+    "vru_w": 1.2,
+    "confusing_pairs": [
+      [
+        "pedestrian",
+        "bicycle"
+      ],
+      [
+        "bicycle",
+        "motorcycle"
+      ],
+      [
+        "pedestrian",
+        "motorcycle"
+      ],
+      [
+        "traffic_cone",
+        "pedestrian"
+      ],
+      [
+        "bicycle",
+        "pedestrian"
+      ],
+      [
+        "motorcycle",
+        "bicycle"
+      ]
+    ]
+  },
+  "frame": {
+    "w_obj": 0.5,
+    "w_crowd": 0.25,
+    "w_weather": 0.25,
+    "w_ood": 0.0,
+    "hard_boost": 0.06,
+    "crowd_n": 5,
+    "crowd_h": [
+      1.2,
+      2.0
+    ],
+    "topk": 5,
+    "ood_ref": "comfort"
+  },
+  "gate": {
+    "enabled": true,
+    "min_points_abs": 1000,
+    "min_points_rel": 0.25,
+    "max_below_ground": 0.05,
+    "max_dt_factor": 5.0,
+    "temporal_radius_m": 1.5,
+    "temporal_max_speed": 3.0,
+    "cell_m": 0.5,
+    "temporal_min_objs": 3,
+    "temporal_min_unsupported": 2,
+    "temporal_min_support": 0.6,
+    "temporal_q": 0.99,
+    "max_float_m": 1.0,
+    "ground_radius_m": 3.0,
+    "vru_h_range": [
+      0.4,
+      2.6
+    ],
+    "vru_max_len": 3.0,
+    "geometry_min_bad": 2,
+    "geometry_q": 0.99,
+    "knn_k": 5,
+    "knn_q_out": 0.999,
+    "knn_q_near": 0.99,
+    "domain_shift_frac": 0.3,
+    "suspect_policy": "review",
+    "corruption_test_n": 20,
+    "ood_flag_q": 0.95
+  },
+  "dedup": {
+    "window_s": 2.0,
+    "disp_m": 2.0,
+    "keep_topk": 2
+  },
+  "diversity": {
+    "enabled": true,
+    "quotas": {
+      "rare_class": 0.3,
+      "crowd": 0.2,
+      "night": 0.15,
+      "rain": 0.15,
+      "far_few": 0.2,
+      "typical": 0.1
+    }
+  },
+  "split": {
+    "val_frac": 0.2,
+    "seed": 0
+  },
+  "evalcfg": {
+    "budgets": [
+      50,
+      100,
+      150
+    ],
+    "iou_thresh": 0.5,
+    "n_seeds": 10,
+    "bootstrap": 100
+  },
+  "out_dir": "/home/phu/0 Projects/VCuboidFit/rare_frame_mining/demo_output"
+}

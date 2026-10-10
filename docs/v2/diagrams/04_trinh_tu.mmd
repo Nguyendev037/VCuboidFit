@@ -1,0 +1,22 @@
+sequenceDiagram
+    actor QL as Quản lý dữ liệu
+    actor ML as Kỹ sư ML
+    participant PL as Pipeline
+    actor GN as Đội gán nhãn
+    QL->>ML: Ngân sách B frame, data mới
+    ML->>PL: run_pilot.py sanity (100–300 frame có nhãn)
+    PL-->>ML: pilot_sanity.json (PASS / WARN)
+    ML->>PL: run_pilot.py batch (top-B′ + random-B′)
+    PL-->>GN: 2 lô pilot
+    GN-->>ML: nhãn 2 lô
+    ML->>PL: run_eval.py → yield pipeline vs random
+    ML-->>QL: GO / NO-GO
+    QL->>ML: GO
+    ML->>PL: run_pipeline.py --budget B --exclude-fids ledger
+    PL-->>GN: frames_ranked_T.csv (selected=1) + objects_T.csv
+    GN-->>ML: nhãn lô B
+    ML->>PL: run_eval.py → report.json
+    ML-->>QL: lift so với Random, theo slice
+    opt Công tắc retrain bật
+        ML->>PL: train_seed.py add → train lại → sanity lại
+    end

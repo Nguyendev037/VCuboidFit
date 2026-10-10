@@ -1,0 +1,14 @@
+flowchart TD
+    S([Bắt đầu một đợt chọn]) --> Q1{"Có checkpoint<br/>công khai?"}
+    Q1 -- Có --> FZ["Chế độ đóng băng (LÕI)<br/>--split auto"]
+    Q1 -- "Không / muốn tự train" --> SD["Chế độ Seed<br/>train_seed.py"]:::opt
+    FZ --> Q2{"Sanity PASS?<br/>box_schema ≥ 0.55"}
+    SD --> Q2
+    Q2 -- Không --> FIX["Sửa adapter detector<br/>(thứ tự w,l,h)"] --> Q2
+    Q2 -- Có --> Q3{"Pilot yield<br/>≥ 1.2× random?"}
+    Q3 -- Không --> REV["Xem lại WARN,<br/>đổi detector"] --> Q2
+    Q3 -- Có --> RUN["Chạy full pool,<br/>giao lô B"]
+    RUN --> Q4{"Bật retrain?"}
+    Q4 -- Không --> END([Báo M6: P/R, lift, yield])
+    Q4 -- Có --> LOOP["Gộp nhãn vào Seed,<br/>train lại, báo thêm AP"]:::opt --> Q2
+    classDef opt fill:#efe6f7,stroke:#6a3d9a,stroke-dasharray: 5 5,color:#3b1f5c

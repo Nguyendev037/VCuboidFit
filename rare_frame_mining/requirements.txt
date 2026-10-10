@@ -1,0 +1,11 @@
+numpy>=1.23
+scipy>=1.10
+scikit-learn>=1.1
+
+# ---- Tuỳ chọn (không cần cho demo tổng hợp) ----
+# nuscenes-devkit            # adapter nuScenes: scripts/run_pipeline.py --source nuscenes
+# pyquaternion               # đi kèm nuscenes-devkit (dùng cho đổi frame GT)
+# open3d                     # tuỳ chọn, thay thế clustering/ground removal
+# torch + mmdet3d            # PointPillars thật (backend mmdet3d)
+# torch + OpenPCDet          # PointPillars thật (backend openpcdet)
+# Pillow                     # proxy "đêm" từ ảnh camera (nếu data có camera)

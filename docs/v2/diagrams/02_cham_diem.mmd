@@ -1,0 +1,16 @@
+flowchart LR
+    subgraph F["Một frame LiDAR"]
+      P[("Point cloud")]
+    end
+    P --> C1["(a) Clustering<br/>không cần model"]
+    P --> C2["(b) PointPillars<br/>+ TTA xoay/lật"]
+    C1 --> MATCH["Ghép theo BEV-IoU<br/>không đếm đôi"]
+    C2 --> MATCH
+    MATCH --> O1["Vật thể 1"]
+    MATCH --> O2["Vật thể 2"]
+    MATCH --> On["Vật thể n"]
+    O1 & O2 & On --> SOBJ["s_obj mỗi vật =<br/>rank_agg(s_shape 0.35,<br/>s_slice 0.30, s_vru 0.20,<br/>s_unc 0.15) + boost"]
+    SOBJ --> AGG["obj_agg = 0.5·max + 0.5·mean-top-k"]
+    AGG --> SF["s_frame = rank_agg(obj 0.50,<br/>crowd 0.25, weather 0.25)<br/>+ boost đông/đêm/mưa"]
+    OOD["OOD Mahalanobis"] -. "chỉ gắn cờ,<br/>không cộng điểm" .-> R
+    SF --> R["Xếp hạng + lý do<br/>(cột reasons)"]

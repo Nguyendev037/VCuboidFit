@@ -1,0 +1,12 @@
+flowchart TD
+    NU[("nuScenes trainval<br/>850 scene có nhãn")] --> TR["train 700 scene"]
+    NU --> VA["val 150 scene"]
+    TEST[("test 150 scene<br/>KHÔNG có nhãn")]:::bad
+    TR --> CK["Checkpoint công khai<br/>đã học trên đây"]:::bad
+    TR -. "chế độ Seed (tuỳ chọn)" .-> SD["Tập Seed<br/>train model Seed"]:::opt
+    VA --> SPLIT{"Chia THEO SCENE"}
+    SPLIT --> V["V ~20% scene<br/>chỉnh tham số / fit thống kê"]
+    SPLIT --> T["T ~80% scene<br/>báo cáo, mở 1 lần"]
+    PIL["Frame pilot / đã gán / Seed"] -. "ép split PILOT" .-> X["loại khỏi V và T"]
+    classDef bad fill:#fde2e2,stroke:#c00000,color:#7a0000
+    classDef opt fill:#efe6f7,stroke:#6a3d9a,stroke-dasharray: 5 5,color:#3b1f5c

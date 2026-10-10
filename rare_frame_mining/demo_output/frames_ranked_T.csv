@@ -1,0 +1,69 @@
+rank,rank_nodedup,fid,scene,t,s_frame,rule_only,mean_det_score,obj_agg,crowd_count,night,rain_score,ood,ood_flag,gate,gate_fail,slice_primary,kept,selected,explore,reasons
+1,1,scene_005_f0008,scene_005,4.0,1.0,2.0,0.5027,0.8241,2,0.0,1.0,5.5069,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); mưa (1.00); có vật xa >30 m hoặc <10 điểm; obj_agg 0.82
+2,2,scene_005_f0009,scene_005,4.5,1.0,2.0,0.5124,0.8285,2,0.0,1.0,5.2995,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); mưa (1.00); có vật xa >30 m hoặc <10 điểm; obj_agg 0.83
+3,4,scene_005_f0000,scene_005,0.0,0.91875,2.0,0.5712,0.7822,1,0.0,1.0,3.901,0,valid,,rain,True,1,0,mưa (1.00); có vật xa >30 m hoặc <10 điểm; obj_agg 0.78
+4,5,scene_003_f0045,scene_003,22.5,0.9025,1.0,0.5706,0.8165,3,0.0,0.052,6.515,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.82
+5,7,scene_006_f0048,scene_006,24.0,0.89,1.0,0.4928,0.902,1,0.0,0.022,4.7055,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.90
+6,9,scene_001_f0035,scene_001,17.5,0.879167,1.0,0.5102,0.8425,1,0.0,0.089,3.1442,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.84
+7,10,scene_005_f0047,scene_005,23.5,0.852917,2.0,0.4679,0.8914,0,0.0,0.75,4.0237,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); mưa (0.75); có vật xa >30 m hoặc <10 điểm; obj_agg 0.89
+8,11,scene_003_f0039,scene_003,19.5,0.832083,1.0,0.6154,0.8882,2,0.0,0.0,5.9219,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.89
+9,13,scene_001_f0033,scene_001,16.5,0.815833,1.0,0.604,0.7724,1,0.0,0.127,3.4259,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.77
+10,14,scene_000_f0032,scene_000,16.0,0.81375,1.0,0.4981,0.8397,2,0.0,0.0,4.4262,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.84
+11,16,scene_007_f0048,scene_007,24.0,0.80375,1.0,0.5463,0.8286,2,0.0,0.0,5.4263,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.83
+12,17,scene_005_f0033,scene_005,16.5,0.797917,2.0,0.6069,0.8062,0,0.0,0.75,2.617,0,valid,,rain,True,1,0,mưa (0.75); có vật xa >30 m hoặc <10 điểm; obj_agg 0.81
+13,19,scene_007_f0046,scene_007,23.0,0.795417,1.0,0.5417,0.9328,1,0.0,0.0,4.9448,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.93
+14,21,scene_005_f0046,scene_005,23.0,0.792917,2.0,0.5735,0.7995,0,0.0,0.75,3.8041,0,valid,,rain,True,1,0,mưa (0.75); có vật xa >30 m hoặc <10 điểm; obj_agg 0.80
+15,22,scene_003_f0037,scene_003,18.5,0.792083,1.0,0.4936,0.9021,1,0.0,0.0,4.9005,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.90
+16,24,scene_003_f0017,scene_003,8.5,0.78375,1.0,0.3749,0.8813,1,0.0,0.0,4.367,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.88
+17,28,scene_000_f0037,scene_000,18.5,0.780833,1.0,0.6263,0.7303,2,0.0,0.02,5.1792,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.73
+18,31,scene_006_f0049,scene_006,24.5,0.775417,1.0,0.5181,0.8631,1,0.0,0.0,4.476,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.86
+19,32,scene_007_f0037,scene_007,18.5,0.772083,1.0,0.4307,0.8487,1,0.0,0.0,4.1051,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.85
+20,33,scene_003_f0044,scene_003,22.0,0.772083,1.0,0.6452,0.7976,2,0.0,0.0,5.2078,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.80
+21,35,scene_003_f0019,scene_003,9.5,0.767083,1.0,0.4541,0.839,1,0.0,0.0,3.6427,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.84
+22,37,scene_000_f0038,scene_000,19.0,0.765,1.0,0.6311,0.7058,2,0.0,0.032,4.5139,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.71
+23,39,scene_000_f0031,scene_000,15.5,0.762083,1.0,0.4374,0.8361,1,0.0,0.0,3.9801,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.84
+24,43,scene_001_f0010,scene_001,5.0,0.75375,1.0,0.496,0.825,1,0.0,0.0,3.1554,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.82
+25,48,scene_001_f0008,scene_001,4.0,0.74375,1.0,0.6727,0.8177,1,0.0,0.0,3.0793,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.82
+26,53,scene_005_f0024,scene_005,12.0,0.72125,2.0,0.4055,0.7396,0,0.0,0.75,4.9482,0,valid,,rain,True,1,0,mưa (0.75); có vật xa >30 m hoặc <10 điểm; obj_agg 0.74
+27,55,scene_001_f0018,scene_001,9.0,0.719167,1.0,0.6284,0.7107,1,0.0,0.022,3.1371,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.71
+28,57,scene_001_f0020,scene_001,10.0,0.708333,1.0,0.6785,0.7,1,0.0,0.016,3.4722,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.70
+29,60,scene_001_f0040,scene_001,20.0,0.69875,1.0,0.5464,0.7683,1,0.0,0.0,2.5633,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.77
+30,63,scene_003_f0009,scene_003,4.5,0.692083,1.0,0.5124,0.7638,1,0.0,0.0,2.3041,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.76
+31,69,scene_003_f0028,scene_003,14.0,0.682083,1.0,0.6161,0.7514,1,0.0,0.0,2.5348,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.75
+32,71,scene_001_f0046,scene_001,23.0,0.67375,0.0,0.689,0.7447,1,0.0,0.0,2.5772,0,valid,,typical,True,1,0,obj_agg 0.74
+33,75,scene_001_f0042,scene_001,21.0,0.665417,1.0,0.6313,0.7425,1,0.0,0.0,2.5708,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.74
+34,83,scene_005_f0023,scene_005,11.5,0.649583,2.0,0.444,0.6806,0,0.0,0.75,2.6996,0,valid,,rain,True,1,0,mưa (0.75); có vật xa >30 m hoặc <10 điểm; obj_agg 0.68
+35,84,scene_001_f0004,scene_001,2.0,0.64875,1.0,0.6381,0.7369,1,0.0,0.0,2.3593,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.74
+36,87,scene_007_f0033,scene_007,16.5,0.642917,1.0,0.6097,0.8302,0,0.0,0.0,2.0729,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.83
+37,90,scene_001_f0000,scene_001,0.0,0.640417,0.0,0.5377,0.731,1,0.0,0.0,3.1835,0,valid,,typical,True,1,0,obj_agg 0.73
+38,92,scene_006_f0043,scene_006,21.5,0.637917,1.0,0.4032,0.8275,0,0.0,0.0,4.3496,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.83
+39,93,scene_007_f0001,scene_007,0.5,0.635417,1.0,0.5305,0.7303,1,0.0,0.0,3.0185,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.73
+40,94,scene_001_f0001,scene_001,0.5,0.632083,1.0,0.5076,0.725,1,0.0,0.0,2.8432,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.72
+41,97,scene_007_f0000,scene_007,0.0,0.627083,0.0,0.5503,0.7192,1,0.0,0.0,2.9253,0,valid,,typical,True,1,0,obj_agg 0.72
+42,105,scene_005_f0035,scene_005,17.5,0.612917,2.0,0.6015,0.6315,0,0.0,0.75,2.7405,0,valid,,rain,True,1,0,mưa (0.75); có vật xa >30 m hoặc <10 điểm; obj_agg 0.63
+43,115,scene_007_f0038,scene_007,19.0,0.600417,1.0,0.5106,0.6913,1,0.0,0.0,2.736,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.69
+44,123,scene_000_f0046,scene_000,23.0,0.59125,1.0,0.5936,0.7742,0,0.0,0.0,2.7684,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.77
+45,135,scene_000_f0048,scene_000,24.0,0.562917,1.0,0.5885,0.7505,0,0.0,0.0,1.8689,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.75
+46,136,scene_007_f0014,scene_007,7.0,0.562083,1.0,0.6186,0.6514,1,0.0,0.0,2.5268,0,valid,,rare_class,True,1,0,có vật lớp hiếm (bicycle/motorcycle); có vật xa >30 m hoặc <10 điểm; obj_agg 0.65
+47,149,scene_007_f0013,scene_007,6.5,0.524583,1.0,0.585,0.7315,0,0.0,0.0,4.0354,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.73
+48,153,scene_006_f0041,scene_006,20.5,0.512917,1.0,0.4305,0.724,0,0.0,0.0,3.961,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.72
+49,161,scene_007_f0030,scene_007,15.0,0.49125,1.0,0.4827,0.697,0,0.0,0.0,1.9767,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.70
+50,163,scene_000_f0000,scene_000,0.0,0.489583,1.0,0.4109,0.6956,0,0.0,0.0,5.8295,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.70
+51,173,scene_003_f0007,scene_003,3.5,0.449583,1.0,0.5407,0.6578,0,0.0,0.0,3.0653,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.66
+52,184,scene_000_f0012,scene_000,6.0,0.422917,1.0,0.4603,0.6166,0,0.0,0.0,6.1113,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.62
+53,187,scene_006_f0000,scene_006,0.0,0.417917,1.0,0.5302,0.6115,0,0.0,0.0,3.7262,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.61
+54,188,scene_000_f0002,scene_000,1.0,0.414583,1.0,0.5144,0.6094,0,0.0,0.0,4.6694,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.61
+55,191,scene_000_f0016,scene_000,8.0,0.407917,1.0,0.5008,0.5954,0,0.0,0.0,3.3146,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.60
+56,193,scene_007_f0023,scene_007,11.5,0.40625,1.0,0.4127,0.5947,0,0.0,0.0,5.2129,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.59
+57,194,scene_007_f0024,scene_007,12.0,0.40125,1.0,0.4763,0.589,0,0.0,0.0,4.7986,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.59
+58,195,scene_006_f0018,scene_006,9.0,0.399583,1.0,0.5659,0.5878,0,0.0,0.0,2.7601,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.59
+59,197,scene_006_f0011,scene_006,5.5,0.39625,1.0,0.6631,0.5867,0,0.0,0.0,3.2075,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.59
+60,203,scene_006_f0025,scene_006,12.5,0.382917,1.0,0.6329,0.5679,0,0.0,0.0,2.0207,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.57
+61,209,scene_006_f0020,scene_006,10.0,0.367917,1.0,0.6478,0.5481,0,0.0,0.0,2.5,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.55
+62,213,scene_006_f0006,scene_006,3.0,0.36125,1.0,0.6883,0.5431,0,0.0,0.0,3.884,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.54
+63,216,scene_006_f0027,scene_006,13.5,0.349583,1.0,0.6921,0.5311,0,0.0,0.0,2.0976,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.53
+64,219,scene_006_f0004,scene_006,2.0,0.344583,1.0,0.6331,0.5257,0,0.0,0.0,3.7148,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.53
+65,220,scene_006_f0001,scene_006,0.5,0.342917,1.0,0.5801,0.5256,0,0.0,0.0,3.4262,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.53
+66,221,scene_006_f0012,scene_006,6.0,0.34125,1.0,0.6125,0.5251,0,0.0,0.0,3.0605,0,valid,,far_few,True,1,0,có vật xa >30 m hoặc <10 điểm; obj_agg 0.53
+67,227,scene_000_f0010,scene_000,5.0,0.327917,0.0,0.8226,0.4956,0,0.0,0.0,5.3344,0,valid,,typical,True,1,0,obj_agg 0.50
+68,263,scene_001_f0049,scene_001,24.5,0.262917,0.0,0.7689,0.3985,0,0.0,0.0,2.708,0,valid,,typical,True,1,0,obj_agg 0.40

@@ -1,0 +1,15 @@
+flowchart TD
+    F[("Frame + ứng viên vật thể<br/>(chưa có nhãn)")] --> T1["1. Dữ liệu hợp lệ?<br/>đủ điểm · không NaN · cường độ ≥ 0<br/>≤ 5% điểm dưới mặt đường · Δt đều · có ego"]:::test
+    T1 -- "Trượt" --> OUT
+    T1 -- "Qua" --> T2["2. Nhất quán thời gian?<br/>keyframe liền kề còn điểm LiDAR<br/>quanh vị trí vật (hệ toàn cục)"]:::test
+    T2 --> T3["3. Hợp lý hình học?<br/>không lơ lửng so với mặt đất cục bộ<br/>kích thước VRU khả dĩ · số vật sai > p99 của V"]:::test
+    T3 --> T4["4. Còn hàng xóm?<br/>k-NN tới V (khác scene)<br/>≤ p99.9 của V"]:::test
+    T4 --> CNT{"Số phép 2–4 bị trượt"}
+    CNT -- "0" --> OK["HỢP LỆ<br/>chấm điểm hiếm, được chọn"]:::ok
+    CNT -- "1, hoặc k-NN sát ngưỡng" --> SUS["NGHI NGỜ<br/>review_T.csv, người duyệt"]:::gate
+    CNT -- "≥ 2" --> OUT["NGOẠI LAI<br/>loại, không train"]:::bad
+    SUS -. "người xác nhận là thật" .-> OK
+    classDef test fill:#eef3fb,stroke:#2f5597,color:#1f3864
+    classDef ok fill:#e2f0d9,stroke:#548235,color:#1e3b0f
+    classDef gate fill:#fff4d6,stroke:#b7791f,color:#5c3d00
+    classDef bad fill:#fde2e2,stroke:#c00000,color:#7a0000

@@ -1,0 +1,3 @@
+rank,rank_nodedup,fid,scene,t,s_frame,rule_only,mean_det_score,obj_agg,crowd_count,night,rain_score,ood,ood_flag,gate,gate_fail,slice_primary,kept,selected,explore,reasons
+,299,scene_003_f0014,scene_003,7.0,0.18125,0.0,0.0,0.0,0,0.0,0.0,24.098,1,suspect,knn: cô lập (d=8.74 > p99.9 của V),typical,False,,0,"cờ OOD (24.10) — chỉ cảnh báo, không cộng điểm; [Nghi ngờ (người duyệt): knn: cô lập (d=8.74 > p99.9 của V)]; obj_agg 0.00"
+,300,scene_006_f0038,scene_006,19.0,0.18125,0.0,0.0,0.0,0,0.0,0.0,29.4306,1,suspect,knn: cô lập (d=13.40 > p99.9 của V),typical,False,,0,"cờ OOD (29.43) — chỉ cảnh báo, không cộng điểm; [Nghi ngờ (người duyệt): knn: cô lập (d=13.40 > p99.9 của V)]; obj_agg 0.00"
