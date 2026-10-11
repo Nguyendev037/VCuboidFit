@@ -618,6 +618,13 @@ export default function Home() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
+          <Link
+            href="/v2"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition-colors shadow-xs"
+          >
+            <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+            <span>Mở Giao Diện v2</span>
+          </Link>
           <Link href="/huong-dan" className="text-xs font-medium text-slate-600 hover:text-blue-700">Hướng dẫn</Link>
           {(jobId || dataset || items.length > 0) && (
             <button type="button" onClick={handleStartNew} className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
@@ -657,6 +664,27 @@ export default function Home() {
           </span>
         </div>
       </header>
+
+      {/* v2 Banner */}
+      <div className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-600 text-white text-xs px-4 py-2 border-b border-indigo-500/30">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase tracking-wider text-[10px] bg-white/20 px-2 py-0.5 rounded-md">
+              v2_beta
+            </span>
+            <span>
+              Đã tích hợp <strong>Rare-Frame Mining (v2.3)</strong>. Xem đối sánh M6, cổng ngoại lai và soi box 3D/BEV:
+            </span>
+          </div>
+          <Link
+            href="/v2"
+            className="inline-flex items-center gap-1 font-bold underline hover:text-indigo-200 text-xs"
+          >
+            <span>Vào Dashboard v2 ngay</span>
+            <span>&rarr;</span>
+          </Link>
+        </div>
+      </div>
 
       {/* Thông báo lỗi nếu có */}
       {error && (
