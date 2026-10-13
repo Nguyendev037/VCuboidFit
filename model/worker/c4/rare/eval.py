@@ -168,6 +168,39 @@ def paired_ci(boot: pd.DataFrame, a: str, b: str, level: float = 0.95) -> dict:
     return dict(delta=float(d.mean()), lo=float(lo), hi=float(hi), n_boot=int(len(d)))
 
 
+def reachability(objects: pd.DataFrame, gt_boxes: pd.DataFrame, tf_rare: dict[str, set[str]],
+                 radius_m: float = 1.0) -> dict:
+    """Chỉ báo báo cáo (SPEC-P04 §9.1; KHÔNG phải tiêu chí thắng): tỉ lệ instance mục tiêu có ≥ 1
+    ứng viên engine (`rare_objects`) cách tâm box GT của chính nó ≤ `radius_m`, trong ≥ 1 frame
+    instance ở DẠNG HIẾM.
+
+    `objects`: sample_token, cx, cy (hệ ego) · `gt_boxes`: instance_token, sample_token, cx, cy
+    (hệ ego). `tf_rare`: instance_token → tập frame dạng hiếm (`capture="rare_form"`)."""
+    n_targets = len(tf_rare)
+    if n_targets == 0:
+        return dict(reach=0.0, n_reachable=0, n_targets=0)
+    by_frame: dict[str, list[tuple[float, float]]] = {}
+    for t, cx, cy in zip(objects["sample_token"], objects["cx"], objects["cy"]):
+        by_frame.setdefault(t, []).append((float(cx), float(cy)))
+    target = set(tf_rare)
+    gt: dict[tuple[str, str], tuple[float, float]] = {}
+    for i, t, cx, cy in zip(gt_boxes["instance_token"], gt_boxes["sample_token"],
+                            gt_boxes["cx"], gt_boxes["cy"]):
+        if i in target:
+            gt[(i, t)] = (float(cx), float(cy))
+    r2 = radius_m * radius_m
+    n_reachable = 0
+    for i, frames in tf_rare.items():
+        for f in frames:
+            c = gt.get((i, f))
+            if c is None:  # frame dạng hiếm nhưng không có box GT của i ⇒ không thể đối chiếu
+                continue
+            if any((x - c[0]) ** 2 + (y - c[1]) ** 2 <= r2 for x, y in by_frame.get(f, ())):
+                n_reachable += 1
+                break
+    return dict(reach=n_reachable / n_targets, n_reachable=n_reachable, n_targets=n_targets)
+
+
 def context_coverage(sel: list[str], ctx: pd.DataFrame, axes=("glare_sun",)) -> dict[str, dict]:
     """Phủ bối cảnh: cov = |Sel ∩ F_a| / B, base = |F_a| / N, lift = cov / base. `ctx`: sample_token, context_tags ('a|b')."""
     tags = ctx.set_index("sample_token")["context_tags"].fillna("").str.split("|")

@@ -29,6 +29,7 @@ from c4.rare.eval import (
     normalized_yield,
     paired_ci,
     random_selector,
+    reachability,
     target_frames,
 )
 from c4.rare.gt_rhcio import (
@@ -145,6 +146,13 @@ def _context(job, frame, mode):
     ), axes
 
 
+def _gt_boxes(tables, pool) -> pd.DataFrame:
+    """Tâm BEV box GT (hệ ego) của các frame pool — CHỈ phía eval dùng (SPEC-P04 §9.1)."""
+    rows = [dict(instance_token=b["instance"], sample_token=tok, cx=b["x"], cy=b["y"])
+            for tok, boxes in load_boxes(tables, pool).items() for b in boxes]
+    return pd.DataFrame(rows, columns=["instance_token", "sample_token", "cx", "cy"])
+
+
 def _holm(boot, pairs, observed):
     tests = []
     for a, b in pairs:
@@ -206,7 +214,7 @@ def run(job, mode, out, data_root=None):
     write_table(frame, out / "gt_rhcio_frame.parquet", "gt_rhcio_frame")
     write_table(inst, out / "gt_rhcio_instance.parquet", "gt_rhcio_instance")
     tf = target_frames(inst, capture="rare_form", gt_frame=frame)
-    timings, selectors, configs = {}, {}, {}
+    timings, selectors, configs, objects = {}, {}, {}, {}
     for method, profile in (("M2", "lidar_only"), ("M3", "multisensor")):
         start = time.perf_counter()
         try:
@@ -221,7 +229,12 @@ def run(job, mode, out, data_root=None):
             configs[method] = json.loads(
                 (r["selection_dir"] / "config_used.json").read_text(encoding="utf-8")
             )
+            # §9.1 đọc ứng viên engine (KHÔNG phải lô chọn) — chỉ để báo cáo trần reachability.
+            objects[method] = read_table(
+                r["selection_dir"] / "rare_objects.parquet", "rare_objects"
+            )
         timings[method] = time.perf_counter() - start
+    reach = {m: reachability(objs, _gt_boxes(tables, pool), tf) for m, objs in objects.items()}
     ctx, axes = _context(job, frame, mode)
     curve, primary, selections, cov_rows = [], None, {}, []
     for frac in FRACTIONS:
@@ -266,6 +279,7 @@ def run(job, mode, out, data_root=None):
                 ci95=[float(lo), float(hi)],
                 iy_a=random_a if m == "M0" else a_rep["methods"][m]["iy"],
                 time_s=random_time if m == "M0" else legacy_time if m == "M1" else timings[m],
+                reach=reach[m]["reach"] if m in reach else "n/a",
             )
             curve.append(
                 dict(method=m, frac=frac, B=B, iy=metric["iy"], lo=float(lo), hi=float(hi))
@@ -321,6 +335,7 @@ def run(job, mode, out, data_root=None):
         pool=len(pool),
         scenes=frame["scene_token"].nunique(),
         bootstrap=dict(n_boot=1000, seed=20261013, fixed_selections=True),
+        reachability=dict(radius_m=1.0, n_targets=len(tf), methods=reach),
         **primary,
         selections=selections,
         curve=curve,
@@ -344,17 +359,19 @@ def run(job, mode, out, data_root=None):
         "Capture B = rare form (primary); A = any visible frame (secondary).",
         "Oracle is a NY reference only. Glare* is predicted.",
         "",
-        "| Method | IY@B (B) | IY@B (A) | CI95 (B) | NY@B | cov glare* | Time (s) |",
-        "|---|---:|---:|---|---:|---:|---:|",
+        "| Method | IY@B (B) | IY@B (A) | CI95 (B) | NY@B | reach | cov glare* | Time (s) |",
+        "|---|---:|---:|---|---:|---:|---:|---:|",
     ]
     for m, v in primary["methods"].items():
         if "iy" not in v:
-            lines.append(f"| {m} | chưa đo | — | — | — | — | — |")
+            lines.append(f"| {m} | chưa đo | — | — | — | — | — | — |")
             continue
         glare = v.get("context", {}).get("glare_sun", {}).get("cov")
+        r = v.get("reach", "n/a")
+        reach_txt = r if isinstance(r, str) else f"{r:.3f}"
         lines.append(
             f"| {m} | {v['iy']:.4f} | {v['iy_a']:.4f} | {v['ci95']} | "
-            f"{v['ny']} | {glare} | {v['time_s']:.3f} |"
+            f"{v['ny']} | {reach_txt} | {glare} | {v['time_s']:.3f} |"
         )
     lines += [
         "",

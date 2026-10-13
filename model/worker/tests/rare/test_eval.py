@@ -1,8 +1,15 @@
 """M5 · eval theo instance (TESTING §0 pitching: đường chính + oracle cận trên)."""
 import pandas as pd
 
-from c4.rare.eval import (budget, evaluate, metrics, oracle_instance, target_frames,
-                          topk_selector)
+from c4.rare.eval import (
+    budget,
+    evaluate,
+    metrics,
+    oracle_instance,
+    reachability,
+    target_frames,
+    topk_selector,
+)
 
 
 def _gt():
@@ -56,3 +63,19 @@ def test_capture_rare_form_excludes_normal_visible_frame():
     boot = bootstrap_fixed({"normal": ["f0"], "rare": ["f1"]}, frame, target_frames(inst),
                            n_boot=20, capture="rare_form")
     assert (boot["normal"] == 0).all() and boot["rare"].max() == 1
+
+
+def test_reachability_counts_only_candidates_in_rare_form_frames():
+    # hit: ứng viên cách 0,5 m trong frame dạng hiếm f1 ⇒ đạt. miss: ứng viên chỉ nằm ở f2
+    # (dạng thường của nó) ⇒ không đạt. radius mặc định 1,0 m, cột hệ ego.
+    objects = pd.DataFrame(dict(sample_token=["f1", "f2"], cx=[0.5, 0.1], cy=[0.0, 0.0]))
+    gt = pd.DataFrame(dict(instance_token=["hit", "miss"], sample_token=["f1", "f2"],
+                           cx=[0.0, 0.0], cy=[0.0, 0.0]))
+    assert reachability(objects, gt, {"hit": {"f1"}, "miss": {"f0"}}) == dict(
+        reach=0.5, n_reachable=1, n_targets=2)
+    # f2 là dạng hiếm của miss ⇒ ứng viên đó phải tính ⇒ chứng minh bộ lọc frame mới là thứ loại nó.
+    assert reachability(objects, gt, {"hit": {"f1"}, "miss": {"f2"}})["reach"] == 1.0
+    # ứng viên 2,0 m ngoài bán kính 1,0 m ⇒ không tính; tập target rỗng ⇒ 0/0 quy ước 0,0.
+    far = pd.DataFrame(dict(sample_token=["f1"], cx=[2.0], cy=[0.0]))
+    assert reachability(far, gt, {"hit": {"f1"}, "miss": {"f0"}})["reach"] == 0.0
+    assert reachability(objects, gt, {}) == dict(reach=0.0, n_reachable=0, n_targets=0)
