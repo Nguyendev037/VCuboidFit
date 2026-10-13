@@ -1,5 +1,7 @@
 "use client";
 
+import { DataError, EmptyState, LoadingState } from "@/components/ui/DataState";
+import { ViewerLegend } from "./ViewerLegend";
 import { ContextPanel } from "@/components/context/ContextPanel";
 import { CandidateObjects } from "./CandidateObjects";
 import React, { useEffect, useState, useMemo, useSyncExternalStore } from "react";
@@ -48,7 +50,7 @@ export function FrameViewer({
     getSampleModeServerSnapshot,
   );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   const [retryVersion, setRetryVersion] = useState(0);
 
   // Chế độ xem: surround (3 cam trước - LiDAR - 3 cam sau) hoặc focus
@@ -68,6 +70,7 @@ export function FrameViewer({
       if (isMounted) {
         setLoading(true);
         setError(null);
+        setFrame(null);
       }
     });
 
@@ -79,7 +82,8 @@ export function FrameViewer({
       })
       .catch((err) => {
         if (!isMounted) return;
-        setError(err instanceof Error ? err.message : "Lỗi tải thông tin frame");
+        setFrame(null);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setLoading(false);
       });
 
@@ -138,6 +142,7 @@ export function FrameViewer({
       className="fixed inset-0 z-50 bg-[#0B0F17] text-slate-100 flex flex-col font-sans select-none overflow-hidden"
       data-testid="frame-overlay"
     >
+      <div data-presentation-banner className="bg-black/60 py-2 text-center text-sm text-white">Demo · dữ liệu nuScenes</div>
       {/* 1. Header điều khiển */}
       <header className="min-h-12 border-b border-white/10 px-2 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 bg-black/40 backdrop-blur-sm z-30 shrink-0">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
@@ -192,6 +197,7 @@ export function FrameViewer({
 
         {/* Nút tác vụ */}
         <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <button type="button" onClick={() => setReset3dTrigger(t => t + 1)} className="min-h-9 rounded-lg bg-white/10 px-3 text-xs hover:bg-white/20">Đặt lại góc nhìn (R)</button>
           {onPrev && (
             <button
               type="button"
@@ -248,35 +254,17 @@ export function FrameViewer({
           </button>
         </div>
       </header>
+      <ViewerLegend />
 
       {/* 2. Nội dung chính */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden relative">
         {/* Khu vực hiển thị camera & LiDAR */}
         <main className="flex-1 min-h-[55vh] md:min-h-0 flex flex-col p-2 gap-2 overflow-hidden relative">
           {loading ? (
-            <div role="status" aria-live="polite" className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-3">
-              <div aria-hidden="true" className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm">Đang nạp dữ liệu frame {token}...</p>
-            </div>
+            <LoadingState />
           ) : error ? (
-            <div role="alert" className="flex-1 flex flex-col items-center justify-center text-rose-300 gap-2 px-4 text-center">
-              <p className="text-sm font-semibold">Không tải được frame: {error}</p>
-              <button
-                type="button"
-                onClick={() => setRetryVersion((version) => version + 1)}
-                className="mt-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-              >
-                Thử lại
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-              >
-                Quay lại
-              </button>
-            </div>
-          ) : !frame ? null : mode === "surround" ? (
+            <DataError error={error} onRetry={() => setRetryVersion(v => v + 1)} />
+          ) : !frame ? <EmptyState message="Không có dữ liệu frame." /> : mode === "surround" ? (
             // ================== BỐ CỤC SURROUND ==================
             <div className="flex-1 flex flex-col gap-2 min-h-0">
               {/* Hàng 1: 3 camera trước (CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT) */}

@@ -180,3 +180,8 @@
     transition-duration: 0.01ms !important;
   }
 }
+html[data-present="1"] { font-size: 18px; }
+[data-presentation-banner] { display: none; }
+html[data-present="1"] [data-presentation-banner] { display: block; }
+html[data-present="1"] a[href^="/dev/"],
+html[data-present="1"] [data-advanced-params] { display: none !important; }

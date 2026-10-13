@@ -1,4 +1,5 @@
 "use client";
+import { DataError } from "@/components/ui/DataState";
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
@@ -372,14 +373,12 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
               <span className="sr-only">Đang tải danh sách frame</span>
             </div>
           ) : framesQuery.isError ? (
-            <div role="alert" className="flex flex-wrap items-center justify-center gap-3 rounded-vcf-card border border-vcf-danger-soft bg-vcf-danger-soft p-5 text-center text-sm text-vcf-danger">
-              <span>Không tải được danh sách frame.</span>
-              <button type="button" onClick={() => void framesQuery.refetch()} className="min-h-9 rounded-vcf-compact border border-vcf-danger bg-vcf-surface px-3 text-xs font-semibold hover:bg-vcf-danger-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-vcf-danger">Thử lại</button>
-            </div>
+            <DataError error={framesQuery.error} onRetry={() => void framesQuery.refetch()} />
           ) : filteredList.length === 0 ? (
             <div className="rounded-vcf-card border border-vcf-border bg-vcf-surface p-6 text-center">
               <p className="text-sm font-semibold text-vcf-text">Không có frame phù hợp</p>
               <p className="mt-1 text-xs text-vcf-subtle">Thử xóa từ khóa hoặc bộ lọc để xem lại danh sách.</p>
+              <Link href="/dashboard" className="mt-3 inline-block text-vcf-accent-ink underline">Về dashboard chọn lô khác</Link>
               {(searchQuery || selectedTag) && (
                 <button
                   type="button"
@@ -421,10 +420,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
               <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-vcf-pill border-2 border-vcf-accent border-t-transparent" />Đang tải phân tích...</span>
             </div>
           ) : analysisQuery.isError ? (
-            <div role="alert" className="p-6 bg-vcf-danger-soft rounded-vcf-card border border-vcf-danger-soft text-center text-xs font-medium text-vcf-danger">
-              <p>Không tải được dữ liệu phân tích.</p>
-              <button type="button" onClick={() => void analysisQuery.refetch()} className="mt-3 min-h-9 rounded-vcf-compact border border-vcf-danger bg-vcf-surface px-3 text-xs font-semibold hover:bg-vcf-danger-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-vcf-danger">Thử lại</button>
-            </div>
+            <DataError error={analysisQuery.error} onRetry={() => void analysisQuery.refetch()} />
           ) : (
             <div role="status" className="p-6 bg-vcf-surface rounded-vcf-card border border-vcf-border text-center text-xs text-vcf-muted">
               Chưa có dữ liệu phân tích cho lựa chọn này.

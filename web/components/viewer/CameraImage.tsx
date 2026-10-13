@@ -54,6 +54,7 @@ export function CameraImage({
   className = "",
 }: CameraImageProps) {
   const [zoom, setZoom] = useState(1);
+  const [failedImage, setFailedImage] = useState<string | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -192,7 +193,10 @@ export function CameraImage({
           alt={camDetail.cam}
           className="w-full h-full object-contain pointer-events-none"
           loading="lazy"
+          onError={() => setFailedImage(camDetail.imageUrl)}
+          onLoad={() => setFailedImage(null)}
         />
+        {failedImage === camDetail.imageUrl && <div role="status" className="absolute inset-0 flex items-center justify-center bg-black/90 p-4 text-center text-xs text-slate-200">Thiếu ảnh: {camDetail.imageUrl.split("/").pop()}</div>}
 
         {/* Lớp SVG vẽ box */}
         <svg

@@ -25,6 +25,19 @@ beforeEach(() => {
   vi.mocked(access).mockResolvedValue(undefined);
 });
 
+it("formats every IY, CI and delta to three decimals without changing the source", async () => {
+  const data = structuredClone(fixture);
+  data.methods.M0.iy = 0.08666666666666666;
+  data.primary.delta = -0.0004;
+  const source = JSON.stringify(data);
+  vi.mocked(readFile).mockResolvedValue(source);
+  const html = renderToStaticMarkup(await Home());
+  for (const value of ["0.087", "0.050", "0.150", "0.120", "0.400", "-0.010", "-0.000"]) expect(html).toContain(value);
+  expect(html).not.toContain("0.08666666666666666");
+  expect(JSON.stringify(data)).toBe(source);
+  expect(html).toContain(data.primary.conclusion);
+});
+
 it("renders T benchmark: all M0–M3, IY with CI95, source and verbatim conclusion", async () => {
   vi.mocked(readFile).mockResolvedValue(JSON.stringify(fixture));
   const html = renderToStaticMarkup(await Home());

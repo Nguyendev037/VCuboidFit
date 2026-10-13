@@ -132,8 +132,10 @@ function Cuboid({
         <boxGeometry args={transform.size} />
         <meshBasicMaterial color={color} transparent opacity={hovered ? 0.14 : 0.045} depthWrite={false} />
       </mesh>
-      <lineSegments geometry={geometry}>
-        <lineBasicMaterial color={hovered ? "#ffffff" : color} transparent opacity={hovered ? 1 : 0.9} linewidth={2} />
+      <lineSegments geometry={geometry} onUpdate={line => line.computeLineDistances()}>
+        {box.candidate
+          ? <lineDashedMaterial color={hovered ? "#ffffff" : color} dashSize={0.25} gapSize={0.15} transparent opacity={hovered ? 1 : 0.9} />
+          : <lineBasicMaterial color={hovered ? "#ffffff" : color} transparent opacity={hovered ? 1 : 0.9} linewidth={2} />}
       </lineSegments>
       {hovered && <Html position={[0, transform.size[1] / 2 + 0.25, 0]} center distanceFactor={18}>
         <span className="whitespace-nowrap rounded border border-white/20 bg-black/90 px-2 py-1 text-[11px] font-medium text-white shadow">{box.category}{box.candidate ? " · Chưa xác nhận" : ""}</span>
@@ -316,6 +318,7 @@ export function LidarScene({
     </div>
     {(!lidarUrl || activeError) && !activeLoading && <div role={activeError ? "alert" : "status"} className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 bg-black/35 px-4 text-center text-sm text-slate-200">
       <p>{activeError ? `Không tải được LiDAR: ${activeError}` : "Frame này chưa có dữ liệu LiDAR"}</p>
+      {activeError && <p className="break-all text-xs">{lidarUrl?.split("/").pop()}</p>}
       {activeError && <button type="button" onClick={() => setRetryVersion((version) => version + 1)} className="rounded bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Thử lại LiDAR</button>}
     </div>}
   </div>;

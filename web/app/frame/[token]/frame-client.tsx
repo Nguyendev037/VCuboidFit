@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { listFrames } from "@/lib/api/client";
 import { FrameViewer } from "@/components/viewer/FrameViewer";
+import { DataError, EmptyState, LoadingState } from "@/components/ui/DataState";
 
 export interface FrameClientProps {
   token: string;
@@ -39,6 +40,10 @@ export default function FrameClient({ token }: FrameClientProps) {
   const handleClose = () => {
     router.push(`/review/${jobId}?sel=${sel}&budget=${budget}`);
   };
+
+  if (framesQuery.isPending) return <LoadingState label="Đang tải lô frame…" />;
+  if (framesQuery.isError) return <DataError error={framesQuery.error} onRetry={() => void framesQuery.refetch()} />;
+  if (list.length === 0) return <EmptyState message="Lô này chưa có frame. Chọn lô khác để xem." />;
 
   return (
     <FrameViewer

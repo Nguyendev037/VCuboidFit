@@ -38,6 +38,7 @@ import { recallRows, stageLabel } from "@/lib/constants";
 import { isDatasetUsable, datasetValidationMessage } from "@/lib/datasetValidation";
 import { ExportImages } from "@/components/review/ExportImages";
 import { warningLabel } from "@/lib/glossary";
+import { DataError, EmptyState, LoadingState } from "@/components/ui/DataState";
 import { AdvancedParamsPanel } from "@/components/AdvancedParamsPanel";
 import { isAnalysisReady, isT1OnlyRunning } from "@/lib/tierStatus";
 import { clearRunBookmark, readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "@/lib/runRecovery";
@@ -687,9 +688,9 @@ export default function Home() {
               {(recentJobs.data?.length ?? 0) > 0 && <button type="button" onClick={() => setDeleteTarget({ kind: "all" })} className="ml-auto px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 rounded">Xoá tất cả</button>}
               <button type="button" title="Làm mới lịch sử" aria-label="Làm mới lịch sử" onClick={() => void recentJobs.refetch()} className="p-2 hover:bg-slate-200 rounded"><RefreshCw size={16} /></button>
             </div>
-            {recentJobs.isPending && <p role="status" className="text-xs text-slate-500">Đang tải lịch sử…</p>}
-            {recentJobs.error && <p role="alert" className="text-xs text-rose-700">{recentJobs.error.message}</p>}
-            {recentJobs.data?.length === 0 && <p className="text-xs text-slate-500">Chưa có lần chạy.</p>}
+            {recentJobs.isPending && <LoadingState />}
+            {recentJobs.error && <DataError error={recentJobs.error} onRetry={() => void recentJobs.refetch()} />}
+            {recentJobs.data?.length === 0 && <EmptyState message="Chưa có lần chạy. Nạp dữ liệu ở Bước 1 hoặc mở dữ liệu mẫu." />}
             <div role="list" className="max-h-48 overflow-auto divide-y divide-slate-200">
               {recentJobs.data?.map((item) => <div role="listitem" key={item.jobId} className="flex items-center justify-between gap-3 py-2 text-xs">
                 <div className="min-w-0"><p className="font-medium break-all">{item.version || item.datasetId} · {item.frames} frame · {item.pipeline === "lidar" ? "LiDAR" : "Camera"}{item.createdAt && item.finishedAt ? ` · ${formatDuration(Math.max(0, (new Date(item.finishedAt).getTime() - new Date(item.createdAt).getTime()) / 1000))}` : ""}</p><p className="text-slate-500 break-all">{item.jobId} · {item.state === "done" ? "Hoàn tất" : item.state === "running" ? "Đang chạy" : item.state === "queued" ? "Đang chờ" : item.state === "failed" ? "Lỗi" : "Đã huỷ"}{item.createdAt ? ` · ${new Date(item.createdAt).toLocaleString("vi-VN")}` : ""}</p></div>
@@ -975,15 +976,8 @@ export default function Home() {
                   })}
                 </ol>
 
-                {job.isError && (
-                  <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
-                    <span>Không tải được trạng thái phân tích: {job.error instanceof Error ? job.error.message : "Lỗi kết nối."}</span>
-                    <button type="button" onClick={() => void job.refetch()} className="min-h-9 rounded-md border border-rose-300 bg-white px-3 font-semibold hover:bg-rose-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700">Thử lại</button>
-                  </div>
-                )}
-                {jobId && job.isPending && (
-                  <p role="status" aria-live="polite" className="text-xs text-slate-700">Đang tải trạng thái phân tích...</p>
-                )}
+                {job.isError && <DataError error={job.error} onRetry={() => void job.refetch()} />}
+                {jobId && job.isPending && <LoadingState />}
 
                 {/* Trạng thái tiến trình */}
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
@@ -1193,15 +1187,8 @@ export default function Home() {
 
                 {/* Biểu đồ Recall theo Method (Figma 02) */}
                 <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-200 flex flex-col gap-3">
-                  {selection.isPending && (
-                    <p role="status" aria-live="polite" className="text-xs text-slate-700">Đang tải kết quả chọn frame...</p>
-                  )}
-                  {selection.isError && (
-                    <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
-                      <span>Không tải được kết quả chọn frame.</span>
-                      <button type="button" onClick={() => void selection.refetch()} className="min-h-9 rounded-md border border-rose-300 bg-white px-3 font-semibold hover:bg-rose-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700">Thử lại</button>
-                    </div>
-                  )}
+                  {selection.isPending && <LoadingState />}
+                  {selection.isError && <DataError error={selection.error} onRetry={() => void selection.refetch()} />}
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-800">
                     <span className="inline-flex items-center gap-1">Tỉ lệ bắt frame hiếm theo cách chọn <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} /></span>
                     <span className="text-slate-400 font-normal">Random trung bình 5 % ± 2</span>
@@ -1403,7 +1390,7 @@ export default function Home() {
               </div>
             </div>
 
-            <details className="mb-4 rounded-xl border p-3 text-sm"><summary className="cursor-pointer font-semibold">Chi tiết kỹ thuật</summary><div className="mt-3 flex flex-wrap gap-3">
+            <div data-advanced-params><details className="mb-4 rounded-xl border p-3 text-sm"><summary className="cursor-pointer font-semibold">Chi tiết kỹ thuật</summary><div className="mt-3 flex flex-wrap gap-3">
  <label>Engine <select aria-label="Engine" value={engineVersion} onChange={e=>setEngineVersion(e.target.value)}><option value="c4_legacy">C4 hiện tại</option><option value="rare_v24">Rare v2.4</option></select></label>
  <label>Profile <select aria-label="Profile" value={profile} onChange={e=>setProfile(e.target.value as "lidar_only"|"multisensor")}><option value="lidar_only">Chỉ LiDAR</option><option value="multisensor">LiDAR + camera</option></select></label>
  {engineVersion === "rare_v24" && <label>Chiến lược <select value={strategy} onChange={e=>setStrategy(e.target.value as typeof strategy)}><option value="balanced">Cân bằng</option><option value="vru_priority">Ưu tiên VRU</option><option value="diversity">Đa dạng</option></select></label>}
@@ -1451,7 +1438,7 @@ export default function Home() {
                     }
                   : undefined
               }
-            />
+            /></div>
 
             {/* Kịch bản quan tâm */}
             {activePipeline === "camera" && (

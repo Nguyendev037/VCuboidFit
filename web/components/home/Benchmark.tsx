@@ -16,11 +16,11 @@ export function Benchmark({ bench, figureUrl }: { bench: DemoBench | null; figur
         <tbody className="block divide-y divide-vcf-border sm:table-row-group">{BENCH_METHODS.map(id => {
           const method = bench.methods[id];
           const measured = method?.status === "ok";
-          return <tr key={id} className="block sm:table-row"><th scope="row" className="block p-3 font-semibold sm:table-cell">{id}{method ? ` · ${method.name}` : ""}</th><td className="block px-3 pb-3 sm:table-cell sm:p-3"><span aria-hidden="true" className="sm:hidden">IY: </span>{measured ? method.iy : "Chưa đo"}</td><td className="block break-words px-3 pb-3 sm:table-cell sm:p-3"><span aria-hidden="true" className="sm:hidden">CI95: </span>{measured ? `[${method.ci_lo}, ${method.ci_hi}]` : "—"}</td></tr>;
+          return <tr key={id} className="block sm:table-row"><th scope="row" className="block p-3 font-semibold sm:table-cell">{id}{method ? ` · ${method.name}` : ""}</th><td className="block px-3 pb-3 sm:table-cell sm:p-3"><span aria-hidden="true" className="sm:hidden">IY: </span>{measured ? method.iy.toFixed(3) : "Chưa đo"}</td><td className="block break-words px-3 pb-3 sm:table-cell sm:p-3"><span aria-hidden="true" className="sm:hidden">CI95: </span>{measured ? `[${method.ci_lo.toFixed(3)}, ${method.ci_hi.toFixed(3)}]` : "—"}</td></tr>;
         })}</tbody>
       </table>
     </div>
-    <p className="mt-5 text-sm tabular-nums">{bench.primary.pair}: ΔIY = {bench.primary.delta} · CI95 [{bench.primary.ci_lo}, {bench.primary.ci_hi}]</p>
+    <p className="mt-5 text-sm tabular-nums">{bench.primary.pair}: ΔIY = {bench.primary.delta.toFixed(3)} · CI95 [{bench.primary.ci_lo.toFixed(3)}, {bench.primary.ci_hi.toFixed(3)}]</p>
     <p className="mt-2 break-words font-semibold">{bench.primary.conclusion}</p>
     {figureUrl && <figure className="mt-6">
       {/* eslint-disable-next-line @next/next/no-img-element */}
