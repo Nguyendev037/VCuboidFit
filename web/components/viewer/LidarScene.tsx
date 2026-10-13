@@ -7,6 +7,7 @@ import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { RareObject } from "@/lib/api/types";
 import type { Cam } from "@/lib/api/types";
+import { candidateBoxCorners } from "./CandidateObjects";
 import {
   cornersToCuboid,
   decodeFloat16Lidar,
@@ -240,11 +241,9 @@ export function LidarScene({
   className = "",
 }: LidarSceneProps) {
   const displayBoxes: Box3D[] = [...boxes3d, ...objects.map(o => {
-    const corners = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]].flatMap(([sx,sy,sz]) => {
-      const x = sx*o.l/2; const y = sy*o.w/2;
-      return [o.cx + x*Math.cos(o.yaw)-y*Math.sin(o.yaw), o.cy+x*Math.sin(o.yaw)+y*Math.cos(o.yaw), o.cz+sz*o.h/2];
-    });
-    return {category:o.cls_pred,corners,candidate:true};
+    // F2 · H25: 8 góc ứng viên dựng theo CÙNG quy ước với box GT (`geometry.box_corners`) — xem
+    // `candidateBoxCorners`; dựng tay thứ tự khác làm cuboid lệch 90° và tráo trục kích thước.
+    return {category:o.cls_pred, corners:candidateBoxCorners(o), candidate:true};
   })];
   const [pointCloud, setPointCloud] = useState<LidarPointCloud | null>(null);
   const [loading, setLoading] = useState(false);

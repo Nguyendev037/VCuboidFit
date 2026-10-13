@@ -58,10 +58,26 @@ def _lidar2ego(calib: dict | None) -> tuple[np.ndarray, np.ndarray, float]:
     return R, np.asarray(calib["t"], np.float64).reshape(3), math.atan2(R[1, 0], R[0, 0])
 
 
+def _tight_box_ego(q: np.ndarray, yaw: float) -> tuple[float, float, float, float, float, float]:
+    """Box bám sát cụm `q` (n, 3) ĐÃ ở HỆ EGO: cạnh dài `l` dọc trục `yaw` (quay quanh z), `w` ngang trục
+    -> (cx, cy, cz, l, w, h). F1 (H25): `l`, `w` phải đo trong CÙNG hệ với `yaw`/tâm — không hoán đổi tay."""
+    c, s = math.cos(yaw), math.sin(yaw)
+    mid = (q.min(0) + q.max(0)) / 2
+    d = q[:, :2] - mid[:2]
+    u = d[:, 0] * c + d[:, 1] * s      # dọc trục yaw
+    v = -d[:, 0] * s + d[:, 1] * c     # ngang trục yaw
+    du, dv = (u.max() + u.min()) / 2, (v.max() + v.min()) / 2
+    lo_z, hi_z = q[:, 2].min(), q[:, 2].max()
+    return (float(mid[0] + du * c - dv * s), float(mid[1] + du * s + dv * c), float((lo_z + hi_z) / 2),
+            float(u.max() - u.min()), float(v.max() - v.min()), float(hi_z - lo_z))
+
+
 def cluster_candidates(pcd_path, cfg: dict, ego_pose: dict, heuristic: dict | None = None,
                        lidar_calib: dict | None = None) -> list[dict]:
     """DBSCAN trên điểm không-mặt-đất (hệ cảm biến LIDAR_TOP); tâm/yaw box đưa về HỆ EGO bằng `lidar_calib`
     (SPEC-P05 §3.1; H14: thiếu bước này box lệch -90° quanh z + ~1,84 m, crop camera sai 100%).
+    H25/F1: có hiệu chuẩn thì ĐIỂM của cụm cũng được đưa về EGO trước khi đo tight box + PCA yaw
+    (`l`, `w` cùng hệ với `yaw`); thiếu hiệu chuẩn => giữ nguyên hành vi cũ (box trong hệ cảm biến).
 
     `ego_pose` = {ego_x, ego_y, ego_yaw}. `pts` = số điểm thô (chưa voxel) trong box cụm, trên mặt đất.
     Không lọc theo kích thước ở đây (lọc VRU ở object_score). Frame > 100k điểm voxel: cắt ngẫu nhiên (seed 0)."""
@@ -85,18 +101,33 @@ def cluster_candidates(pcd_path, cfg: dict, ego_pose: dict, heuristic: dict | No
         return []
     lab = DBSCAN(eps=b["dbscan"]["eps_m"], min_samples=b["dbscan"]["min_samples"],
                  algorithm="kd_tree").fit_predict(pts[:, :3])
+    p_ng_ego = (p_ng[:, :3] @ R.T + t) if lidar_calib is not None else None
     out = []
     for k in range(int(lab.max()) + 1 if lab.size else 0):
         q = pts[lab == k, :3]
-        lo, hi = q.min(0), q.max(0)
-        l, w, h = (hi - lo).tolist()
-        cx, cy, cz = (R @ ((lo + hi) / 2) + t).tolist()
-        yaw = dyaw
-        if len(q) >= 5:
-            _, vec = np.linalg.eigh(np.cov(q[:, :2].T))
-            yaw = float(math.atan2(vec[1, -1], vec[0, -1])) + dyaw
-        inside = ((p_ng[:, 0] >= lo[0]) & (p_ng[:, 0] <= hi[0]) & (p_ng[:, 1] >= lo[1])
-                  & (p_ng[:, 1] <= hi[1]) & (p_ng[:, 2] >= lo[2]) & (p_ng[:, 2] <= hi[2]))
+        if lidar_calib is None:
+            # Thiếu hiệu chuẩn: GIỮ hành vi cũ (box đo trong hệ cảm biến, tâm/yaw = hệ cảm biến).
+            lo, hi = q.min(0), q.max(0)
+            l, w, h = (hi - lo).tolist()
+            cx, cy, cz = ((lo + hi) / 2).tolist()
+            yaw = dyaw
+            if len(q) >= 5:
+                _, vec = np.linalg.eigh(np.cov(q[:, :2].T))
+                yaw = float(math.atan2(vec[1, -1], vec[0, -1])) + dyaw
+            inside = ((p_ng[:, 0] >= lo[0]) & (p_ng[:, 0] <= hi[0]) & (p_ng[:, 1] >= lo[1])
+                      & (p_ng[:, 1] <= hi[1]) & (p_ng[:, 2] >= lo[2]) & (p_ng[:, 2] <= hi[2]))
+        else:
+            qe = q @ R.T + t  # F1: điểm cụm sang HỆ EGO TRƯỚC khi đo tight box + PCA yaw
+            yaw = 0.0
+            if len(q) >= 5:
+                _, vec = np.linalg.eigh(np.cov(qe[:, :2].T))
+                yaw = float(math.atan2(vec[1, -1], vec[0, -1]))
+            cx, cy, cz, l, w, h = _tight_box_ego(qe, yaw)
+            c, s = math.cos(yaw), math.sin(yaw)
+            du, dv = p_ng_ego[:, 0] - cx, p_ng_ego[:, 1] - cy
+            u, v = du * c + dv * s, -du * s + dv * c
+            inside = ((np.abs(u) <= l / 2) & (np.abs(v) <= w / 2)
+                      & (p_ng_ego[:, 2] >= cz - h / 2) & (p_ng_ego[:, 2] <= cz + h / 2))
         gx, gy = _to_global(cx, cy, ego_pose)
         out.append(dict(object_id=f"c{k:03d}", source="cluster", cls_pred=_heuristic_class(l, w, h, heuristic),
                         cx=cx, cy=cy, cz=cz, l=l, w=w, h=h, yaw=yaw, pts=max(int(inside.sum()), len(q)),

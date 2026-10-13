@@ -1,10 +1,16 @@
-"""M2 · phía CHỌN của rare_v24 không import/đọc nhãn hay annotation (planning/11 SPEC-P05 §9 + §14.3)."""
+"""M2 · phía CHỌN của rare_v24 không import/đọc nhãn hay annotation (planning/11 SPEC-P05 §9 + §14.3).
+
+H25/F3: phạm vi quét phủ cả tầng `service/` (`engines.py`, `export_images.py`) — trước đây chỉ `c4/rare/*` + CLI
+nên một đường đọc nhãn nằm ở tầng phục vụ sẽ lọt qua test.
+"""
 import ast
 from pathlib import Path
 
 WORKER = Path(__file__).resolve().parents[2]
 SELECT_SIDE = [p for p in sorted((WORKER / "c4" / "rare").glob("*.py"))
-               if p.name not in ("gt_rhcio.py", "eval.py", "__init__.py")] + [WORKER / "c4" / "cli" / "rare.py"]
+               if p.name not in ("gt_rhcio.py", "eval.py", "__init__.py")] \
+    + [WORKER / "c4" / "cli" / "rare.py", WORKER / "service" / "engines.py",
+       WORKER / "service" / "export_images.py"]
 BANNED = {"gt_rhcio", "sample_annotation", "annotation", "attribute", "visibility", "gt_rare", "gt_boxes"}
 BANNED_MODULES = {"c4.rare.gt_rhcio", "c4.rare.eval"}
 
@@ -46,7 +52,7 @@ def _violations(name: str, src: str) -> list[str]:
 
 def test_no_leakage_rare():
     """Mọi file phía chọn sạch; bộ quét phải bắt được dòng cấm (đường ĐỎ)."""
-    assert len(SELECT_SIDE) >= 7
+    assert len(SELECT_SIDE) >= 9
     found = [v for p in SELECT_SIDE for v in _violations(p.name, p.read_text(encoding="utf-8"))]
     assert not found, found
     assert _violations("x.py", "def f(t):\n    return t.sample_annotation\n")
