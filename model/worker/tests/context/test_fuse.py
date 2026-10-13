@@ -35,22 +35,25 @@ def _run(axis, cls, sun, cv=None, p1=0.9, p2=0.05, thr=THR, img_ok=True):
     return fuse(q, _probs(axis, cls, p1, p2), pd.Series([sun]), thr).iloc[0]
 
 
+# Luật v1.1 (SPEC-P02 §5, Đ23): m=0,2 ⇒ 2m=0,4; margin 0,9/0,05=0,85 · 0,6/0,3=0,3 · 0,45/0,35=0,1
 # (trục, lớp CLIP idx, sun, đặc trưng đè, p1, p2, tag mong đợi, lý do review mong đợi)
 CASES = [
-    ("illum", 2, -30.0, None, 0.9, 0.05, "night", ""),                      # đêm thật theo sun
-    ("illum", 2, NAN, {"v_mean": 10.0}, 0.9, 0.05, "night", ""),            # đêm theo NIGHT_CV
-    ("illum", 2, 30.0, None, 0.9, 0.05, None, "illum:DISAGREE"),            # CLIP đêm, sun ban ngày
-    ("illum", 1, 0.0, None, 0.9, 0.05, "lowlight", ""),                     # lowlight đúng dải
-    ("illum", 1, 30.0, None, 0.9, 0.05, None, "illum:DISAGREE"),            # lowlight mâu thuẫn sun
-    ("illum", 2, NAN, GLARE, 0.9, 0.05, "night", ""),                       # đèn pha tắt NIGHT_CV, margin ≥ 2m
-    ("illum", 2, NAN, GLARE, 0.6, 0.3, None, "illum:LOW_MARGIN"),           # margin 0,3 < 2m
-    ("illum", 0, 30.0, None, 0.45, 0.35, None, ""),                         # day biên thấp: không vào hàng đợi
+    ("illum", 2, -30.0, None, 0.9, 0.05, "night", ""),                      # đêm theo mặt trời
+    ("illum", 1, -30.0, None, 0.9, 0.05, "night", ""),                      # CLIP "lowlight" ảnh đêm ⇒ mặt trời thắng
+    ("illum", 2, NAN, {"v_mean": 10.0}, 0.9, 0.05, "night", ""),            # không rõ sun: NIGHT_CV
+    ("illum", 2, 30.0, None, 0.9, 0.05, None, "illum:DISAGREE"),            # CLIP chắc đêm, sun ban ngày
+    ("illum", 1, 0.0, None, 0.9, 0.05, "lowlight", ""),                     # dải hoàng hôn
+    ("illum", 2, NAN, None, 0.6, 0.3, None, ""),                            # không rõ sun, không cờ, margin < 2m ⇒ im
     ("glare", 1, NAN, GLARE, 0.9, 0.05, "glare_headlight", ""),             # chói có cờ CV
-    ("glare", 1, NAN, None, 0.9, 0.05, None, "glare:DISAGREE"),             # chói không cờ CV
+    ("glare", 1, NAN, None, 0.9, 0.05, "glare_headlight", ""),              # CLIP chắc (≥2m) dù CV không thấy
+    ("glare", 1, NAN, None, 0.6, 0.3, None, "glare:DISAGREE"),              # CLIP vừa phải, không cờ ⇒ người xem
     ("glare", 0, NAN, GLARE, 0.9, 0.05, None, "glare:DISAGREE"),            # none nhưng cờ CV bật
-    ("glare", 2, -20.0, GLARE, 0.9, 0.05, None, "glare:DISAGREE"),          # nắng khi sun < 0
+    ("glare", 2, -20.0, GLARE, 0.9, 0.05, None, ""),                        # "nắng" khi sun < 0 ⇒ bỏ, im
+    ("lens", 1, NAN, None, 0.9, 0.05, None, ""),                            # CLIP gợi ý giọt nước, không cờ ⇒ im
+    ("lens", 1, NAN, {"sharp_ratio": 1.0}, 0.9, 0.05, "droplets", ""),      # có BLUR_CV
     ("weather", 1, NAN, None, 0.9, 0.05, "rain", ""),
-    ("weather", 1, NAN, None, 0.6, 0.3, None, "weather:LOW_MARGIN"),
+    ("weather", 1, -30.0, None, 0.9, 0.05, None, ""),                       # đêm: không gán mưa
+    ("weather", 1, NAN, None, 0.6, 0.3, None, ""),                          # margin < 2m
 ]
 
 

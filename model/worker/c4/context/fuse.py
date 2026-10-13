@@ -12,11 +12,16 @@ import pandas as pd
 from c4.context.clip_axes import load_axes
 from c4.contracts import CONTEXT_FRAME
 
-CONTEXT_VERSION = "ctx_v1"
+CONTEXT_VERSION = "ctx_v1.1"
 AXIS_ORDER = ("illum", "glare", "lens", "weather")
 NORMAL = {"illum": "day", "glare": "none", "lens": "clean", "weather": "dry"}
-STRONG = 2.0  # "margin ≥ 2·m" ở SPEC-P02 §5
-OK, DISAGREE, LOW_MARGIN = "OK", "DISAGREE", "LOW_MARGIN"
+STRONG = 2.0  # "margin ≥ 2·m" ở SPEC-P02 §5, giới hạn bởi _strong() để luôn với tới được
+
+
+def _strong(m: float) -> float:
+    """Ngưỡng 'CLIP chắc chắn' = min(2m, (1+m)/2): với m lớn (vd m_glare 0,51 đo trên mini) 2m > 1 là không thể đạt."""
+    return min(STRONG * m, (1.0 + m) / 2.0)
+OK, DISAGREE, SOFT = "OK", "DISAGREE", "SOFT"
 NOT_FROZEN = "CONTEXT_NOT_FROZEN"
 
 
@@ -34,43 +39,46 @@ def cv_flag_arrays(qcv: pd.DataFrame, cv: dict) -> dict[str, np.ndarray]:
 
 
 def _decide(axis: str, cls: str, margin: float, m: float, f: dict, sun: float, sun_cfg: dict):
-    """(tag|None, status) cho một trục — bảng SPEC-P02 §5. `sun` NaN = không rõ."""
-    if margin < m:
-        return None, LOW_MARGIN
+    """(tag|None, status) cho một trục — luật v1.1 (planning/11 SPEC-P02 §5, Đ23, đo trên ảnh thật mini).
+    status: OK · DISAGREE (vào hàng đợi review) · SOFT (bỏ tag, KHÔNG review). `sun` NaN = không rõ."""
     known = not np.isnan(sun)
     if axis == "illum":
-        if cls == "night":
-            if (known and sun < sun_cfg["night_deg"]) or f["NIGHT_CV"]:
-                return "night", OK
-            if not known and f["GLARE_CV"]:  # đèn pha kéo v_mean lên làm tắt NIGHT_CV
-                return ("night", OK) if margin >= STRONG * m else (None, LOW_MARGIN)
-            return None, DISAGREE
-        if cls == "day":
-            if not f["NIGHT_CV"] and (not known or sun >= sun_cfg["lowlight_deg"]):
-                return "day", OK
-            return None, DISAGREE
-        if cls == "lowlight":
-            in_band = (not known) or (sun_cfg["night_deg"] <= sun < sun_cfg["lowlight_deg"])
-            if in_band and not f["NIGHT_CV"]:
-                return "lowlight", OK
-            return None, DISAGREE
-    elif axis == "glare":
+        if known:  # mặt trời là nguồn chính: CLIP không tách được night/lowlight (P 0,38/0,62 trên ảnh đêm)
+            band = ("night" if sun < sun_cfg["night_deg"] else
+                    "lowlight" if sun < sun_cfg["lowlight_deg"] else "day")
+            opposite = {("day", "night"), ("night", "day")}
+            if margin >= m and (cls, band) in opposite:
+                return None, DISAGREE  # CLIP chắc chắn ngược mặt trời (vd hầm, đèn sân vận động)
+            return band, OK
+        if margin < m:
+            return None, SOFT
+        if cls == "night" and not (f["NIGHT_CV"] or f["GLARE_CV"] or margin >= _strong(m)):
+            return None, SOFT
+        return cls, OK
+    if axis == "glare":
+        cv_on = f["GLARE_CV"] or f["VEIL_CV"]
         if cls == "none":
-            return (None, DISAGREE) if f["GLARE_CV"] else ("none", OK)
-        if not (f["GLARE_CV"] or f["VEIL_CV"]):
-            return None, DISAGREE
+            return (None, DISAGREE) if (f["GLARE_CV"] and margin >= m) else ("none", OK)
         if cls == "sun" and known and sun < 0:  # không có mặt trời
-            return None, DISAGREE
-        return f"glare_{cls}", OK
-    elif axis == "lens":
-        if cls == "clean":
-            return "clean", OK
-        return (cls, OK) if (f["BLUR_CV"] or f["VEIL_CV"]) else (None, DISAGREE)
-    elif axis == "weather":
+            return None, SOFT
+        if cv_on and margin >= m:
+            return f"glare_{cls}", OK
+        if margin >= _strong(m):  # CLIP bắt được lóe mà CV không thấy (đo: headlight 0,82, top 4% ảnh đêm)
+            return f"glare_{cls}", OK
+        return (None, DISAGREE) if margin >= m else (None, SOFT)
+    if axis == "lens":
+        if cls == "clean" or margin < m:
+            return ("clean", OK) if cls == "clean" and margin >= m else (None, SOFT)
+        return (cls, OK) if (f["BLUR_CV"] or f["VEIL_CV"]) else (None, SOFT)
+    if axis == "weather":
+        if known and sun < sun_cfg["night_deg"]:
+            return None, SOFT  # CLIP zero-shot cho P(rain)≈0,8 ở MỌI cảnh đêm (khô lẫn mưa) ⇒ không gán
+        if margin < m:
+            return None, SOFT
         if cls == "dry":
             return "dry", OK
-        return (cls, OK) if margin >= STRONG * m else (None, LOW_MARGIN)
-    return None, DISAGREE
+        return (cls, OK) if margin >= _strong(m) else (None, SOFT)
+    return None, SOFT
 
 
 def _js(classes: tuple[str, ...], p: np.ndarray) -> str:
@@ -117,8 +125,7 @@ def fuse(qcv: pd.DataFrame, probs: dict[str, np.ndarray], sun: pd.Series, thr: d
                 cls = axes[ax][order[ax][i, 0]]
                 tag, st = _decide(ax, cls, margin[ax][i], thr["clip"][f"m_{ax}"], f, sun_arr[i], thr["sun"])
                 tags[ax][i] = tag
-                # LOW_MARGIN của lớp "bình thường" không vào hàng đợi (SPEC-P02 §5); DISAGREE luôn vào
-                if st == DISAGREE or (st == LOW_MARGIN and cls != NORMAL[ax]):
+                if st == DISAGREE:  # v1.1: chỉ mâu thuẫn thật vào hàng đợi; SOFT thì im lặng
                     rs.append(f"{ax}:{st}")
             reasons[i] = "|".join(rs)
             review[i] = bool(rs)

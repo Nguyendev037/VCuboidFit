@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 
+from c4.context.fuse import CONTEXT_VERSION
 from c4.cli import context as context_cli
 from c4.context import pipeline
 from c4.contracts import CONTEXT_FRAME, read_table, write_table
@@ -66,4 +67,4 @@ def test_pipeline_cli_fit_run_end_to_end(tmp_path, monkeypatch):
     assert context_cli.main(run) == 0
     df2 = read_table(out, "context_frame")
     assert len(df2) == len(frames) and df2["review"].dtype == bool
-    assert (df2["context_version"] == "ctx_v1").all() and _manifest_warnings(job) == []
+    assert (df2["context_version"] == CONTEXT_VERSION).all() and _manifest_warnings(job) == []
