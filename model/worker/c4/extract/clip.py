@@ -35,6 +35,8 @@ CLIP_STD = (0.26862954, 0.26130258, 0.27577711)
 class FakeTextEncoder:
     """Hash text → vector đơn vị (chạy CPU, không cần trọng số)."""
 
+    logit_scale: float = 100.0
+
     def encode(self, texts: list[str]) -> np.ndarray:
         return fake_embed(list(texts), CLIP_DIM, seed=7)
 
@@ -62,14 +64,25 @@ class OpenClipTextEncoder:
         self._model = self._tokenize = None
         self._fake = FakeTextEncoder()
 
-    def encode(self, texts: list[str]) -> np.ndarray:
-        if fake_models_enabled():
-            return self._fake.encode(texts)
+    def _ensure_loaded(self) -> None:
         if self._model is None:
             self._model = _load_open_clip(self._name, self._pretrained, "cpu")
             import open_clip
 
             self._tokenize = open_clip.get_tokenizer(self._name)
+
+    @property
+    def logit_scale(self) -> float:
+        """`model.logit_scale.exp()` (≈100 với openai). Nạp lười như encode; fake = 100.0."""
+        if fake_models_enabled():
+            return self._fake.logit_scale
+        self._ensure_loaded()
+        return float(self._model.logit_scale.exp().item())
+
+    def encode(self, texts: list[str]) -> np.ndarray:
+        if fake_models_enabled():
+            return self._fake.encode(texts)
+        self._ensure_loaded()
         with torch.inference_mode():
             z = self._model.encode_text(self._tokenize(list(texts)))
             z = torch.nn.functional.normalize(z.float(), dim=-1)

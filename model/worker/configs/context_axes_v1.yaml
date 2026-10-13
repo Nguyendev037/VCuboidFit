@@ -1,0 +1,64 @@
+# Bốn trục bối cảnh ảnh camera (SPEC-P02 §2). 3 prompt/lớp; embedding = mean 3 prompt rồi L2.
+# ĐÓNG BĂNG: CẤM sửa v1 sau khi đóng băng; đổi prompt = context_axes_v2.yaml + Đ-log.
+version: ctx_v1
+axes:
+  - name: illum
+    classes: [day, lowlight, night]
+    prompts:
+      day:
+        - "a road photo taken in bright daylight"
+        - "a well-lit daytime street scene from a car camera"
+        - "a sunny day driving view"
+      lowlight:
+        - "a road photo at dusk with dim light"
+        - "a twilight street scene from a car camera"
+        - "a dimly lit road in the early evening"
+      night:
+        - "a road photo taken at night"
+        - "a dark night street scene lit by street lamps"
+        - "a night driving view from a car camera"
+  - name: glare
+    classes: [none, headlight, sun]
+    prompts:
+      none:
+        - "a road photo with no glare or lens flare"
+        - "an evenly exposed street scene"
+        - "a clear car camera image without bright light sources"
+      headlight:
+        - "glare from oncoming car headlights at night"
+        - "bright street lamps causing lens flare in a car camera"
+        - "blinding headlights on a dark road"
+      sun:
+        - "the sun shining directly into the camera with lens flare"
+        - "a backlit road with dark silhouettes against a bright sky"
+        - "strong sun glare on a car camera"
+  - name: lens
+    classes: [clean, droplets, blurred]
+    prompts:
+      clean:
+        - "a sharp image from a clean camera lens"
+        - "a crisp and clear car camera photo"
+        - "a focused street photo with clean optics"
+      droplets:
+        - "water droplets on the camera lens"
+        - "a dirty smudged camera lens over a road scene"
+        - "raindrops blurring part of a car camera image"
+      blurred:
+        - "a motion blurred road photo"
+        - "an out of focus street scene from a car camera"
+        - "a blurry low quality driving image"
+  - name: weather
+    classes: [dry, rain, fog]
+    prompts:
+      dry:
+        - "a dry road in clear weather"
+        - "a street scene on a clear day"
+        - "a dry asphalt road with good visibility"
+      rain:
+        - "a rainy street with a wet road"
+        - "driving in heavy rain"
+        - "a wet road reflecting lights in the rain"
+      fog:
+        - "a foggy road with low visibility"
+        - "a misty street scene"
+        - "a hazy road in fog"

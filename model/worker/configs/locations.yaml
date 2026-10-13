@@ -1,0 +1,7 @@
+# log.location (nuScenes) -> toạ độ tâm khu vực, độ thập phân (WGS84).
+# Nguồn: toạ độ xấp xỉ tâm vùng bản đồ nuScenes (Caesar et al. 2020, Fig. 1 / nuScenes-devkit maps);
+# sai số vài trăm m, không ảnh hưởng độ cao mặt trời (1 km ~ 0,01 độ vĩ). Cố định, CẤM fit.
+singapore-onenorth: {lat: 1.2993, lon: 103.7875}
+singapore-queenstown: {lat: 1.2897, lon: 103.8001}
+singapore-hollandvillage: {lat: 1.3110, lon: 103.7960}
+boston-seaport: {lat: 42.3470, lon: -71.0390}
