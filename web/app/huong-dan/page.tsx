@@ -47,7 +47,8 @@ export default function GuidePage() {
             <p className="text-slate-500 mt-2 text-sm">Tài liệu chi tiết giúp bạn hiểu rõ các chỉ số đánh giá và cơ chế lọc frame của VCuboidFIT.</p>
           </div>
 
-          <section id="tong-quan" className="scroll-mt-24">
+          <section className="rounded-xl border border-blue-200 bg-white p-6 text-sm leading-relaxed"><h2 className="mb-3 text-xl font-bold">Quy trình v2: từ dữ liệu đến ảnh hiếm</h2><ol className="list-decimal space-y-3 pl-5"><li>Chuẩn bị nuScenes: LiDAR, ego pose, timestamp; thêm camera nếu muốn xem bối cảnh. Nạp đủ các phần ZIP trên dashboard.</li><li>Trong Chi tiết kỹ thuật, chọn rare_v24. Chỉ LiDAR (lidar_only) bỏ tầng bối cảnh; LiDAR + camera (multisensor) dùng OpenCLIP + OpenCV. Mặc định vẫn là c4_legacy.</li><li>Thẻ RHCIO: độ hiếm R1/R2/R3, khó H, bối cảnh C, tương tác I, ngoại lệ O. Đây là dự đoán, không phải nhãn thật. Viewer hiển thị ứng viên Chưa xác nhận và bốn trục bối cảnh cho camera đang xem.</li><li>Mở Hàng đợi duyệt bối cảnh để xem ảnh, xác suất, cờ CV và lý do chưa chắc. Hàng đợi không chặn selection.</li><li>Xuất ảnh hiếm (ZIP): 6 camera hoặc chỉ camera trước, tuỳ chọn ảnh LiDAR đã có. ZIP gồm index.csv, meta.json và ảnh gốc; ảnh thiếu được ghi lại.</li></ol><p className="mt-4 text-amber-800">Giới hạn: pool không có đêm/mưa thì không thể chọn ra các cảnh đó. Số mini chỉ minh hoạ; capture B là số đo chính, A là số đo phụ. Thẻ và xác suất cần người duyệt.</p><Link href="/dashboard" className="mt-4 inline-block font-semibold text-blue-700">Vào dashboard →</Link></section>
+ <section id="tong-quan" className="scroll-mt-24">
             <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2 mb-4">1. VCuboidFIT làm gì?</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center text-center">

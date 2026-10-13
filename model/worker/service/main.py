@@ -40,6 +40,7 @@ def create_app(settings: Settings | None = None, runner=None, encoder_factory=No
     app.include_router(selection.router)
     app.include_router(frames.router)
     app.include_router(remote.router)
+    app.include_router(__import__("service.export_images", fromlist=["router"]).router)
 
     @app.get("/health")
     def health():

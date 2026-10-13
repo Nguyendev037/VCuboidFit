@@ -6,6 +6,7 @@ import type { FrameSummary, Cam } from "@/lib/api/types";
 import { CAMS } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
 import { LIDAR_TAG_LABELS } from "@/lib/constants";
+import { PRED_TAG_LABELS } from "@/lib/glossary";
 import { FRAME_SCORES, GT_GROUPS, gtTagLabel, reasonText } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
 
@@ -17,6 +18,7 @@ export interface FrameGridProps {
   viewMode?: "grid" | "list";
   pipeline?: "camera" | "lidar";
   showLidarModelMetrics?: boolean;
+  predictionTags?: boolean;
   className?: string;
 }
 
@@ -28,6 +30,7 @@ export function FrameGrid({
   viewMode = "grid",
   pipeline = "camera",
   showLidarModelMetrics,
+  predictionTags = false,
   className = "",
 }: FrameGridProps) {
   // Quản lý index được chọn để hỗ trợ bàn phím
@@ -186,7 +189,7 @@ export function FrameGrid({
             <div className="flex items-center gap-1 flex-wrap">
               {frame.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-[10px] py-0 px-1.5">
-                  {pipeline === "lidar" ? gtTagLabel(tag) : LIDAR_TAG_LABELS[tag] ?? tag}
+                  {predictionTags ? `${PRED_TAG_LABELS[tag] ?? tag} (dự đoán)` : pipeline === "lidar" ? gtTagLabel(tag) : LIDAR_TAG_LABELS[tag] ?? tag}
                   {pipeline === "lidar" && GT_GROUPS[tag] && <Tooltip label={GT_GROUPS[tag].label} content={GT_GROUPS[tag].tooltip} />}
                 </Badge>
               ))}

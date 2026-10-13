@@ -190,3 +190,14 @@ export function reasonText(reason: string): string {
 export function gtTagLabel(tag: string): string {
   return GT_GROUPS[tag]?.label ?? tag;
 }
+
+export const PRED_TAG_LABELS: Record<string, string> = { R: "Hiếm", R1: "Hình dạng hiếm", R2: "Lát cắt hiếm", R3: "VRU hiếm", H: "Khó với model", C: "Bối cảnh", I: "Tương tác", O: "Ngoại lệ" };
+export const CONTEXT_AXES: Record<string, string> = { illum: "Chiếu sáng", glare: "Chói", lens: "Ống kính", weather: "Thời tiết" };
+export const CONTEXT_CLASSES: Record<string, string> = { day: "Ban ngày", lowlight: "Ánh sáng yếu", night: "Ban đêm", none: "Không chói", headlight: "Đèn xe", sun: "Mặt trời", clean: "Sạch", droplets: "Giọt nước", blurred: "Mờ", dry: "Khô", rain: "Mưa", fog: "Sương" };
+export const WARNING_LABELS: Record<string, string> = {
+ ELIGIBLE_LT_B: "Frame đủ điều kiện ít hơn ngân sách; không trộn ứng viên đáng ngờ.",
+ CONTEXT_NOT_FROZEN: "Ngưỡng bối cảnh chưa đóng băng; chưa xác nhận thẻ bối cảnh.",
+ STRATEGY_NOT_IMPLEMENTED: "Chiến lược chưa hỗ trợ; engine dùng chiến lược cân bằng.",
+};
+export const warningLabel = (code: string) => WARNING_LABELS[code] ?? `Cảnh báo chưa có diễn giải: ${code}`;
+export const CV_FLAG_LABELS: Record<string, string> = { NIGHT_CV: "Ảnh tối", GLARE_CV: "Vùng chói", BLUR_CV: "Ảnh mờ", VEIL_CV: "Màn sương / loá" };

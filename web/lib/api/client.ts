@@ -194,3 +194,7 @@ export function getAnalysis(jobId: string, sid: string): Promise<Analysis> {
 export function exportUrl(jobId: string, sid: string, budget: number): string {
   return `/api/jobs/${seg(jobId)}/selections/${seg(sid)}/export.csv${query({ budget })}`;
 }
+
+export function exportImagesUrl(jobId: string, sid: string, budget: number, options: { cams: "all" | "front"; lidar: boolean }): string {
+  return `/api/jobs/${seg(jobId)}/selections/${seg(sid)}/export-images.zip${query({ budget, cams: options.cams, lidar: String(options.lidar) })}`;
+}

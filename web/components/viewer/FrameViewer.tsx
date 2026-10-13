@@ -1,5 +1,7 @@
 "use client";
 
+import { ContextPanel } from "@/components/context/ContextPanel";
+import { CandidateObjects } from "./CandidateObjects";
 import React, { useEffect, useState, useMemo, useSyncExternalStore } from "react";
 import type { Cam, FrameDetail } from "@/lib/api/types";
 import { getFrame } from "@/lib/api/client";
@@ -306,6 +308,7 @@ export function FrameViewer({
                 <LidarScene
                   lidarUrl={frame.lidar?.url}
                   boxes3d={frame.boxes3d}
+                  objects={frame.objects}
                   camPoses={frame.camPoses}
                   showBoxes={showBoxes}
                   resetTrigger={reset3dTrigger}
@@ -349,6 +352,7 @@ export function FrameViewer({
                   <LidarScene
                     lidarUrl={frame.lidar?.url}
                     boxes3d={frame.boxes3d}
+                  objects={frame.objects}
                     camPoses={frame.camPoses}
                     showBoxes={showBoxes}
                     resetTrigger={reset3dTrigger}
@@ -528,6 +532,8 @@ export function FrameViewer({
               )}
             </div>
 
+            <CandidateObjects objects={frame.objects} predTags={frame.predTags}/>
+            <ContextPanel context={frame.context} cam={mode === "focus" && focusTarget.startsWith("CAM_") ? focusTarget : "CAM_FRONT"}/>
             {/* Chi tiết từng camera */}
             <div>
               <h4 className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-2">

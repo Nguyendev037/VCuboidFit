@@ -6,9 +6,13 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   getAnalysis,
+  exportUrl,
+  getSelection,
   listFrames
 } from "@/lib/api/client";
 import type { FrameSummary } from "@/lib/api/types";
+import { ExportImages } from "@/components/review/ExportImages";
+import { PRED_TAG_LABELS } from "@/lib/glossary";
 import { LIDAR_TAG_LABELS } from "@/lib/constants";
 import { FrameGrid } from "@/components/review/FrameGrid";
 import { AnalysisPanel } from "@/components/review/AnalysisPanel";
@@ -38,6 +42,7 @@ export const CAMERA_FILTER_TAGS = ["Hiếm", "Khó", "Kịch bản", "Rare GT A"
  */
 export function matchesTagFilter(frame: FrameSummary, selectedTag: string, isLidar: boolean): boolean {
   const hasTag = (tag: string) => frame.tags.includes(tag);
+  if (selectedTag in PRED_TAG_LABELS) return selectedTag === "R" ? frame.tags.some(t=>["R1","R2","R3"].includes(t)) : hasTag(selectedTag);
 
   if (selectedTag === "duplicates") {
     return frame.tags.some((tag) => tag.startsWith("Trùng với #"));
@@ -78,22 +83,27 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
   // Bộ lọc tìm kiếm và tags theo Figma 03
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [gate, setGate] = useState("all");
+  const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<"rank" | "score">("rank");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Tải danh sách frames
   const framesQuery = useQuery({
-    queryKey: ["frames", jobId, sel, budget, sortBy],
+    queryKey: ["frames", jobId, sel, budget, sortBy, page, selectedTag],
     queryFn: () =>
       listFrames(jobId, sel!, {
         budget,
         sort: sortBy,
-        page: 1,
+        page,
+        tag: selectedTag && selectedTag in PRED_TAG_LABELS ? selectedTag : undefined,
         pageSize: 200,
       }),
     enabled: !!sel,
   });
 
+  const selectionQuery = useQuery({queryKey:["selection",jobId,sel],queryFn:()=>getSelection(jobId,sel!),enabled:!!sel});
+  const isRare = selectionQuery.data?.engineVersion === "rare_v24";
   // Tải dữ liệu phân tích
   const analysisQuery = useQuery({
     queryKey: ["analysis", jobId, sel],
@@ -122,11 +132,12 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
         if (!matchesScene && !matchesToken && !matchesReason) return false;
       }
 
+      if (isRare && gate !== "all" && gate !== "valid") return false;
       if (selectedTag && !matchesTagFilter(f, selectedTag, isLidar)) return false;
 
       return true;
     });
-  }, [rawList, searchQuery, selectedTag, isLidar]);
+  }, [rawList, searchQuery, selectedTag, isLidar, gate, isRare]);
 
   const activeIdx = useMemo(() => {
     if (!token) return -1;
@@ -185,7 +196,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
             Vui lòng thực hiện phân tích từ trang chủ để xem Deep Review.
           </p>
           <Link
-            href={`/?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`}
+            href={`/dashboard?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`}
             className="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors inline-block"
           >
             ← Quay lại trang chủ
@@ -202,7 +213,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
       {/* 1. Top Header theo Figma (Screens 03) */}
       <header className="w-full bg-white border-b border-[#E2E8F0] px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs sticky top-0 z-30">
         <div className="flex items-center gap-6">
-          <Link href={`/?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`} className="flex items-center gap-2.5 font-bold text-lg text-slate-900 tracking-tight">
+          <Link href={`/dashboard?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`} className="flex items-center gap-2.5 font-bold text-lg text-slate-900 tracking-tight">
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -232,7 +243,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
       <div className="bg-white border-b border-[#E2E8F0] px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Link
-            href={`/?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`}
+            href={`/dashboard?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`}
             className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors"
           >
             ← Quay lại
@@ -268,14 +279,14 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
           </div>
 
           {/* Filter chips theo Figma */}
-          {(isLidar ? LIDAR_FILTER_TAGS : CAMERA_FILTER_TAGS).map((tag) => {
+          {(isRare ? Object.keys(PRED_TAG_LABELS) : isLidar ? LIDAR_FILTER_TAGS : CAMERA_FILTER_TAGS).map((tag) => {
             const isActive = selectedTag === tag;
-            const label = isLidar ? LIDAR_TAG_LABELS[tag] ?? tag : tag;
+            const label = isRare ? `${PRED_TAG_LABELS[tag]} (dự đoán)` : isLidar ? LIDAR_TAG_LABELS[tag] ?? tag : tag;
             return (
               <button
                 key={tag}
                 type="button"
-                onClick={() => setSelectedTag(isActive ? null : tag)}
+                onClick={() => { setSelectedTag(isActive ? null : tag); setPage(1); }}
                 className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                   isActive
                     ? "bg-blue-600 text-white border-blue-600"
@@ -287,6 +298,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
             );
           })}
 
+          {isRare && <label className="text-xs">Gate <select aria-label="Lọc gate" value={gate} onChange={e=>setGate(e.target.value)}><option value="all">Tất cả</option><option value="valid">Hợp lệ</option><option value="suspect">Đáng ngờ</option><option value="outlier">Ngoại lệ</option></select></label>}
           {/* Sắp xếp */}
           <select
             value={sortBy}
@@ -336,6 +348,8 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-8"><a className="text-xs text-blue-700 underline" href={exportUrl(jobId,sel,budget)}>Xuất CSV</a><ExportImages jobId={jobId} sid={sel} budget={budget}/><Link className="text-xs text-blue-700 underline" href={`/review/context?job=${encodeURIComponent(jobId)}&sel=${encodeURIComponent(sel)}`}>Hàng đợi duyệt bối cảnh</Link></div>
+      {isRare && <p className="px-8 text-xs text-slate-500">Lô đã chọn chỉ chứa gate hợp lệ; ứng viên đáng ngờ và ngoại lệ không được trộn vào lô.</p>}
       {/* Hiển thị lỗi nếu có */}
       {/* 3. Bố cục chính 2 cột: Cột trái (Lưới frames) & Cột phải (Analysis Panel) */}
       <main className="max-w-[1440px] mx-auto p-4 sm:p-6 w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
@@ -378,6 +392,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
             </div>
           ) : (
             <FrameGrid
+              predictionTags={isRare}
               frames={filteredList}
               selectedToken={token ?? undefined}
               onSelectFrame={(f: FrameSummary) => setFrame(f.sampleToken, "push")}
@@ -387,6 +402,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
               showLidarModelMetrics={showLidarModelMetrics}
             />
           )}
+        <div className="flex gap-3 text-xs"><button disabled={page===1} onClick={()=>setPage(v=>v-1)}>Trang trước</button><span>Trang {page}</span><button disabled={rawList.length<200} onClick={()=>setPage(v=>v+1)}>Trang sau</button></div>
         </section>
 
         {/* ============ CỘT PHẢI (BẢNG PHÂN TÍCH - 4 CỘT) ============ */}

@@ -5,6 +5,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, OrthographicCamera, PerspectiveCamera } from "@react-three/drei";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import type { RareObject } from "@/lib/api/types";
 import type { Cam } from "@/lib/api/types";
 import {
   cornersToCuboid,
@@ -17,7 +18,7 @@ import {
   type LidarPointCloud,
 } from "./lidarDecoder";
 
-type Box3D = { category: string; corners: number[] };
+type Box3D = { category: string; corners: number[]; candidate?: boolean };
 type CameraPose = { cam: Cam; translation: number[]; rotation: number[]; intrinsic: number[][] };
 type ViewMode = "free" | "top" | "rear";
 type SceneView = "main" | "top" | "side" | "front";
@@ -25,6 +26,7 @@ type SceneView = "main" | "top" | "side" | "front";
 export interface LidarSceneProps {
   lidarUrl?: string | null;
   boxes3d?: Box3D[];
+  objects?: RareObject[];
   camPoses?: CameraPose[];
   showBoxes?: boolean;
   onSelectCam?: (cam: Cam) => void;
@@ -133,7 +135,7 @@ function Cuboid({
         <lineBasicMaterial color={hovered ? "#ffffff" : color} transparent opacity={hovered ? 1 : 0.9} linewidth={2} />
       </lineSegments>
       {hovered && <Html position={[0, transform.size[1] / 2 + 0.25, 0]} center distanceFactor={18}>
-        <span className="whitespace-nowrap rounded border border-white/20 bg-black/90 px-2 py-1 text-[11px] font-medium text-white shadow">{box.category}</span>
+        <span className="whitespace-nowrap rounded border border-white/20 bg-black/90 px-2 py-1 text-[11px] font-medium text-white shadow">{box.category}{box.candidate ? " · Chưa xác nhận" : ""}</span>
       </Html>}
     </group>
   );
@@ -230,12 +232,20 @@ function SceneContents({
 export function LidarScene({
   lidarUrl,
   boxes3d = [],
+  objects = [],
   camPoses = [],
   showBoxes = true,
   onSelectCam,
   resetTrigger = 0,
   className = "",
 }: LidarSceneProps) {
+  const displayBoxes: Box3D[] = [...boxes3d, ...objects.map(o => {
+    const corners = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]].flatMap(([sx,sy,sz]) => {
+      const x = sx*o.l/2; const y = sy*o.w/2;
+      return [o.cx + x*Math.cos(o.yaw)-y*Math.sin(o.yaw), o.cy+x*Math.sin(o.yaw)+y*Math.cos(o.yaw), o.cz+sz*o.h/2];
+    });
+    return {category:o.cls_pred,corners,candidate:true};
+  })];
   const [pointCloud, setPointCloud] = useState<LidarPointCloud | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -269,7 +279,7 @@ export function LidarScene({
 
   return <div className={`relative isolate h-full min-h-[220px] overflow-hidden rounded-lg bg-[#080d15] text-white ${className}`} data-testid="lidar-scene">
     <Canvas dpr={[1, 1.5]} gl={{ antialias: true, powerPreference: "high-performance" }} className="absolute inset-0">
-      <SceneContents view="main" pointCloud={activePointCloud} colors={colors} pointSize={pointSize} boxes3d={boxes3d} showBoxes={showBoxes} camPoses={camPoses} onSelectCam={onSelectCam} viewMode={viewMode} resetTrigger={resetTrigger + cameraReset} />
+      <SceneContents view="main" pointCloud={activePointCloud} colors={colors} pointSize={pointSize} boxes3d={displayBoxes} showBoxes={showBoxes} camPoses={camPoses} onSelectCam={onSelectCam} viewMode={viewMode} resetTrigger={resetTrigger + cameraReset} />
     </Canvas>
 
     <button type="button" aria-expanded={mobileControlsOpen} onClick={() => setMobileControlsOpen((open) => !open)} className="absolute left-2 top-2 z-10 rounded-md border border-white/10 bg-black/75 px-2 py-1.5 text-[10px] text-white md:hidden">
@@ -301,7 +311,7 @@ export function LidarScene({
     </label>
     <div className="pointer-events-none absolute bottom-2 right-2 z-10 hidden gap-1.5 md:flex sm:bottom-3 sm:right-3 sm:gap-2">
       {([ ["top", "Trên"], ["side", "Bên"], ["front", "Trước"] ] as const).map(([key, title]) => <div key={key} className="relative h-[62px] w-[76px] overflow-hidden rounded border border-white/25 bg-[#080d15]/90 shadow-lg sm:h-[82px] sm:w-[104px]" aria-label={`Góc nhìn ${title}`}>
-        <Canvas dpr={1} frameloop="demand"><SceneContents view={key} pointCloud={activePointCloud} colors={colors} pointSize={pointSize} boxes3d={boxes3d} showBoxes={showBoxes} camPoses={[]} /></Canvas>
+        <Canvas dpr={1} frameloop="demand"><SceneContents view={key} pointCloud={activePointCloud} colors={colors} pointSize={pointSize} boxes3d={displayBoxes} showBoxes={showBoxes} camPoses={[]} /></Canvas>
         <span className="absolute bottom-0 left-0 right-0 bg-black/75 px-1 py-0.5 text-center text-[9px] text-white/90">{title}</span>
       </div>)}
     </div>
