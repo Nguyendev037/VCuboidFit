@@ -97,6 +97,39 @@ GT_RHCIO_INSTANCE = dict(
     instance_token="string", category="string", vru_group="string", axes="string",
     n_frames_visible="int32", frames="string")
 
+RARE_OBJECTS = dict(  # planning/11 SPEC-P05 §7.1 · c4.rare.candidates ghi, c4.rare.object_score chấm
+    sample_token="string", object_id="string",
+    source="string",       # cluster | pointpillars | merged
+    cls_pred="string",     # pedestrian|bicycle|motorcycle|vru_unknown|other
+    cx="float32", cy="float32", cz="float32",
+    l="float32", w="float32", h="float32", yaw="float32",
+    pts="int32", dist_m="float32",
+    track_id="string",     # "" chưa track
+    speed_mps="Float32",   # nullable: None khi track 1 box
+    score_shape="float32", score_slice="float32",
+    score_vru="float32", score_unc="float32",
+    r_sem="Float32",       # nullable, chờ M3
+    concept_top="string",  # "" chờ M3
+    concept_score="Float32",
+    s_obj="float32",
+    missed_by_model="bool",
+    reasons="string")
+
+RARE_FRAMES = dict(  # planning/11 SPEC-P05 §7.2
+    sample_token="string", scene_token="string",
+    gate="string",         # valid | suspect | outlier
+    gate_fail="string",    # "" khi valid
+    ood_flag="bool",
+    s_objects="float32",
+    crowd="int32",
+    weather_pred="string",
+    s_frame="float32",
+    pred_tags="string",    # ⊆ R1|R2|R3|H|C|I, "|" phân cách
+    evidence="string",     # JSON
+    rank="Int32",          # nullable
+    selected="bool",
+    explore="bool")
+
 SPEC = dict(  # tên -> (schema, khóa chính)
     features_cache=(FEATURES_CACHE, ["sample_token", "cam"]),
     frame_scores=(FRAME_SCORES, ["sample_token"]),
@@ -115,7 +148,9 @@ SPEC = dict(  # tên -> (schema, khóa chính)
     lidar_scores=(LIDAR_SCORES, ["sample_token"]),
     lidar_selected=(LIDAR_SELECTED, ["method", "seed", "sample_token"]),
     quality_cv=(QUALITY_CV, ["sample_token", "cam"]),
-    context_frame=(CONTEXT_FRAME, ["sample_token", "cam"]))
+    context_frame=(CONTEXT_FRAME, ["sample_token", "cam"]),
+    rare_objects=(RARE_OBJECTS, ["sample_token", "object_id"]),
+    rare_frames=(RARE_FRAMES, ["sample_token"]))
 
 
 class ContractError(Exception):

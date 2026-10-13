@@ -1,0 +1,26 @@
+# planning/11 SPEC-P05 §3.3 · ánh xạ lớp PP -> nhóm dự đoán + heuristic kích thước Tầng 0. Đổi = file mới, không sửa file này.
+# --- Ánh xạ 10 lớp PP -> nhóm VRU dự đoán (10/SPEC-P01 §5) ---
+pp_to_group:
+  pedestrian: pedestrian
+  bicycle: bicycle
+  motorcycle: motorcycle
+  car: other
+  truck: other
+  construction_vehicle: other
+  bus: other
+  trailer: other
+  barrier: other
+  traffic_cone: other
+
+# Thứ tự lớp của checkpoint OpenPCDet/PointPillars nuScenes (infer_t1.py ghi pred_labels thô).
+# pp_label_base: OpenPCDet đánh nhãn từ 1 (nhãn 1 = phần tử đầu danh sách). GIẢ ĐỊNH chưa kiểm trên checkpoint thật
+# (nhánh pp_candidates chưa từng chạy: không có preds_orig.pkl) - kiểm khi có checkpoint.
+pp_class_names: [car, truck, construction_vehicle, bus, trailer, barrier, motorcycle, bicycle, pedestrian, traffic_cone]
+pp_label_base: 1
+
+# --- Heuristic kích thước cho Tầng 0 cluster (khi thiếu PP). Khớp theo thứ tự khai báo; l,w = cạnh dài, cạnh ngắn của box ---
+cluster_heuristic:
+  pedestrian: {max_l: 1.2, max_w: 1.2, min_h: 0.8, max_h: 2.2}
+  bicycle:    {max_l: 2.5, max_w: 1.0, min_h: 0.5, max_h: 2.0}
+  motorcycle: {max_l: 2.8, max_w: 1.5, min_h: 0.5, max_h: 2.0}
+  vru_unknown: {max_l: 3.0, max_w: 2.0, min_h: 0.4, max_h: 2.5}
