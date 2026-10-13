@@ -7,6 +7,26 @@ tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tha
 > **Repo này là ROOT duy nhất của dự án** (bản hoàn chỉnh nhất, phiên bản hiện tại v0.6.5). Mọi thay đổi
 > code, tài liệu, Docker, notebook đều làm, commit và push thẳng tại đây — không sinh lại từ nơi khác.
 
+## v2 (đang phát triển): rare_v24 + bối cảnh camera
+
+Phiên bản v2 (đích 0.7.0) bổ sung engine `rare_v24` nhằm phát hiện tình huống hiếm RHCIO và đánh giá theo từng instance VRU.
+Hệ thống tích hợp tầng bối cảnh ảnh camera kết hợp OpenCV và OpenCLIP pretrained (không dùng VLM) với hai profile `lidar_only` (thuần CPU) và `multisensor`.
+Quy trình chọn lọc ưu tiên capture B (thu thập instance ở đúng khoảnh khắc dạng hiếm), áp dụng phạt track và MMR để chọn đúng B frame.
+Toàn bộ quy trình được chuẩn hoá qua CLI và notebook Colab A100 phục vụ pitching và kiểm chứng.
+
+| Lệnh | Mô tả |
+|---|---|
+| `python -m c4.cli.rare run` | Chạy engine `rare_v24` chấm điểm và chọn B frame theo profile `lidar_only` hoặc `multisensor`. |
+| `python -m c4.cli.rare crops` | Cắt crop ảnh camera theo bounding box và trích xuất vector ngữ nghĩa OpenCLIP. |
+| `python -m c4.cli.context cv` | Trích xuất 13 đặc trưng chất lượng hình ảnh (độ sáng, nhiễu, chói) bằng OpenCV. |
+| `python -m c4.cli.context fit` | Khớp ngưỡng phân vị bối cảnh trên tập V để đóng băng luật phân loại. |
+| `python -m c4.cli.context run` | Gán thẻ bối cảnh camera (chiếu sáng, thời tiết, chói) cho từng frame. |
+| `python -m c4.cli.bench_pitch` | Benchmark so sánh các phương pháp chọn frame (IY, IRecall, oracle, random) trên mini/pool. |
+
+Chi tiết luồng hoạt động xem tại [docs/model-workflow.md](docs/model-workflow.md) (mục "Engine rare_v24") và hướng dẫn chạy benchmark tại [docs/colab-dev-setup.md](docs/colab-dev-setup.md) (mục "Benchmark pitching").
+
+Trạng thái: chưa phát hành, benchmark T chưa chạy.
+
 ## Kiến trúc
 
 ```text
