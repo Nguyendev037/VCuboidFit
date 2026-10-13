@@ -52,8 +52,80 @@ copy .env.example .env.local        # WORKER_URL=http://127.0.0.1:8001, WORKSPAC
 npm ci
 npm run dev                         # http://localhost:3000
 ```
-Kiểm: `npx tsc --noEmit` và `npx vitest run`. Chạy không cần worker (dữ liệu mẫu):
-`$env:NEXT_PUBLIC_MOCK="1"; npm run dev`.
+Kiểm: `node node_modules/typescript/bin/tsc --noEmit` và `node node_modules/vitest/vitest.mjs run`. Chạy không cần worker (dữ liệu mẫu):
+`$env:NEXT_PUBLIC_MOCK="1"; node node_modules/next/dist/bin/next dev`.
+
+## 2b. Chạy demo local (Demo UI 15 phút — OPERATIONS §3)
+
+Thực hiện theo `OPERATIONS.md` §3 và §6 cho buổi trình chiếu demo:
+
+### 1. Khởi động Worker và Web
+Worker và Web phải có `WORKSPACE` khớp nhau và chung biến `VCF_PORT`:
+```powershell
+# Cửa sổ 1: Worker (Python)
+cd model\worker
+$env:WORKSPACE = (Resolve-Path ..).Path + "\workspace"     # = model\workspace
+$env:VCF_PORT = "8001"
+.venv\Scripts\python -m uvicorn service.main:create_app --factory --port $env:VCF_PORT
+# Kiểm tra sức khoẻ worker trước demo:
+curl.exe "http://127.0.0.1:8001/health"                    # phải trả {"ok":true,...}
+
+# Cửa sổ 2: Web (Next.js - dùng node trực tiếp vì lỗi NVM4306 của npm)
+cd web
+$env:WORKSPACE = (Resolve-Path ..\model\workspace).Path   # biến môi trường KHÔNG đi theo từ cửa sổ 1
+$env:VCF_PORT = "8001"
+$env:PORT = "3000"
+node node_modules/next/dist/bin/next dev
+```
+Truy cập giao diện tại:
+- Chế độ trình chiếu (khuyên dùng khi pitch): <http://localhost:3000/?present=1> (phóng to cỡ chữ 18px, ẩn bớt chi tiết rườm rà).
+- Màn hình duyệt bối cảnh: <http://localhost:3000/review/context>.
+- Bảng điều khiển phân tích: <http://localhost:3000/dashboard>.
+
+### 2. Đăng ký Job sẵn có bằng `job.json`
+Để giao diện web và API worker nhận diện được các job đã chạy trước (tránh lỗi 404/500 khi mở hoặc xuất ảnh), tạo tệp `job.json` và `status.json` trong thư mục job tương ứng (`model/workspace/jobs/<job_id>/`):
+
+Ví dụ với job `m2_mini` (`model/workspace/jobs/m2_mini/job.json`):
+```json
+{
+  "jobId": "m2_mini",
+  "datasetId": "d98cf3321dff",
+  "pipeline": "lidar",
+  "createdAt": "2026-10-13T14:29:23",
+  "state": "done"
+}
+```
+Và `model/workspace/jobs/m2_mini/status.json`:
+```json
+{
+  "state": "done",
+  "stage": "done",
+  "progress": 1.0,
+  "done": 404,
+  "total": 404
+}
+```
+
+Tương tự cho job `night_v24` (`model/workspace/jobs/night_v24/job.json`):
+```json
+{
+  "jobId": "night_v24",
+  "datasetId": "nuscenes_trainval",
+  "pipeline": "lidar",
+  "createdAt": "2026-10-13T22:57:24",
+  "state": "done"
+}
+```
+
+### 3. Liên kết dữ liệu ảnh tạm qua Junction (OPERATIONS §6)
+Màn duyệt bối cảnh của job `night_v24` yêu cầu ảnh camera nuScenes trainval. Tạo junction trỏ từ workspace dataset tới thư mục dữ liệu thật trên ổ `E:\`:
+```powershell
+New-Item -ItemType Junction -Path model\workspace\datasets\nuscenes_trainval\data -Target E:\nuscenes_trainval
+```
+> **Lưu ý dọn dẹp:** Khi hoàn tất demo hoặc trước khi xoá ổ `E:`, chỉ gỡ liên kết junction (không làm mất dữ liệu gốc trên `E:`):
+> ```powershell
+> Remove-Item model\workspace\datasets\nuscenes_trainval\data -Force
+> ```
 
 ## 3. Upload một bộ zip
 

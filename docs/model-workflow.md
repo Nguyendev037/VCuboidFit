@@ -175,19 +175,14 @@ $env:PYTHONIOENCODING="utf-8"
 .venv/Scripts/python -m c4.cli.lidar_index --data-root D --job-dir J
 .venv/Scripts/python -m c4.cli.lidar_t0 --data-root D --job-dir J
 .venv/Scripts/python -m c4.cli.rare run --data-root D --job-dir J --profile lidar_only
-# Venv torch chỉ chạy encoder; import c4 từ worker hiện tại
-$env:PYTHONPATH=(Get-Location).Path
-../../../../vcuboidfit/worker/.venv/Scripts/python -m c4.cli.extract_clip --data-root D --job-dir J --device cuda
+# Các bước trích xuất CLIP và crops cần PyTorch (cài `.[gpu]` vào venv chính khi cần):
+.venv/Scripts/python -m c4.cli.extract_clip --data-root D --job-dir J --device cuda
 .venv/Scripts/python -m c4.cli.context cv --data-root D --job-dir J
 # Chuẩn bị J/split_manifest.csv từ lidar/index.parquet trước fit
 .venv/Scripts/python -m c4.cli.context fit --job-dir J --split V
 .venv/Scripts/python -m c4.cli.context run --data-root D --job-dir J
-../../../../vcuboidfit/worker/.venv/Scripts/python -m c4.cli.rare crops --data-root D --job-dir J --device cuda
+.venv/Scripts/python -m c4.cli.rare crops --data-root D --job-dir J --device cuda
 .venv/Scripts/python -m c4.cli.rare run --data-root D --job-dir J --profile multisensor
 ```
 
-Venv chính chạy index/Tầng 0/context/run CPU; venv cũ có torch/OpenCLIP chỉ dùng encoder ảnh/crops,
-không sửa code cây cũ. Colab dùng một venv đủ dependency. crops cần rare_objects từ run đầu và index camera;
-multisensor cần context_frame + cache crops. Mini thêm `--pool-split all --ref-split all` vào rare run
-(và dùng ngưỡng context mini đã chuẩn bị): in-sample minh hoạ. Pool mặc định T/V;
-không chạy benchmark `--mode pool` local (Đ29). Capture B (dạng hiếm) chính, A (frame bất kỳ) phụ.
+Venv chính chạy index/Tầng 0/context/run CPU. Khi cần chạy trích xuất CLIP hoặc crops cục bộ với GPU, cài thêm `pip install -e ".[gpu]"` vào venv chính khi cần (khoảng ~2 GB dung lượng, cần người duyệt theo OPERATIONS §4). Trên Google Colab, môi trường sử dụng một venv duy nhất có đầy đủ dependency. `crops` cần `rare_objects` từ run đầu và index camera; `multisensor` cần `context_frame` + cache `crops`. Mini thêm `--pool-split all --ref-split all` vào rare run (và dùng ngưỡng context mini đã chuẩn bị): in-sample minh hoạ. Pool mặc định T/V; không chạy benchmark `--mode pool` local (Đ29). Capture B (dạng hiếm) chính, A (frame bất kỳ) phụ.
