@@ -17,10 +17,29 @@ def budget(n_eligible: int, frac: float) -> int:
     return max(1, math.ceil(frac * n_eligible))
 
 
-def target_frames(gt_inst: pd.DataFrame, axis: str = "r2_combo") -> dict[str, set[str]]:
+def target_frames(gt_inst: pd.DataFrame, axis: str = "r2_combo", capture: str = "any",
+                  gt_frame: pd.DataFrame | None = None) -> dict[str, set[str]]:
     """instance target của trục → tập frame (có ≥1 điểm) chứa nó."""
     rows = gt_inst[gt_inst["axes"].str.split("|").apply(lambda a: axis in a)]
-    return {r.instance_token: set(r.frames.split("|")) for r in rows.itertuples() if r.frames}
+    tf = {r.instance_token: set(r.frames.split("|")) for r in rows.itertuples() if r.frames}
+    return _capture_frames(tf, gt_frame, capture, axis)
+
+
+def _capture_frames(tf, gt_frame, capture, axis="r2_combo"):
+    if capture == "any":
+        return tf
+    if capture != "rare_form":
+        raise ValueError(f"unknown capture: {capture}")
+    if gt_frame is None:
+        raise ValueError("rare_form requires gt_frame")
+    if axis != "r2_combo":
+        raise ValueError("target_instances records rare form only for r2_combo")
+    out = {i: set() for i in tf}
+    for row in gt_frame.itertuples():
+        for i in str(row.target_instances or "").split("|"):
+            if i in out:
+                out[i].add(row.sample_token)
+    return out
 
 
 def captured(sel: Sequence[str], tf: dict[str, set[str]]) -> set[str]:
@@ -102,10 +121,11 @@ def bootstrap_delta(sel_a: Selector, sel_b: Selector, gt_frame: pd.DataFrame, tf
 
 
 def evaluate(selectors: dict[str, Selector], gt_frame: pd.DataFrame, gt_inst: pd.DataFrame,
-             frac: float = 0.05, axis: str = "r2_combo", n_random: int = 100) -> dict:
+             frac: float = 0.05, axis: str = "r2_combo", n_random: int = 100,
+             capture: str = "any") -> dict:
     """Bảng chính cho slide: IY, NY, IRecall, Precision, phủ đêm/mưa mỗi phương pháp + random + oracle."""
     pool = list(gt_frame["sample_token"])
-    tf = target_frames(gt_inst, axis)
+    tf = target_frames(gt_inst, axis, capture, gt_frame)
     B = budget(len(pool), frac)
     iy_rand = expected_random_iy(pool, B, tf, n_random)
     orc = metrics(oracle_instance(pool, B, tf), gt_frame, tf)
@@ -120,9 +140,10 @@ def evaluate(selectors: dict[str, Selector], gt_frame: pd.DataFrame, gt_inst: pd
 
 
 def bootstrap_fixed(sels: dict[str, list[str]], gt_frame: pd.DataFrame, tf: dict[str, set[str]],
-                    n_boot: int = 1000, seed: int = 20261013) -> pd.DataFrame:
+                    n_boot: int = 1000, seed: int = 20261013, capture: str = "any") -> pd.DataFrame:
     """CI chính (planning/11 SPEC-P04 §3): lô chọn CỐ ĐỊNH, rút scene có hoàn lại (scene lặp đếm lặp),
     IY_b = Σ cap_s / Σ |Sel ∩ s|. Hợp lệ vì mỗi instance chỉ thuộc một scene. Dòng = lượt, cột = phương pháp."""
+    tf = _capture_frames(tf, gt_frame, capture)
     scene_of = dict(zip(gt_frame["sample_token"], gt_frame["scene_token"]))
     names = sorted(set(scene_of.values()))
     pos = {n: k for k, n in enumerate(names)}

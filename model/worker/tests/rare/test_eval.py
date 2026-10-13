@@ -39,3 +39,20 @@ def test_bootstrap_fixed_keeps_selection_and_pairs_methods():
     boot = bootstrap_fixed({"good": ["f0", "f10", "f11"], "bad": ["f0", "f1", "f2"]}, frame, tf, n_boot=200)
     ci = paired_ci(boot, "good", "bad")
     assert len(boot) == 200 and ci["delta"] > 0 and ci["hi"] >= ci["lo"]
+
+
+def test_capture_rare_form_excludes_normal_visible_frame():
+    from c4.rare.eval import bootstrap_fixed
+    frame, inst = _gt()
+    frame["target_instances"] = ["long" if i == 1 else "a" if i == 10 else "b" if i == 11 else ""
+                                 for i in range(20)]
+    sel = {"normal": lambda p, b: ["f0"], "rare": lambda p, b: ["f1"]}
+    a = evaluate(sel, frame, inst, capture="any")
+    b = evaluate(sel, frame, inst, capture="rare_form")
+    assert a["methods"]["normal"]["iy"] == 1
+    assert b["methods"]["normal"]["iy"] == 0 and b["methods"]["rare"]["iy"] == 1
+    tf = target_frames(inst, capture="rare_form", gt_frame=frame)
+    assert tf["long"] == {"f1"}
+    boot = bootstrap_fixed({"normal": ["f0"], "rare": ["f1"]}, frame, target_frames(inst),
+                           n_boot=20, capture="rare_form")
+    assert (boot["normal"] == 0).all() and boot["rare"].max() == 1
