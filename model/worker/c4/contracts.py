@@ -74,6 +74,21 @@ LIDAR_SELECTED = dict(
     method="string", seed="int32", rank="int32", sample_token="string", scene_token="string",
     s="float32", max_sim="float32", mmr_util="float32", reason="string", budget_B="int32")
 
+QUALITY_CV = dict(  # planning/11 · 01-CONTRACTS §2 · c4.context.quality_cv
+    sample_token="string", cam="string", img_ok="bool", luma_mean="float32", v_mean="float32",
+    v_p5="float32", v_p95="float32", sat_frac="float32", blob_max_frac="float32",
+    blob_count="int16", tile_range="float32", veil="float32", noise_sigma="float32",
+    lap_var_raw="float32", lap_var_dn="float32", sharp_ratio="float32")
+
+GT_RHCIO_FRAME = dict(  # planning/10 01-CONTRACTS §1 · CHỈ c4.rare.gt_rhcio ghi, CHỈ c4.rare.eval đọc
+    sample_token="string", scene_token="string", split="string", r1_class="bool", r2_combo="bool",
+    r3_behavior="bool", i_conflict="bool", h_hard="bool", c_night="bool", c_rain="bool",
+    unknown="bool", is_target="bool", target_instances="string", n_vru_visible="int32")
+
+GT_RHCIO_INSTANCE = dict(
+    instance_token="string", category="string", vru_group="string", axes="string",
+    n_frames_visible="int32", frames="string")
+
 SPEC = dict(  # tên -> (schema, khóa chính)
     features_cache=(FEATURES_CACHE, ["sample_token", "cam"]),
     frame_scores=(FRAME_SCORES, ["sample_token"]),
@@ -86,9 +101,12 @@ SPEC = dict(  # tên -> (schema, khóa chính)
     lidar_index=(LIDAR_INDEX, ["sample_token"]),
     lidar_filter=(LIDAR_FILTER, ["sample_token"]),
     gt_rare_lidar=(GT_RARE_LIDAR, ["sample_token"]),
+    gt_rhcio_frame=(GT_RHCIO_FRAME, ["sample_token"]),
+    gt_rhcio_instance=(GT_RHCIO_INSTANCE, ["instance_token"]),
     t1_signals=(T1_SIGNALS, ["sample_token"]),
     lidar_scores=(LIDAR_SCORES, ["sample_token"]),
-    lidar_selected=(LIDAR_SELECTED, ["method", "seed", "sample_token"]))
+    lidar_selected=(LIDAR_SELECTED, ["method", "seed", "sample_token"]),
+    quality_cv=(QUALITY_CV, ["sample_token", "cam"]))
 
 
 class ContractError(Exception):

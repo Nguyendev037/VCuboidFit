@@ -1,0 +1,10 @@
+# Định nghĩa "hiếm" v2.4 (planning/10 SPEC-P01 §3). Đổi định nghĩa = file mới rare_def_v25.yaml, KHÔNG sửa file này.
+version: rare_v24
+alpha: 0.10               # ngưỡng = phân vị (1 - alpha) của surprisal trên V, so sánh strict ">"
+bins: per_class_quartiles # cạnh bin dist/pts = tứ phân vị theo từng lớp, fit trên V
+corridor: {x_max: 20.0, y_abs: 4.0}   # trục I: hành lang trước xe (hệ ego, m)
+v_min: 0.5                # trục I: VRU di chuyển ≥ 0,5 m/s
+min_pts: 1                # VRU phải có ≥ 1 điểm LiDAR mới tính
+hard: {far_m: 30.0, few_pts: 10}      # trục H (chỉ báo cáo)
+base_rate_cap: 0.10
+min_support_scenes: 3
