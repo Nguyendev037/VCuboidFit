@@ -80,6 +80,14 @@ QUALITY_CV = dict(  # planning/11 · 01-CONTRACTS §2 · c4.context.quality_cv
     blob_count="int16", tile_range="float32", veil="float32", noise_sigma="float32",
     lap_var_raw="float32", lap_var_dn="float32", sharp_ratio="float32")
 
+CONTEXT_FRAME = dict(  # planning/11 · 01-CONTRACTS §3 · c4.context.fuse. "Float32" (nullable) cho sun_elev_deg:
+    # validate() chỉ kiểm NaN ở cột "float*"/"int*" ⇒ null hợp lệ khi không biết vị trí log.
+    sample_token="string", cam="string", sun_elev_deg="Float32", p_illum="string", p_glare="string",
+    p_lens="string", p_weather="string", tag_illum="string", tag_glare="string", tag_lens="string",
+    tag_weather="string", margin_illum="float32", margin_glare="float32", margin_lens="float32",
+    margin_weather="float32", cv_flags="string", review="bool", review_reasons="string",
+    context_version="string")
+
 GT_RHCIO_FRAME = dict(  # planning/10 01-CONTRACTS §1 · CHỈ c4.rare.gt_rhcio ghi, CHỈ c4.rare.eval đọc
     sample_token="string", scene_token="string", split="string", r1_class="bool", r2_combo="bool",
     r3_behavior="bool", i_conflict="bool", h_hard="bool", c_night="bool", c_rain="bool",
@@ -106,7 +114,8 @@ SPEC = dict(  # tên -> (schema, khóa chính)
     t1_signals=(T1_SIGNALS, ["sample_token"]),
     lidar_scores=(LIDAR_SCORES, ["sample_token"]),
     lidar_selected=(LIDAR_SELECTED, ["method", "seed", "sample_token"]),
-    quality_cv=(QUALITY_CV, ["sample_token", "cam"]))
+    quality_cv=(QUALITY_CV, ["sample_token", "cam"]),
+    context_frame=(CONTEXT_FRAME, ["sample_token", "cam"]))
 
 
 class ContractError(Exception):
