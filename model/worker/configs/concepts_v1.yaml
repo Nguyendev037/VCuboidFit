@@ -1,0 +1,16 @@
+# planning/11 SPEC-P06 §4 · từ vựng khái niệm zero-shot (10/SPEC-P02 §3), CHỈ nhóm R (hiếm) và I (tương tác).
+# Nhóm C (bối cảnh) bỏ: do tầng c4/context lo. Mỗi khái niệm 3 prompt; điểm = max cosine. Đổi file ⇒ sha256 đổi ⇒ cache cũ vô hiệu.
+version: concepts_v1
+concepts:
+  - {id: wheelchair, group: R, prompts: ["a person in a wheelchair on the street", "a wheelchair user crossing the road", "a photo of a wheelchair"]}
+  - {id: stroller, group: R, prompts: ["a baby stroller on the street", "a person pushing a stroller", "a photo of a pram"]}
+  - {id: child, group: R, prompts: ["a small child walking on the street", "a young child near the road", "a photo of a kid on the sidewalk"]}
+  - {id: scooter_rider, group: R, prompts: ["a person riding a kick scooter", "a person on an electric scooter on the road", "a photo of a scooter rider"]}
+  - {id: cyclist_passenger, group: R, prompts: ["a cyclist carrying a passenger", "a bicycle with two people", "a person riding a bike with a child on the back"]}
+  - {id: delivery_rider, group: R, prompts: ["a delivery rider with a large box on the back", "a delivery courier on a motorbike with a box", "a food delivery cyclist with an insulated bag"]}
+  - {id: animal_on_road, group: R, prompts: ["an animal on the road", "a dog walking on the street", "a photo of a cat or a deer on the road"]}
+  - {id: person_lying, group: R, prompts: ["a person lying on the road", "a person lying on the ground", "a photo of a fallen person on the street"]}
+  - {id: police_directing, group: R, prompts: ["a police officer directing traffic", "a traffic officer waving cars", "a person in a reflective vest directing traffic"]}
+  - {id: construction_worker, group: R, prompts: ["a construction worker on the road", "a road worker in a high visibility vest", "a worker standing next to road works"]}
+  - {id: pedestrian_crossing_front, group: I, prompts: ["a pedestrian crossing in front of a car", "a person walking across the road in front of the vehicle", "a photo of a pedestrian stepping onto the road"]}
+  - {id: cyclist_merging, group: I, prompts: ["a cyclist merging into the traffic lane", "a bicycle cutting into the lane", "a photo of a cyclist entering the road from the side"]}

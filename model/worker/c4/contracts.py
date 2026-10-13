@@ -130,6 +130,10 @@ RARE_FRAMES = dict(  # planning/11 SPEC-P05 §7.2
     selected="bool",
     explore="bool")
 
+RARE_OBJ_CAM = dict(  # planning/11 SPEC-P06 §3 · c4.rare.project ghi; bbox đã cắt về ảnh 1600×900, MỘT camera tốt nhất mỗi vật
+    sample_token="string", object_id="string", cam="string",
+    x1="float32", y1="float32", x2="float32", y2="float32", visible_frac="float32")
+
 SPEC = dict(  # tên -> (schema, khóa chính)
     features_cache=(FEATURES_CACHE, ["sample_token", "cam"]),
     frame_scores=(FRAME_SCORES, ["sample_token"]),
@@ -150,7 +154,8 @@ SPEC = dict(  # tên -> (schema, khóa chính)
     quality_cv=(QUALITY_CV, ["sample_token", "cam"]),
     context_frame=(CONTEXT_FRAME, ["sample_token", "cam"]),
     rare_objects=(RARE_OBJECTS, ["sample_token", "object_id"]),
-    rare_frames=(RARE_FRAMES, ["sample_token"]))
+    rare_frames=(RARE_FRAMES, ["sample_token"]),
+    rare_obj_cam=(RARE_OBJ_CAM, ["sample_token", "object_id"]))
 
 
 class ContractError(Exception):

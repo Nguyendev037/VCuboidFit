@@ -24,7 +24,8 @@ def _context_by_frame(context: pd.DataFrame | None) -> dict[str, tuple[str, floa
     for tok, g in context.groupby("sample_token"):
         front = g[g["cam"] == "CAM_FRONT"]
         if len(front):
-            wx = str(front["tag_weather"].iloc[0] or "")
+            v = front["tag_weather"].iloc[0]  # <NA> = tầng context từ chối gán nhãn (biên thấp) => coi như ""
+            wx = "" if pd.isna(v) else str(v)
         else:
             bad = g["tag_weather"].isin(BAD_WEATHER)
             wx = str(g.loc[bad, "tag_weather"].mode().iloc[0]) if bad.sum() * 2 > len(g) else ""
@@ -35,11 +36,12 @@ def _context_by_frame(context: pd.DataFrame | None) -> dict[str, tuple[str, floa
 
 def frame_scores(rare_objects: pd.DataFrame, gate_df: pd.DataFrame, context: pd.DataFrame | None,
                  index: pd.DataFrame, cfg: dict, ref: PredReference | None = None,
-                 rare_cfg: RareDefV24 | None = None) -> pd.DataFrame:
+                 rare_cfg: RareDefV24 | None = None, concept_groups: dict | None = None) -> pd.DataFrame:
     """-> rare_frames (rank/selected/explore = None/False/False; select.py điền sau). Thứ tự dòng = `index`.
 
     `cfg`: w_obj/w_crowd/w_ctx. Không có `ref` => không sinh thẻ R1/R2; không có `rare_cfg` => không sinh R3/H/I.
-    Frame outlier không đóng góp vật; s_frame = hạng phần trăm trên frame gate=valid."""
+    `concept_groups` (id khái niệm -> "R"|"I", chỉ profile multisensor): vật có concept_top thuộc nhóm R thêm thẻ R1, nhóm I
+    thêm thẻ I (cùng luật OR với thẻ LiDAR). Frame outlier không đóng góp vật; s_frame = hạng phần trăm trên frame gate=valid."""
     w = {**DEFAULT_FRAME_W, **{k: cfg[k] for k in DEFAULT_FRAME_W if k in cfg}}
     gates = gate_df.set_index("sample_token")
     ctx = _context_by_frame(context)
@@ -58,7 +60,9 @@ def frame_scores(rare_objects: pd.DataFrame, gate_df: pd.DataFrame, context: pd.
             top = g.loc[g["s_obj"].idxmax()]
             s_obj = float(top["s_obj"])
             ev = {"top_object": str(top["object_id"]), "s_obj_max": round(s_obj, 4), "n_vru": crowd}
-            vis = g[g["pts"] >= rare_cfg.min_pts] if rare_cfg is not None else g
+            vis = g[g["cls_pred"].isin(VRU_ALL)]  # R1/R2 chỉ trên VRU (ref không chứa "other")
+            if rare_cfg is not None:
+                vis = vis[vis["pts"] >= rare_cfg.min_pts]
             if ref is not None and len(vis):
                 u = [surprisal(ref, c, cell) for c, cell in zip(vis["cls_pred"], vis["_cell"])]
                 u1, u2 = [a for a, _ in u], [b for _, b in u]
@@ -78,6 +82,13 @@ def frame_scores(rare_objects: pd.DataFrame, gate_df: pd.DataFrame, context: pd.
                                  & (mover["cy"].abs() <= rare_cfg.corridor_y_abs)]
                 if len(conflict):
                     tags["I"] = f"{conflict['object_id'].iloc[0]} x={float(conflict['cx'].iloc[0]):.1f}"
+        if concept_groups and g is not None and len(g):
+            for oid, cid in zip(g["object_id"], g["concept_top"].fillna("")):
+                grp = concept_groups.get(cid) if cid else None
+                if grp == "R":
+                    tags.setdefault("R1", f"concept {cid} {oid}")
+                elif grp == "I":
+                    tags.setdefault("I", f"concept {cid} {oid}")
         if wx != "" or night:
             tags["C"] = f"weather={wx or '-'} sun_elev={sun}"
         ev["tags_source"] = tags

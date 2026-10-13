@@ -18,14 +18,15 @@ from c4.rare.config import load_rare_def
 from c4.rare.eval import budget
 from c4.rare.frame_score import frame_scores
 from c4.rare.gate import gate_all
-from c4.rare.object_score import fit_pred_reference, score_objects
+from c4.rare.object_score import fit_pred_reference, fuse_semantic, score_objects
 from c4.rare.select import select_rare
+from c4.rare.semantic import CROP_FILES, check_crops, semantic_scores
 
 DEFAULT_SCORING = {
     "w_shape": 0.15, "w_slice": 0.35, "w_vru": 0.30, "w_unc": 0.20,   # SPEC-P05 §5.2
     "w_obj": 0.70, "w_crowd": 0.15, "w_ctx": 0.15,                     # SPEC-P05 §6.1
     "gate_ood_sigma": 3.0, "iou_thr": 0.3, "d_max": 1.5, "v_max": 3.0,
-    "mmr_lambda": 0.7, "quota_m": 3, "min_ref_vru": 50, "slice_vru_only": False,
+    "mmr_lambda": 0.7, "quota_m": 3, "min_ref_vru": 50, "w_sem": 0.20,
 }
 PROFILES = ("lidar_only", "multisensor")
 SPLITS_POOL = ("T", "V", "all")
@@ -53,6 +54,8 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
     job, root = Path(job_dir), Path(data_root)
     sc = {**DEFAULT_SCORING, **(scoring or {})}
     need = [job / "lidar" / n for n in ("index.parquet", "z0.npy", "filter.parquet")]
+    if profile == "multisensor":  # SPEC-P06 §5: thiếu => lỗi, KHÔNG suy biến âm thầm về lidar_only
+        need += [job / "cache" / n for n in ("context_frame.parquet",) + CROP_FILES]
     miss = [p.relative_to(job).as_posix() for p in need if not p.is_file()]
     if miss:
         raise FileNotFoundError(', '.join(miss))
@@ -79,10 +82,18 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
 
     unc = load_signals(job / "t1", index) if has_pp else None
     keep_s = pd.Series(keep, index=index["sample_token"].to_numpy())
-    scored = score_objects(cand, ref, unc, keep_s, sc, slice_vru_only=bool(sc["slice_vru_only"]))
-    ctx_path = job / "cache" / "context_frame.parquet"
-    ctx = read_table(ctx_path, "context_frame") if profile == "multisensor" and ctx_path.is_file() else None
-    frames = frame_scores(scored, gate_df, ctx, index, sc, ref=ref, rare_cfg=rare_cfg)
+    scored = score_objects(cand, ref, unc, keep_s, sc)
+    ctx, groups, sem_info = None, None, None
+    if profile == "multisensor":
+        check_crops(job, cand)  # CropsStale nếu ứng viên đổi sau khi crops
+        sem = semantic_scores(job, index, ref_split)
+        scored = fuse_semantic(scored, sem, float(sc["w_sem"]))
+        ctx = read_table(job / "cache" / "context_frame.parquet", "context_frame")
+        cmeta = json.loads((job / "cache" / "concepts_text.json").read_text(encoding="utf-8"))
+        groups = dict(zip(cmeta["ids"], cmeta["groups"]))
+        sem_info = {"concepts_sha256": cmeta["concepts_sha256"], "n_crops": len(sem),
+                    "n_concept_hit": int((sem["concept_top"] != "").sum())}
+    frames = frame_scores(scored, gate_df, ctx, index, sc, ref=ref, rare_cfg=rare_cfg, concept_groups=groups)
 
     pool_mask = np.ones(len(index), bool) if pool_split == "all" else (split == pool_split)
     elig = (frames["gate"] == "valid").to_numpy() & pool_mask
@@ -100,13 +111,13 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
         "rare_def_hash": rare_sha, "pred_ref_hash": ref.sha256, "freeze_manifest_sha256": None, "seed": 0,
         "budget_frac": budget_frac, "B_resolved": B, "eligible_n": n_elig, "git_sha": _git_sha(),
         "vlm_model_id": None, "pool_split": pool_split, "ref_split": ref_split,
-        "scoring_weights": {k: sc[k] for k in ("w_shape", "w_slice", "w_vru", "w_unc")},
+        "scoring_weights": {k: sc[k] for k in ("w_shape", "w_slice", "w_vru", "w_unc", "w_sem")},
+        "semantic": sem_info,
         "frame_weights": {k: sc[k] for k in ("w_obj", "w_crowd", "w_ctx")},
         "gate_config": {"ood_sigma": sc["gate_ood_sigma"]},
         "tracker_config": {"d_max": sc["d_max"], "v_max": sc["v_max"]},
         "mmr_config": {"lambda": sc["mmr_lambda"], "quota_m": sc["quota_m"]},
-        "scoring_extra": {"iou_thr": sc["iou_thr"], "min_ref_vru": sc["min_ref_vru"],
-                          "slice_vru_only": bool(sc["slice_vru_only"])},
+        "scoring_extra": {"iou_thr": sc["iou_thr"], "min_ref_vru": sc["min_ref_vru"], "ref_vru_only": True},
         "warnings": warnings}
     sid = hashlib.sha1(f"rare_v24|{json.dumps(manifest, sort_keys=True, default=str)}|{_fingerprint(job)}"
                        .encode()).hexdigest()[:12]

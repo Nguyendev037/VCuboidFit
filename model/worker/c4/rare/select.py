@@ -9,7 +9,6 @@ from c4.lidar.select import l2n
 from c4.mining.mmr import mmr_select
 
 TRACK_PENALTY = 0.5
-EXPLORE_MAX_SIM = 0.5
 
 
 def rare_selector(ranking: list[str]):
@@ -70,9 +69,12 @@ def select_rare(rare_frames: pd.DataFrame, rare_objects: pd.DataFrame, z0: np.nd
             order += [(p["i"], p["max_sim"]) for p in rest]
     rank = np.full(len(df), -1, np.int64)
     explore = np.zeros(len(df), bool)
-    for r, (i, ms) in enumerate(order, start=1):
+    # explore (Đ25): frame được chọn nhưng hạng s_frame THUẦN (không phạt track, không MMR) nằm ngoài top-B eligible
+    pure = df["s_frame"].to_numpy(np.float64)
+    pure_top = set(np.flatnonzero(elig)[np.argsort(-pure[elig], kind="mergesort")[:B]])
+    for r, (i, _) in enumerate(order, start=1):
         rank[i] = r
-        explore[i] = (r <= B) and ms > EXPLORE_MAX_SIM
+        explore[i] = (r <= B) and i not in pure_top
     df["rank"] = pd.array([None if r < 0 else int(r) for r in rank], dtype="Int32")
     df["selected"] = (rank > 0) & (rank <= B)
     df["explore"] = explore

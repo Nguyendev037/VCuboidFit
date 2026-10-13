@@ -14,6 +14,7 @@ from c4.lidar.uncertainty import unc_score
 from c4.rare.config import RareDefV24
 
 VRU_PRED = ("pedestrian", "bicycle", "motorcycle")
+VRU_ALL = VRU_PRED + ("vru_unknown",)  # nhóm VRU: duy nhất vào tham chiếu / bin (Đ25, M2.1)
 DEFAULT_WEIGHTS = {"w_shape": 0.15, "w_slice": 0.35, "w_vru": 0.30, "w_unc": 0.20}
 COMPONENTS = (("score_shape", "shape"), ("score_slice", "slice"), ("score_vru", "vru"), ("score_unc", "unc"))
 SIGMA_FLOOR_M = 0.05
@@ -61,15 +62,12 @@ def surprisal(ref: PredReference, cls: str, cell: str | None) -> tuple[float, fl
     return (-math.log(pc) if pc else math.inf), (-math.log(pcell) if pcell else math.inf)
 
 
-def fit_pred_reference(rare_objects_v: pd.DataFrame, rare_cfg: RareDefV24, n_frames: int | None = None,
-                       vru_only: bool = False) -> PredReference:
+def fit_pred_reference(rare_objects_v: pd.DataFrame, rare_cfg: RareDefV24, n_frames: int | None = None) -> PredReference:
     """Fit trên rare_objects của frame V (SPEC-P05 §5.1). bins = tứ phân vị mỗi cls_pred (dist_m, pts).
 
-    `n_frames` = số frame V (kể cả frame không có vật; mặc định = số frame có vật). `vru_only=True` bỏ cls_pred="other"
-    khỏi tham chiếu (chẩn đoán, KHÔNG phải mặc định). Không dùng nhãn."""
-    obj = rare_objects_v[rare_objects_v["pts"] >= rare_cfg.min_pts]
-    if vru_only:
-        obj = obj[obj["cls_pred"] != "other"]
+    CHỈ nhóm VRU (pedestrian|bicycle|motorcycle|vru_unknown); cls_pred="other" không vào tham chiếu (R07 "Đo lại", Đ25).
+    `n_frames` = số frame V (kể cả frame không có vật; mặc định = số frame có vật). Không dùng nhãn."""
+    obj = rare_objects_v[(rare_objects_v["pts"] >= rare_cfg.min_pts) & rare_objects_v["cls_pred"].isin(VRU_ALL)]
     n = int(n_frames) if n_frames is not None else int(rare_objects_v["sample_token"].nunique())
     ref = PredReference(n_frames_v=n, cfg=asdict(rare_cfg))
     total = len(obj)
@@ -96,11 +94,11 @@ def fit_pred_reference(rare_objects_v: pd.DataFrame, rare_cfg: RareDefV24, n_fra
 
 
 def score_objects(rare_objects: pd.DataFrame, ref: PredReference, unc_signals: pd.DataFrame | None,
-                  keep, weights: dict | None = None, slice_vru_only: bool = False) -> pd.DataFrame:
+                  keep, weights: dict | None = None) -> pd.DataFrame:
     """Bản mới của rare_objects với score_*, s_obj, reasons (SPEC-P05 §5.2).
 
     `keep`: pd.Series/dict sample_token -> bool (None = mọi frame keep). `unc_signals`: bảng t1_signals căn theo
-    index (None = Tầng 0 => score_unc = 0). `slice_vru_only`: chẩn đoán, score_slice của "other" = 0."""
+    index (None = Tầng 0 => score_unc = 0). `score_slice` chỉ tính trên nhóm VRU: "other" => 0, không vào bin."""
     w = {**DEFAULT_WEIGHTS, **(weights or {})}
     df = rare_objects.copy()
     n = len(df)
@@ -123,11 +121,10 @@ def score_objects(rare_objects: pd.DataFrame, ref: PredReference, unc_signals: p
     cells = object_cells(df, ref.edges_pred)
     u = np.array([surprisal(ref, c, cell)[1] for c, cell in zip(cls, cells)], np.float64)
     unseen = ~np.isfinite(u)
-    slc = pct_rank(np.where(unseen, 1e6, u), in_keep)
-    slc[unseen & in_keep] = 1.0
-    if slice_vru_only:
-        slc[cls == "other"] = 0.0
-    slc = np.where(in_keep, slc, 0.0).astype(np.float32)
+    is_vru = np.isin(cls, VRU_ALL)
+    slc = pct_rank(np.where(unseen, 1e6, u), in_keep & is_vru)
+    slc[unseen & in_keep & is_vru] = 1.0
+    slc = np.where(in_keep & is_vru, slc, 0.0).astype(np.float32)
     # vru
     vru = np.where(np.isin(cls, VRU_PRED), 1.0, np.where(cls == "vru_unknown", 0.5, 0.0)).astype(np.float32)
     # unc (cấp frame -> gán đều cho vật)
@@ -144,4 +141,27 @@ def score_objects(rare_objects: pd.DataFrame, ref: PredReference, unc_signals: p
     mat = df[[c for c, _ in active]].to_numpy(np.float64)
     top = mat.argmax(1)
     df["reasons"] = [f"{active[j][1]} p{int(round(100 * mat[i, j]))}" for i, j in enumerate(top)]
+    return df
+
+
+def fuse_semantic(scored: pd.DataFrame, sem: pd.DataFrame, w_sem: float = 0.20) -> pd.DataFrame:
+    """Profile multisensor (SPEC-P06 §5): s_obj_ms = (1 - w_sem) * s_obj + w_sem * sem,
+    sem = max(r_sem, 1.0 nếu concept_top != "" else 0); vật không có crop => sem = 0. Điền r_sem/concept_top/concept_score.
+    `sem` = đầu ra `semantic_scores` (khoá sample_token + object_id)."""
+    keys = ["sample_token", "object_id"]
+    df = scored.drop(columns=["r_sem", "concept_top", "concept_score"]).merge(
+        sem[keys + ["r_sem", "concept_top", "concept_score"]], on=keys, how="left", validate="one_to_one")
+    r = df["r_sem"].fillna(0.0).to_numpy(np.float32)
+    top = df["concept_top"].fillna("").astype("string")
+    hit = (top != "").to_numpy(bool)
+    s_sem = np.maximum(r, hit.astype(np.float32))
+    lid = df["s_obj"].to_numpy(np.float32)
+    lead = df[[c for c, _ in COMPONENTS]].to_numpy(np.float64).max(1)
+    df["s_obj"] = np.clip((1.0 - w_sem) * lid + w_sem * s_sem, 0.0, 1.0).astype(np.float32)
+    df["r_sem"] = pd.array(df["r_sem"], dtype="Float32")
+    df["concept_top"] = top.fillna("")
+    df["concept_score"] = pd.array(df["concept_score"], dtype="Float32")
+    take = (s_sem > lead) & (s_sem > 0)
+    df.loc[take, "reasons"] = [f"concept {c}" if h else f"sem p{int(round(100 * v))}"
+                               for c, h, v in zip(top[take], hit[take], s_sem[take])]
     return df
