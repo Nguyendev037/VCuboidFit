@@ -124,6 +124,9 @@ export interface FramesPage {
 
 // ---- Selection ----
 export interface SelectParams {
+  engineVersion?: string | null;
+  profile?: "lidar_only" | "multisensor" | null;
+  strategy?: "balanced" | "vru_priority" | "diversity" | null;
   budget: number;
   pipeline?: Pipeline;
   preset?: Preset;
@@ -194,6 +197,12 @@ export interface FrameSummary {
 }
 
 export interface SelectionResult {
+  engineVersion?: "c4_legacy" | "rare_v24";
+  gateSummary?: { valid: number; suspect: number; outlier: number } | null;
+  tagSummary?: Record<"R1" | "R2" | "R3" | "H" | "C" | "I", number> | null;
+  evaluationAvailable?: boolean;
+  warningCodes?: string[];
+  contextSummary?: { night: number; glare: number; rain: number; review: number } | null;
   selectionId: string;
   params: SelectParams | Record<string, unknown>;
   pipeline?: Pipeline;
@@ -230,7 +239,40 @@ export interface CamDetail {
   score: { nov: number; unc: number; qry: number; s: number };
   qOk: boolean;
 }
+export interface RareObject {
+  sample_token: string;
+  object_id: string;
+  source: "cluster" | "pointpillars" | "merged";
+  cls_pred: string;
+  cx: number; cy: number; cz: number;
+  l: number; w: number; h: number; yaw: number;
+  pts: number; dist_m: number; track_id: string;
+  speed_mps: number | null;
+  score_shape: number; score_slice: number; score_vru: number; score_unc: number;
+  r_sem: number | null;
+  concept_top: string | null;
+  concept_score: number | null;
+  s_obj: number;
+  missed_by_model: boolean;
+  reasons: string;
+}
+export interface FrameContext {
+  perCam: Record<string, {
+    tags: string[];
+    probs: Record<string, Record<string, number>>;
+    cvFlags: string[];
+    review: boolean;
+    reviewReasons: string[];
+  }>;
+  sunElevDeg: number | null;
+}
+export interface ReviewQueue {
+  items: { sampleToken: string; cam: string; reviewReasons: string[] }[];
+}
 export interface FrameDetail extends FrameSummary {
+  objects?: RareObject[];
+  predTags?: string[];
+  context?: FrameContext | null;
   timestamp: number;
   cams: CamDetail[];
   lidar: { url: string; numPoints: number; format?: "f16-xyzi" | string } | null;

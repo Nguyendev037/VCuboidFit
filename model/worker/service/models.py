@@ -112,6 +112,9 @@ class SelectionList(ApiModel):
 
 
 class SelectParamsIn(ApiModel):
+    engine_version: str | None = None
+    profile: Literal["lidar_only", "multisensor"] | None = None
+    strategy: Literal["balanced", "vru_priority", "diversity"] | None = None
     budget: float = Field(0.05, ge=0.01, le=0.10)
     preset: Preset = "balanced"
     diversity: Diversity = "medium"
@@ -196,7 +199,87 @@ class FramesPage(ApiModel):
     budget_b: int
 
 
+class GateSummary(ApiModel):
+    valid: int
+    suspect: int
+    outlier: int
+
+
+class TagSummary(ApiModel):
+    R1: int = Field(alias="R1")
+    R2: int = Field(alias="R2")
+    R3: int = Field(alias="R3")
+    H: int = Field(alias="H")
+    C: int = Field(alias="C")
+    I: int = Field(alias="I")
+
+
+class ContextSummary(ApiModel):
+    night: int
+    glare: int
+    rain: int
+    review: int
+
+
+class ContextCam(ApiModel):
+    tags: list[str]
+    probs: dict[str, dict[str, float]]
+    cv_flags: list[str]
+    review: bool
+    review_reasons: list[str]
+
+
+class FrameContext(ApiModel):
+    per_cam: dict[str, ContextCam]
+    sun_elev_deg: float | None = None
+
+
+class ReviewItem(ApiModel):
+    sample_token: str
+    cam: str
+    review_reasons: list[str]
+
+
+class ReviewQueue(ApiModel):
+    items: list[ReviewItem]
+
+
+class RareObject(BaseModel):
+    """Columns of rare_objects, preserving the table contract's field names."""
+    sample_token: str
+    object_id: str
+    source: Literal["cluster", "pointpillars", "merged"]
+    cls_pred: str
+    cx: float
+    cy: float
+    cz: float
+    l: float
+    w: float
+    h: float
+    yaw: float
+    pts: int
+    dist_m: float
+    track_id: str
+    speed_mps: float | None
+    score_shape: float
+    score_slice: float
+    score_vru: float
+    score_unc: float
+    r_sem: float | None
+    concept_top: str | None
+    concept_score: float | None
+    s_obj: float
+    missed_by_model: bool
+    reasons: str
+
+
 class SelectionResult(ApiModel):
+    engine_version: Literal["c4_legacy", "rare_v24"] = "c4_legacy"
+    gate_summary: GateSummary | None = None
+    tag_summary: TagSummary | None = None
+    evaluation_available: bool = False
+    warning_codes: list[str] = Field(default_factory=list)
+    context_summary: ContextSummary | None = None
     selection_id: str
     params: dict
     pool_size: int
@@ -250,6 +333,9 @@ class CamPose(ApiModel):
 
 
 class FrameDetail(FrameSummary):
+    objects: list[RareObject] = Field(default_factory=list)
+    pred_tags: list[str] = Field(default_factory=list)
+    context: FrameContext | None = None
     timestamp: int
     cams: list[CamDetail] = Field(default_factory=list)
     lidar: LidarRef | None = None

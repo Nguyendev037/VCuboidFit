@@ -6,13 +6,12 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 
-from c4.config import load_config
 from c4.contracts import ContractError
-from c4.lidar.pipeline import machine_schema, run_selection_lidar
+from c4.lidar.pipeline import machine_schema
 from c4.lidar.pipeline import schema as lidar_params_schema
-from c4.pipeline import run_selection
+from service import engines
 from service.errors import ApiError
 from service.models import (
     FrameSummary,
@@ -20,6 +19,8 @@ from service.models import (
     SelectionList,
     SelectionResult,
     SelectParamsIn,
+    ReviewQueue,
+    ReviewItem,
 )
 from service.settings import Settings
 
@@ -108,7 +109,11 @@ def to_selection_result(job_id: str, job_dir: Path, result: dict) -> SelectionRe
         budget_b=result["budgetB"], warnings=result["warnings"], metrics=result["metrics"],
         preview=[frame_summary(job_id, job_dir, p, names, pipeline)
                  for p in result["preview"]],
-        pipeline=pipeline, tier_available=result.get("tierAvailable", []))
+        pipeline=pipeline, tier_available=result.get("tierAvailable", []),
+        engine_version=result.get("engineVersion", "c4_legacy"),
+        gate_summary=result.get("gateSummary"), tag_summary=result.get("tagSummary"),
+        evaluation_available=result.get("evaluationAvailable", result.get("metrics") is not None),
+        warning_codes=result.get("warningCodes", []), context_summary=result.get("contextSummary"))
 
 
 def load_selection(settings: Settings, job_id: str, sid: str) -> dict:
@@ -154,14 +159,10 @@ def select(job_id: str, params: SelectParamsIn, request: Request):
     st = app.state.queue.status(job_id)  # 404 nếu job không có
     if st.state != "done" and not t1_only_running(st):
         raise ApiError(409, "busy", "Job chưa xong, hãy đợi hoàn tất rồi chọn lại.")
-    job_dir = app.state.settings.jobs / job_id
+    context_token = engines.APP.set(app)
     try:
         with app.state.job_locks.of(job_id):
-            if st.pipeline == "lidar":
-                result = run_selection_lidar(job_dir, params.to_lidar_params())
-            else:
-                result = run_selection(job_dir, params.to_select_params(), cfg=load_config(),
-                                       encoder=LazyEncoder(app.state.encoders))
+            result = engines.route(job_id, params)
     except ValueError as e:
         if st.pipeline == "lidar":
             # 01-CONTRACTS §5: thiếu t1/ khi tier=1 ⇒ tier_unavailable; tham số sai ⇒ bad_params
@@ -172,7 +173,25 @@ def select(job_id: str, params: SelectParamsIn, request: Request):
         raise ApiError(500, "missing_input", f"Thiếu file đầu vào của job: {e}") from e
     except ContractError as e:
         raise ApiError(500, "contract", f"Dữ liệu job vi phạm contract: {e}") from e
-    return to_selection_result(job_id, job_dir, result)
+    finally:
+        engines.APP.reset(context_token)
+    return result
+
+
+@router.get("/jobs/{job_id}/review-queue", response_model=ReviewQueue,
+            response_model_by_alias=True)
+def review_queue(job_id: str, request: Request, kind: str = "context",
+                 offset: int = Query(0, ge=0), limit: int = Query(200, ge=1, le=200)):
+    request.app.state.queue.status(job_id)
+    if kind != "context":
+        raise ApiError(422, "bad_params", "Loại hàng đợi không được hỗ trợ.")
+    ctx = engines.context_table(request.app.state.settings.jobs / job_id)
+    if ctx is None:
+        return ReviewQueue(items=[])
+    rows = ctx[ctx["review"]].sort_values(["sample_token", "cam"]).iloc[offset:offset + limit]
+    return ReviewQueue(items=[ReviewItem(sample_token=r.sample_token, cam=r.cam,
+                                       review_reasons=engines.split_tags(r.review_reasons))
+                              for r in rows.itertuples()])
 
 
 @router.get("/params-schema")

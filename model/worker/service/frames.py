@@ -27,6 +27,7 @@ from service.models import (
     LidarRef,
 )
 from service.selection import LazyEncoder, bev_url, load_selection, scene_names, thumb_url
+from service.engines import frame_context, split_tags
 
 router = APIRouter()
 _CACHE: dict[tuple[str, str], "SelectionData"] = {}
@@ -249,11 +250,21 @@ def frame_detail(job_id: str, token: str, request: Request, sid: str):
                          intrinsic=[float(x) for x in p.intrinsic])
                  for p in poses.itertuples() if p.cam in {c.cam for c in cams}]
     cam_poses.sort(key=lambda p: CAMS.index(p.cam))
+    objects, pred_tags = [], []
+    if data.result.get("engineVersion") == "rare_v24":
+        artifact = job_dir / "engines" / "rare_v24" / data.result["selectionId"]
+        obj = read_table(artifact / "rare_objects.parquet", "rare_objects")
+        obj = obj[obj["sample_token"] == token]
+        objects = obj.astype(object).where(obj.notna(), None).to_dict("records")
+        rare = read_table(artifact / "rare_frames.parquet", "rare_frames")
+        row = rare[rare["sample_token"] == token]
+        pred_tags = split_tags(row["pred_tags"].iloc[0]) if len(row) else []
     return FrameDetail(
         **summary.model_dump(), timestamp=data.timestamp(token), cams=cams, lidar=lidar,
         boxes3d=[Box3D(category=b.category, corners=[float(x) for x in b.corners])
                  for b in b3.itertuples()],
-        cam_poses=cam_poses)
+        cam_poses=cam_poses, objects=objects, pred_tags=pred_tags,
+        context=frame_context(job_dir, token))
 
 
 @router.get("/jobs/{job_id}/selections/{sid}/analysis", response_model=Analysis,

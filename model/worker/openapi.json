@@ -1,0 +1,3223 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "VCuboidFIT worker",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/datasets": {
+   "post": {
+    "summary": "Post Dataset",
+    "operationId": "post_dataset_datasets_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreateDatasetIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DatasetReport"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/datasets/progress/{upload_id}": {
+   "get": {
+    "summary": "Get Progress",
+    "description": "Tiến độ xét tệp (SPEC-P05); 404 khi chưa có `progress.json` hoặc id không hợp lệ.",
+    "operationId": "get_progress_datasets_progress__upload_id__get",
+    "parameters": [
+     {
+      "name": "upload_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Upload Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/datasets/{dataset_id}": {
+   "get": {
+    "summary": "Get Dataset",
+    "operationId": "get_dataset_datasets__dataset_id__get",
+    "parameters": [
+     {
+      "name": "dataset_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Dataset Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DatasetReport"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs": {
+   "get": {
+    "summary": "Get Jobs",
+    "operationId": "get_jobs_jobs_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobList"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "summary": "Post Job",
+    "operationId": "post_job_jobs_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CreateJobIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Delete Jobs",
+    "operationId": "delete_jobs_jobs_delete",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}": {
+   "get": {
+    "summary": "Get Job",
+    "operationId": "get_job_jobs__job_id__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobStatus"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Delete Job",
+    "operationId": "delete_job_jobs__job_id__delete",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/t1/run": {
+   "post": {
+    "summary": "Run Job T1",
+    "operationId": "run_job_t1_jobs__job_id__t1_run_post",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/cancel": {
+   "post": {
+    "summary": "Cancel Job",
+    "operationId": "cancel_job_jobs__job_id__cancel_post",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/JobStatus"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/select": {
+   "post": {
+    "summary": "Select",
+    "operationId": "select_jobs__job_id__select_post",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SelectParamsIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SelectionResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/review-queue": {
+   "get": {
+    "summary": "Review Queue",
+    "operationId": "review_queue_jobs__job_id__review_queue_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "kind",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "default": "context",
+       "title": "Kind"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Offset"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 200,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ReviewQueue"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/params-schema": {
+   "get": {
+    "summary": "Machine Params Schema",
+    "description": "Lược đồ trước khi có job: web hiển thị đúng Tầng 1 của máy ngay từ đầu (plan 09 D1).",
+    "operationId": "machine_params_schema_params_schema_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/params-schema": {
+   "get": {
+    "summary": "Params Schema",
+    "description": "01-CONTRACTS §4: lược đồ cho panel ẩn của web; web KHÔNG hard-code miền giá trị.",
+    "operationId": "params_schema_jobs__job_id__params_schema_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/selections/{sid}": {
+   "get": {
+    "summary": "Get Selection",
+    "operationId": "get_selection_jobs__job_id__selections__sid__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "sid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SelectionResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/selections": {
+   "get": {
+    "summary": "Get Selections",
+    "operationId": "get_selections_jobs__job_id__selections_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SelectionList"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/selections/{sid}/frames": {
+   "get": {
+    "summary": "List Frames",
+    "operationId": "list_frames_jobs__job_id__selections__sid__frames_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "sid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sid"
+      }
+     },
+     {
+      "name": "budget",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Budget"
+      }
+     },
+     {
+      "name": "sort",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "rank",
+        "score"
+       ],
+       "type": "string",
+       "default": "rank",
+       "title": "Sort"
+      }
+     },
+     {
+      "name": "tag",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Tag"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "pageSize",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 60,
+       "title": "Pagesize"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FramesPage"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/frames/{token}": {
+   "get": {
+    "summary": "Frame Detail",
+    "operationId": "frame_detail_jobs__job_id__frames__token__get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     },
+     {
+      "name": "sid",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FrameDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/selections/{sid}/analysis": {
+   "get": {
+    "summary": "Analysis",
+    "operationId": "analysis_jobs__job_id__selections__sid__analysis_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "sid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Analysis"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/selections/{sid}/export.csv": {
+   "get": {
+    "summary": "Export Csv",
+    "operationId": "export_csv_jobs__job_id__selections__sid__export_csv_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     },
+     {
+      "name": "sid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Sid"
+      }
+     },
+     {
+      "name": "budget",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Budget"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/jobs/{job_id}/t1-remote": {
+   "post": {
+    "summary": "Create Task",
+    "operationId": "create_task_jobs__job_id__t1_remote_post",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "summary": "Get Task",
+    "operationId": "get_task_jobs__job_id__t1_remote_get",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Cancel Task",
+    "operationId": "cancel_task_jobs__job_id__t1_remote_delete",
+    "parameters": [
+     {
+      "name": "job_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Job Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/remote/t1/next": {
+   "get": {
+    "summary": "Next Task",
+    "operationId": "next_task_remote_t1_next_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/remote/t1/{task_id}/seed": {
+   "get": {
+    "summary": "Seed",
+    "operationId": "seed_remote_t1__task_id__seed_get",
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/remote/t1/{task_id}/bundle": {
+   "get": {
+    "summary": "Bundle",
+    "operationId": "bundle_remote_t1__task_id__bundle_get",
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/remote/t1/{task_id}/heartbeat": {
+   "post": {
+    "summary": "Heartbeat",
+    "operationId": "heartbeat_remote_t1__task_id__heartbeat_post",
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/remote/t1/{task_id}/fail": {
+   "post": {
+    "summary": "Fail",
+    "operationId": "fail_remote_t1__task_id__fail_post",
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/remote/t1/{task_id}/result": {
+   "post": {
+    "summary": "Result",
+    "operationId": "result_remote_t1__task_id__result_post",
+    "parameters": [
+     {
+      "name": "task_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Task Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/health": {
+   "get": {
+    "summary": "Health",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "Analysis": {
+    "properties": {
+     "pool": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Pool"
+     },
+     "selected": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Selected"
+     },
+     "histogram": {
+      "$ref": "#/components/schemas/Histogram"
+     }
+    },
+    "type": "object",
+    "required": [
+     "pool",
+     "selected",
+     "histogram"
+    ],
+    "title": "Analysis"
+   },
+   "Box2D": {
+    "properties": {
+     "category": {
+      "type": "string",
+      "title": "Category"
+     },
+     "corners": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "maxItems": 16,
+      "minItems": 16,
+      "title": "Corners"
+     },
+     "visibility": {
+      "type": "string",
+      "title": "Visibility",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "category",
+     "corners"
+    ],
+    "title": "Box2D"
+   },
+   "Box3D": {
+    "properties": {
+     "category": {
+      "type": "string",
+      "title": "Category"
+     },
+     "corners": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "maxItems": 24,
+      "minItems": 24,
+      "title": "Corners"
+     }
+    },
+    "type": "object",
+    "required": [
+     "category",
+     "corners"
+    ],
+    "title": "Box3D"
+   },
+   "CamDetail": {
+    "properties": {
+     "cam": {
+      "type": "string",
+      "enum": [
+       "CAM_FRONT",
+       "CAM_FRONT_LEFT",
+       "CAM_FRONT_RIGHT",
+       "CAM_BACK",
+       "CAM_BACK_LEFT",
+       "CAM_BACK_RIGHT"
+      ],
+      "title": "Cam"
+     },
+     "imageUrl": {
+      "type": "string",
+      "title": "Imageurl"
+     },
+     "width": {
+      "type": "integer",
+      "title": "Width",
+      "default": 1600
+     },
+     "height": {
+      "type": "integer",
+      "title": "Height",
+      "default": 900
+     },
+     "boxes": {
+      "items": {
+       "$ref": "#/components/schemas/Box2D"
+      },
+      "type": "array",
+      "title": "Boxes"
+     },
+     "score": {
+      "$ref": "#/components/schemas/CamScore"
+     },
+     "qOk": {
+      "type": "boolean",
+      "title": "Qok"
+     }
+    },
+    "type": "object",
+    "required": [
+     "cam",
+     "imageUrl",
+     "score",
+     "qOk"
+    ],
+    "title": "CamDetail"
+   },
+   "CamPose": {
+    "properties": {
+     "cam": {
+      "type": "string",
+      "enum": [
+       "CAM_FRONT",
+       "CAM_FRONT_LEFT",
+       "CAM_FRONT_RIGHT",
+       "CAM_BACK",
+       "CAM_BACK_LEFT",
+       "CAM_BACK_RIGHT"
+      ],
+      "title": "Cam"
+     },
+     "translation": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Translation"
+     },
+     "rotation": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Rotation"
+     },
+     "intrinsic": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Intrinsic"
+     }
+    },
+    "type": "object",
+    "required": [
+     "cam",
+     "translation",
+     "rotation",
+     "intrinsic"
+    ],
+    "title": "CamPose"
+   },
+   "CamScore": {
+    "properties": {
+     "nov": {
+      "type": "number",
+      "title": "Nov"
+     },
+     "unc": {
+      "type": "number",
+      "title": "Unc"
+     },
+     "qry": {
+      "type": "number",
+      "title": "Qry"
+     },
+     "s": {
+      "type": "number",
+      "title": "S"
+     }
+    },
+    "type": "object",
+    "required": [
+     "nov",
+     "unc",
+     "qry",
+     "s"
+    ],
+    "title": "CamScore"
+   },
+   "Ci95": {
+    "properties": {
+     "low": {
+      "type": "number",
+      "title": "Low"
+     },
+     "high": {
+      "type": "number",
+      "title": "High"
+     }
+    },
+    "type": "object",
+    "required": [
+     "low",
+     "high"
+    ],
+    "title": "Ci95"
+   },
+   "ContextCam": {
+    "properties": {
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tags"
+     },
+     "probs": {
+      "additionalProperties": {
+       "additionalProperties": {
+        "type": "number"
+       },
+       "type": "object"
+      },
+      "type": "object",
+      "title": "Probs"
+     },
+     "cvFlags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Cvflags"
+     },
+     "review": {
+      "type": "boolean",
+      "title": "Review"
+     },
+     "reviewReasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Reviewreasons"
+     }
+    },
+    "type": "object",
+    "required": [
+     "tags",
+     "probs",
+     "cvFlags",
+     "review",
+     "reviewReasons"
+    ],
+    "title": "ContextCam"
+   },
+   "ContextSummary": {
+    "properties": {
+     "night": {
+      "type": "integer",
+      "title": "Night"
+     },
+     "glare": {
+      "type": "integer",
+      "title": "Glare"
+     },
+     "rain": {
+      "type": "integer",
+      "title": "Rain"
+     },
+     "review": {
+      "type": "integer",
+      "title": "Review"
+     }
+    },
+    "type": "object",
+    "required": [
+     "night",
+     "glare",
+     "rain",
+     "review"
+    ],
+    "title": "ContextSummary"
+   },
+   "CreateDatasetIn": {
+    "properties": {
+     "uploadId": {
+      "type": "string",
+      "title": "Uploadid"
+     }
+    },
+    "type": "object",
+    "required": [
+     "uploadId"
+    ],
+    "title": "CreateDatasetIn"
+   },
+   "CreateJobIn": {
+    "properties": {
+     "datasetId": {
+      "type": "string",
+      "title": "Datasetid"
+     },
+     "pipeline": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "lidar",
+         "camera"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pipeline"
+     }
+    },
+    "type": "object",
+    "required": [
+     "datasetId"
+    ],
+    "title": "CreateJobIn"
+   },
+   "DatasetReport": {
+    "properties": {
+     "datasetId": {
+      "type": "string",
+      "title": "Datasetid"
+     },
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "scenes": {
+      "type": "integer",
+      "title": "Scenes",
+      "default": 0
+     },
+     "frames": {
+      "type": "integer",
+      "title": "Frames",
+      "default": 0
+     },
+     "imagesByCam": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Imagesbycam"
+     },
+     "hasLidar": {
+      "type": "boolean",
+      "title": "Haslidar",
+      "default": false
+     },
+     "hasAnnotations": {
+      "type": "boolean",
+      "title": "Hasannotations",
+      "default": false
+     },
+     "version": {
+      "type": "string",
+      "title": "Version",
+      "default": ""
+     },
+     "errors": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Errors"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     }
+    },
+    "type": "object",
+    "required": [
+     "datasetId",
+     "ok"
+    ],
+    "title": "DatasetReport"
+   },
+   "FrameContext": {
+    "properties": {
+     "perCam": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/ContextCam"
+      },
+      "type": "object",
+      "title": "Percam"
+     },
+     "sunElevDeg": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sunelevdeg"
+     }
+    },
+    "type": "object",
+    "required": [
+     "perCam"
+    ],
+    "title": "FrameContext"
+   },
+   "FrameDetail": {
+    "properties": {
+     "rank": {
+      "type": "integer",
+      "title": "Rank"
+     },
+     "sampleToken": {
+      "type": "string",
+      "title": "Sampletoken"
+     },
+     "sceneName": {
+      "type": "string",
+      "title": "Scenename"
+     },
+     "frameIdx": {
+      "type": "integer",
+      "title": "Frameidx"
+     },
+     "bestCam": {
+      "type": "string",
+      "title": "Bestcam"
+     },
+     "thumbUrl": {
+      "type": "string",
+      "title": "Thumburl"
+     },
+     "S": {
+      "type": "number",
+      "title": "S"
+     },
+     "rNov": {
+      "type": "number",
+      "title": "Rnov"
+     },
+     "rUnc": {
+      "type": "number",
+      "title": "Runc"
+     },
+     "rQry": {
+      "type": "number",
+      "title": "Rqry"
+     },
+     "qryBest": {
+      "type": "string",
+      "title": "Qrybest",
+      "default": ""
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason",
+      "default": ""
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tags"
+     },
+     "camsAvailable": {
+      "items": {
+       "type": "string",
+       "enum": [
+        "CAM_FRONT",
+        "CAM_FRONT_LEFT",
+        "CAM_FRONT_RIGHT",
+        "CAM_BACK",
+        "CAM_BACK_LEFT",
+        "CAM_BACK_RIGHT"
+       ]
+      },
+      "type": "array",
+      "title": "Camsavailable"
+     },
+     "rRar": {
+      "type": "number",
+      "title": "Rrar",
+      "default": 0.0
+     },
+     "bevUrl": {
+      "type": "string",
+      "title": "Bevurl",
+      "default": ""
+     },
+     "objects": {
+      "items": {
+       "$ref": "#/components/schemas/RareObject"
+      },
+      "type": "array",
+      "title": "Objects"
+     },
+     "predTags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Predtags"
+     },
+     "context": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/FrameContext"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "timestamp": {
+      "type": "integer",
+      "title": "Timestamp"
+     },
+     "cams": {
+      "items": {
+       "$ref": "#/components/schemas/CamDetail"
+      },
+      "type": "array",
+      "title": "Cams"
+     },
+     "lidar": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/LidarRef"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "boxes3d": {
+      "items": {
+       "$ref": "#/components/schemas/Box3D"
+      },
+      "type": "array",
+      "title": "Boxes3D"
+     },
+     "camPoses": {
+      "items": {
+       "$ref": "#/components/schemas/CamPose"
+      },
+      "type": "array",
+      "title": "Camposes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rank",
+     "sampleToken",
+     "sceneName",
+     "frameIdx",
+     "bestCam",
+     "thumbUrl",
+     "S",
+     "rNov",
+     "rUnc",
+     "rQry",
+     "timestamp"
+    ],
+    "title": "FrameDetail"
+   },
+   "FrameSummary": {
+    "properties": {
+     "rank": {
+      "type": "integer",
+      "title": "Rank"
+     },
+     "sampleToken": {
+      "type": "string",
+      "title": "Sampletoken"
+     },
+     "sceneName": {
+      "type": "string",
+      "title": "Scenename"
+     },
+     "frameIdx": {
+      "type": "integer",
+      "title": "Frameidx"
+     },
+     "bestCam": {
+      "type": "string",
+      "title": "Bestcam"
+     },
+     "thumbUrl": {
+      "type": "string",
+      "title": "Thumburl"
+     },
+     "S": {
+      "type": "number",
+      "title": "S"
+     },
+     "rNov": {
+      "type": "number",
+      "title": "Rnov"
+     },
+     "rUnc": {
+      "type": "number",
+      "title": "Runc"
+     },
+     "rQry": {
+      "type": "number",
+      "title": "Rqry"
+     },
+     "qryBest": {
+      "type": "string",
+      "title": "Qrybest",
+      "default": ""
+     },
+     "reason": {
+      "type": "string",
+      "title": "Reason",
+      "default": ""
+     },
+     "tags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Tags"
+     },
+     "camsAvailable": {
+      "items": {
+       "type": "string",
+       "enum": [
+        "CAM_FRONT",
+        "CAM_FRONT_LEFT",
+        "CAM_FRONT_RIGHT",
+        "CAM_BACK",
+        "CAM_BACK_LEFT",
+        "CAM_BACK_RIGHT"
+       ]
+      },
+      "type": "array",
+      "title": "Camsavailable"
+     },
+     "rRar": {
+      "type": "number",
+      "title": "Rrar",
+      "default": 0.0
+     },
+     "bevUrl": {
+      "type": "string",
+      "title": "Bevurl",
+      "default": ""
+     }
+    },
+    "type": "object",
+    "required": [
+     "rank",
+     "sampleToken",
+     "sceneName",
+     "frameIdx",
+     "bestCam",
+     "thumbUrl",
+     "S",
+     "rNov",
+     "rUnc",
+     "rQry"
+    ],
+    "title": "FrameSummary"
+   },
+   "FramesPage": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/FrameSummary"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "budgetB": {
+      "type": "integer",
+      "title": "Budgetb"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "total",
+     "budgetB"
+    ],
+    "title": "FramesPage"
+   },
+   "GateSummary": {
+    "properties": {
+     "valid": {
+      "type": "integer",
+      "title": "Valid"
+     },
+     "suspect": {
+      "type": "integer",
+      "title": "Suspect"
+     },
+     "outlier": {
+      "type": "integer",
+      "title": "Outlier"
+     }
+    },
+    "type": "object",
+    "required": [
+     "valid",
+     "suspect",
+     "outlier"
+    ],
+    "title": "GateSummary"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "Histogram": {
+    "properties": {
+     "bins": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Bins"
+     },
+     "counts": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Counts"
+     },
+     "budgetThreshold": {
+      "type": "number",
+      "title": "Budgetthreshold"
+     }
+    },
+    "type": "object",
+    "required": [
+     "bins",
+     "counts",
+     "budgetThreshold"
+    ],
+    "title": "Histogram"
+   },
+   "JobError": {
+    "properties": {
+     "code": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Code"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "message"
+    ],
+    "title": "JobError"
+   },
+   "JobList": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/JobSummary"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items"
+    ],
+    "title": "JobList"
+   },
+   "JobStatus": {
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "title": "Jobid"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "queued",
+       "running",
+       "done",
+       "failed",
+       "cancelled"
+      ],
+      "title": "State"
+     },
+     "stage": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "index",
+         "dino",
+         "det",
+         "clip",
+         "merge",
+         "lidar_index",
+         "t0",
+         "t1"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Stage"
+     },
+     "pipeline": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "lidar",
+         "camera"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pipeline"
+     },
+     "done": {
+      "type": "integer",
+      "title": "Done",
+      "default": 0
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total",
+      "default": 0
+     },
+     "etaSec": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Etasec"
+     },
+     "stages": {
+      "items": {
+       "$ref": "#/components/schemas/StageStatus"
+      },
+      "type": "array",
+      "title": "Stages"
+     },
+     "error": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/JobError"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "tier0": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Tier0Info"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "tier1": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Tier1Info"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "jobId",
+     "state"
+    ],
+    "title": "JobStatus"
+   },
+   "JobSummary": {
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "title": "Jobid"
+     },
+     "datasetId": {
+      "type": "string",
+      "title": "Datasetid"
+     },
+     "pipeline": {
+      "type": "string",
+      "enum": [
+       "lidar",
+       "camera"
+      ],
+      "title": "Pipeline",
+      "default": "camera"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "queued",
+       "running",
+       "done",
+       "failed",
+       "cancelled"
+      ],
+      "title": "State"
+     },
+     "createdAt": {
+      "type": "string",
+      "title": "Createdat",
+      "default": ""
+     },
+     "finishedAt": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Finishedat"
+     },
+     "scenes": {
+      "type": "integer",
+      "title": "Scenes",
+      "default": 0
+     },
+     "frames": {
+      "type": "integer",
+      "title": "Frames",
+      "default": 0
+     },
+     "version": {
+      "type": "string",
+      "title": "Version",
+      "default": ""
+     },
+     "lastSelectionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lastselectionid"
+     }
+    },
+    "type": "object",
+    "required": [
+     "jobId",
+     "datasetId",
+     "state"
+    ],
+    "title": "JobSummary"
+   },
+   "LidarRef": {
+    "properties": {
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "numPoints": {
+      "type": "integer",
+      "title": "Numpoints"
+     },
+     "format": {
+      "type": "string",
+      "const": "f16-xyzi",
+      "title": "Format",
+      "default": "f16-xyzi"
+     }
+    },
+    "type": "object",
+    "required": [
+     "url",
+     "numPoints"
+    ],
+    "title": "LidarRef"
+   },
+   "Metrics": {
+    "properties": {
+     "recall": {
+      "type": "number",
+      "title": "Recall"
+     },
+     "uplift": {
+      "type": "number",
+      "title": "Uplift"
+     },
+     "precision": {
+      "type": "number",
+      "title": "Precision"
+     },
+     "coverage": {
+      "type": "number",
+      "title": "Coverage"
+     },
+     "coverageGain": {
+      "type": "number",
+      "title": "Coveragegain"
+     },
+     "redundancy": {
+      "type": "number",
+      "title": "Redundancy"
+     },
+     "byGroup": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Bygroup"
+     },
+     "nRecall": {
+      "type": "number",
+      "title": "Nrecall",
+      "default": 0.0
+     },
+     "sceneRecall": {
+      "type": "number",
+      "title": "Scenerecall",
+      "default": 0.0
+     },
+     "nBoxes": {
+      "type": "number",
+      "title": "Nboxes",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "recall",
+     "uplift",
+     "precision",
+     "coverage",
+     "coverageGain",
+     "redundancy"
+    ],
+    "title": "Metrics"
+   },
+   "MetricsBlock": {
+    "properties": {
+     "hybrid": {
+      "$ref": "#/components/schemas/Metrics"
+     },
+     "random": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RandomMetrics"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "ablation": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/Metrics"
+      },
+      "type": "object",
+      "title": "Ablation"
+     },
+     "ci95": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Ci95"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "hybrid"
+    ],
+    "title": "MetricsBlock"
+   },
+   "RandomMetrics": {
+    "properties": {
+     "mean": {
+      "$ref": "#/components/schemas/Metrics"
+     },
+     "std": {
+      "$ref": "#/components/schemas/Metrics"
+     }
+    },
+    "type": "object",
+    "required": [
+     "mean",
+     "std"
+    ],
+    "title": "RandomMetrics"
+   },
+   "RareObject": {
+    "properties": {
+     "sample_token": {
+      "type": "string",
+      "title": "Sample Token"
+     },
+     "object_id": {
+      "type": "string",
+      "title": "Object Id"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "cluster",
+       "pointpillars",
+       "merged"
+      ],
+      "title": "Source"
+     },
+     "cls_pred": {
+      "type": "string",
+      "title": "Cls Pred"
+     },
+     "cx": {
+      "type": "number",
+      "title": "Cx"
+     },
+     "cy": {
+      "type": "number",
+      "title": "Cy"
+     },
+     "cz": {
+      "type": "number",
+      "title": "Cz"
+     },
+     "l": {
+      "type": "number",
+      "title": "L"
+     },
+     "w": {
+      "type": "number",
+      "title": "W"
+     },
+     "h": {
+      "type": "number",
+      "title": "H"
+     },
+     "yaw": {
+      "type": "number",
+      "title": "Yaw"
+     },
+     "pts": {
+      "type": "integer",
+      "title": "Pts"
+     },
+     "dist_m": {
+      "type": "number",
+      "title": "Dist M"
+     },
+     "track_id": {
+      "type": "string",
+      "title": "Track Id"
+     },
+     "speed_mps": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Speed Mps"
+     },
+     "score_shape": {
+      "type": "number",
+      "title": "Score Shape"
+     },
+     "score_slice": {
+      "type": "number",
+      "title": "Score Slice"
+     },
+     "score_vru": {
+      "type": "number",
+      "title": "Score Vru"
+     },
+     "score_unc": {
+      "type": "number",
+      "title": "Score Unc"
+     },
+     "r_sem": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "R Sem"
+     },
+     "concept_top": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Concept Top"
+     },
+     "concept_score": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Concept Score"
+     },
+     "s_obj": {
+      "type": "number",
+      "title": "S Obj"
+     },
+     "missed_by_model": {
+      "type": "boolean",
+      "title": "Missed By Model"
+     },
+     "reasons": {
+      "type": "string",
+      "title": "Reasons"
+     }
+    },
+    "type": "object",
+    "required": [
+     "sample_token",
+     "object_id",
+     "source",
+     "cls_pred",
+     "cx",
+     "cy",
+     "cz",
+     "l",
+     "w",
+     "h",
+     "yaw",
+     "pts",
+     "dist_m",
+     "track_id",
+     "speed_mps",
+     "score_shape",
+     "score_slice",
+     "score_vru",
+     "score_unc",
+     "r_sem",
+     "concept_top",
+     "concept_score",
+     "s_obj",
+     "missed_by_model",
+     "reasons"
+    ],
+    "title": "RareObject",
+    "description": "Columns of rare_objects, preserving the table contract's field names."
+   },
+   "ReviewItem": {
+    "properties": {
+     "sampleToken": {
+      "type": "string",
+      "title": "Sampletoken"
+     },
+     "cam": {
+      "type": "string",
+      "title": "Cam"
+     },
+     "reviewReasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Reviewreasons"
+     }
+    },
+    "type": "object",
+    "required": [
+     "sampleToken",
+     "cam",
+     "reviewReasons"
+    ],
+    "title": "ReviewItem"
+   },
+   "ReviewQueue": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/ReviewItem"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items"
+    ],
+    "title": "ReviewQueue"
+   },
+   "SelectParamsIn": {
+    "properties": {
+     "engineVersion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Engineversion"
+     },
+     "profile": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "lidar_only",
+         "multisensor"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Profile"
+     },
+     "strategy": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "balanced",
+         "vru_priority",
+         "diversity"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Strategy"
+     },
+     "budget": {
+      "type": "number",
+      "maximum": 0.1,
+      "minimum": 0.01,
+      "title": "Budget",
+      "default": 0.05
+     },
+     "preset": {
+      "type": "string",
+      "enum": [
+       "balanced",
+       "rare_first",
+       "hard_for_model",
+       "safety_scenarios"
+      ],
+      "title": "Preset",
+      "default": "balanced"
+     },
+     "diversity": {
+      "type": "string",
+      "enum": [
+       "low",
+       "medium",
+       "high"
+      ],
+      "title": "Diversity",
+      "default": "medium"
+     },
+     "queries": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "maxLength": 200,
+         "minLength": 1
+        },
+        "type": "array",
+        "maxItems": 12,
+        "minItems": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Queries"
+     },
+     "alpha": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Alpha"
+     },
+     "beta": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Beta"
+     },
+     "gamma": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Gamma"
+     },
+     "maxPerScene": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 50.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Maxperscene"
+     },
+     "minGap": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 20.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mingap"
+     },
+     "cameras": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "enum": [
+          "CAM_FRONT",
+          "CAM_FRONT_LEFT",
+          "CAM_FRONT_RIGHT",
+          "CAM_BACK",
+          "CAM_BACK_LEFT",
+          "CAM_BACK_RIGHT"
+         ]
+        },
+        "type": "array",
+        "minItems": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cameras"
+     },
+     "minLuma": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 255.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Minluma"
+     },
+     "minBlurVar": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1000.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Minblurvar"
+     },
+     "tier": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "enum": [
+         0,
+         1
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tier"
+     },
+     "k": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 50.0,
+        "minimum": 3.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "K"
+     },
+     "lam": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 1.0,
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lam"
+     },
+     "quotaOff": {
+      "type": "boolean",
+      "title": "Quotaoff",
+      "default": false
+     }
+    },
+    "type": "object",
+    "title": "SelectParamsIn"
+   },
+   "SelectionInfo": {
+    "properties": {
+     "selectionId": {
+      "type": "string",
+      "title": "Selectionid"
+     },
+     "params": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Params"
+     },
+     "createdAt": {
+      "type": "string",
+      "title": "Createdat"
+     }
+    },
+    "type": "object",
+    "required": [
+     "selectionId",
+     "createdAt"
+    ],
+    "title": "SelectionInfo"
+   },
+   "SelectionList": {
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/SelectionInfo"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items"
+    ],
+    "title": "SelectionList"
+   },
+   "SelectionResult": {
+    "properties": {
+     "engineVersion": {
+      "type": "string",
+      "enum": [
+       "c4_legacy",
+       "rare_v24"
+      ],
+      "title": "Engineversion",
+      "default": "c4_legacy"
+     },
+     "gateSummary": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/GateSummary"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "tagSummary": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/TagSummary"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "evaluationAvailable": {
+      "type": "boolean",
+      "title": "Evaluationavailable",
+      "default": false
+     },
+     "warningCodes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warningcodes"
+     },
+     "contextSummary": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ContextSummary"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "selectionId": {
+      "type": "string",
+      "title": "Selectionid"
+     },
+     "params": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Params"
+     },
+     "poolSize": {
+      "type": "integer",
+      "title": "Poolsize"
+     },
+     "budgetB": {
+      "type": "integer",
+      "title": "Budgetb"
+     },
+     "warnings": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Warnings"
+     },
+     "metrics": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/MetricsBlock"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "preview": {
+      "items": {
+       "$ref": "#/components/schemas/FrameSummary"
+      },
+      "type": "array",
+      "title": "Preview"
+     },
+     "pipeline": {
+      "type": "string",
+      "enum": [
+       "lidar",
+       "camera"
+      ],
+      "title": "Pipeline",
+      "default": "camera"
+     },
+     "tierAvailable": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Tieravailable"
+     }
+    },
+    "type": "object",
+    "required": [
+     "selectionId",
+     "params",
+     "poolSize",
+     "budgetB"
+    ],
+    "title": "SelectionResult"
+   },
+   "StageStatus": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "state": {
+      "type": "string",
+      "title": "State"
+     },
+     "durationSec": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Durationsec"
+     },
+     "peakVramMb": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Peakvrammb"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "state"
+    ],
+    "title": "StageStatus"
+   },
+   "TagSummary": {
+    "properties": {
+     "R1": {
+      "type": "integer",
+      "title": "R1"
+     },
+     "R2": {
+      "type": "integer",
+      "title": "R2"
+     },
+     "R3": {
+      "type": "integer",
+      "title": "R3"
+     },
+     "H": {
+      "type": "integer",
+      "title": "H"
+     },
+     "C": {
+      "type": "integer",
+      "title": "C"
+     },
+     "I": {
+      "type": "integer",
+      "title": "I"
+     }
+    },
+    "type": "object",
+    "required": [
+     "R1",
+     "R2",
+     "R3",
+     "H",
+     "C",
+     "I"
+    ],
+    "title": "TagSummary"
+   },
+   "Tier0Info": {
+    "properties": {
+     "state": {
+      "type": "string",
+      "title": "State"
+     },
+     "nTotal": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ntotal"
+     },
+     "nKeep": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nkeep"
+     },
+     "durationSec": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Durationsec"
+     }
+    },
+    "type": "object",
+    "required": [
+     "state"
+    ],
+    "title": "Tier0Info",
+    "description": "Tóm tắt Tầng 0 (hình học) của MỘT job lidar: số frame đủ điểm LiDAR, thời gian chạy."
+   },
+   "Tier1Info": {
+    "properties": {
+     "state": {
+      "type": "string",
+      "enum": [
+       "ready",
+       "queued",
+       "running",
+       "done",
+       "skipped",
+       "failed"
+      ],
+      "title": "State"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "canRun": {
+      "type": "boolean",
+      "title": "Canrun",
+      "default": false
+     },
+     "novSource": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "seed",
+         "none"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Novsource"
+     }
+    },
+    "type": "object",
+    "required": [
+     "state"
+    ],
+    "title": "Tier1Info",
+    "description": "Trạng thái Tầng 1 của MỘT job (plan 09 §3): máy sẵn sàng hay chưa nằm ở params-schema."
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  }
+ }
+}
