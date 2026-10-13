@@ -1,0 +1,78 @@
+{
+  "schema": "vcf-demo-bench-v1",
+  "source": {
+    "run_id": "mini_bench",
+    "repo_sha": "dd5989d",
+    "code_sha": "dd5989d",
+    "prereg_sha256": "590a7a6a17fd55b63f778dbd79c4b01ed6f33add705d84225d7db7b890a0a75d",
+    "final_config_sha256": "",
+    "report_sha256": "696da93223803db108d4358a0b0a75fb8038516e655296cdb4a243e342ca4470"
+  },
+  "label": "mini · minh hoạ · in-sample",
+  "pool": 404,
+  "scenes": 10,
+  "capture_primary": "rare_form",
+  "budget_B": 21,
+  "methods": {
+    "M0": {
+      "name": "Random",
+      "iy": 0.08666666666666666,
+      "ci_lo": 0.03177869040750474,
+      "ci_hi": 0.14525955568042587,
+      "status": "ok",
+      "ny": 0.0
+    },
+    "M1": {
+      "name": "Legacy",
+      "iy": 0.047619047619047616,
+      "ci_lo": 0.0,
+      "ci_hi": 0.1601666666666665,
+      "status": "ok",
+      "ny": -0.0451045104510451
+    },
+    "M2": {
+      "name": "lidar_only",
+      "iy": 0.09523809523809523,
+      "ci_lo": 0.0,
+      "ci_hi": 0.25,
+      "status": "ok",
+      "ny": 0.009900990099009908
+    },
+    "M3": {
+      "name": "multisensor",
+      "iy": 0.09523809523809523,
+      "ci_lo": 0.0,
+      "ci_hi": 0.23088235294117637,
+      "status": "ok",
+      "ny": 0.009900990099009908
+    }
+  },
+  "primary": {
+    "pair": "M2-M1",
+    "delta": 0.047619047619047616,
+    "ci_lo": -0.1176642156862745,
+    "ci_hi": 0.22738135026737957,
+    "conclusion": "not shown / underpowered"
+  },
+  "reachability": {
+    "radius_m": 1.0,
+    "n_targets": 20,
+    "methods": {
+      "M2": {
+        "reach": 0.55,
+        "n_reachable": 11,
+        "n_targets": 20
+      },
+      "M3": {
+        "reach": 0.55,
+        "n_reachable": 11,
+        "n_targets": 20
+      }
+    }
+  },
+  "figures": [
+    "fig_iy_budget.png",
+    "fig_context.png",
+    "fig_examples.png"
+  ]
+}
