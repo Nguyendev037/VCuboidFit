@@ -134,3 +134,47 @@ Không có scene seed S thì dừng và giữ kết quả CPU. GPU tùy runtime;
 | Không đủ 2 frame hợp lệ | Kiểm .bin và ngưỡng tối thiểu 2.000 điểm trong cấu hình LiDAR |
 | Hết ổ tạm Colab | Dùng bộ test nhỏ hơn, bắt đầu phiên mới |
 | Cài đặt lỗi | Xem lỗi ô 2; lệnh lỗi sẽ dừng ngay |
+
+## Benchmark pitching
+
+Notebook: [vcf_bench_pitch_colab.ipynb](../model/notebooks/vcf_bench_pitch_colab.ipynb).
+Dùng runtime **A100**, chạy từng ô; mini chỉ minh hoạ in-sample, pool là bảng chính riêng biệt.
+Không train PointPillars, không VLM, không dùng sweeps; ứng viên `cluster_only`.
+
+Từ root sản phẩm, đóng gói thật bằng:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File model/scripts/pack_pool_colab.ps1
+```
+Nguồn `E:/nuscenes_trainval` chỉ đọc. Script lấy đúng 6.753 keyframe từ job `pool_v24`,
+6 camera mỗi keyframe, toàn bộ `v1.0-trainval/` và `maps/`; chia ZIP độc lập ≤ 2 GB,
+kiểm CRC và ghi số file/SHA-256 từng part vào `manifest.json`. Đầu ra mặc định
+`F:/vcf_pack/pool_v24/`, không có ZIP tạm trong repo. Script dừng nếu code ZIP đã tồn tại;
+để tái đóng gói sau commit H10, dùng `-OutDir F:/vcf_pack/pool_v24/<sha-moi>`.
+
+Chuẩn bị Drive:
+1. Chép `manifest.json` và tất cả `vcf_part_*.zip` vào `MyDrive/vcf_pack/pool_v24/`.
+2. Chép `code_<sha>.zip` vào `MyDrive/vcf_pack/`. ZIP là `git archive HEAD`, không chứa thay đổi chưa commit.
+3. Bộ mini đủ 404 keyframe và 6 camera phải có manifest vcf-pack tại
+   `MyDrive/datatest/vcf_manifest.json`. Nếu khác chỗ, sửa `MINI_DATA_ZIP`.
+4. Upload notebook trực tiếp vào Colab; sửa `REPO_SHA` bằng `repo_sha` trong manifest,
+   sửa `DATA_ZIP`/`CODE_ZIP` nếu dùng thư mục khác. Notebook kiểm cả SHA Git archive và checksum.
+
+**Phụ thuộc H10:** code ZIP phải chứa CLI `c4.cli.bench_pitch` và các đầu vào đóng băng
+mà CLI yêu cầu. HEAD `f4a2abf` lúc đóng gói K1 chưa có CLI này; ô kiểm `--help` sẽ dừng.
+Sau khi người duyệt commit H10 tại local, đóng gói lại HEAD vào thư mục mới và cập nhật các biến trên.
+Không cần push; không dùng bản GitHub để thay code ZIP.
+
+Notebook ghép cây `data/` của các ZIP sau khi kiểm SHA, kiểm prereg `pitch-v2`,
+chạy `lidar_index`, `lidar_t0`, `extract_clip`, `context cv/fit/run`, `rare run lidar_only`,
+`rare crops`, `rare run multisensor`, rồi benchmark mini. Pool chạy cùng chuỗi chuẩn bị
+nhưng dừng trước `bench_pitch --mode pool`.
+
+`RUN_T = False` mặc định. Chỉ bật tay **một lần** sau khi người duyệt xem mini/cấu hình đóng băng.
+Cổng quét `report_pitch.json` mode pool trên Drive và marker `pitch-v2-T-opened.json`;
+marker ghi trước lệnh và giữ cả khi lỗi/ngắt phiên. Không xoá marker để thử lại.
+Exit 2/3: dừng và gửi log cho người duyệt, không sửa prereg hay tự mở lại T.
+
+Kết quả và log lưu ngay tại `MyDrive/vcf_results/<run_id>/`: `timing.json`, prereg,
+log từng CLI, hai thư mục `mini/` và `pool/` riêng, cùng bản sao job.
+VRAM là đỉnh bộ nhớ GPU toàn thiết bị qua `nvidia-smi`, lấy mẫu 1 giây;
+không phải peak allocator riêng của PyTorch. Thời gian/VRAM trên A100 chỉ có sau khi chạy Colab thật.
