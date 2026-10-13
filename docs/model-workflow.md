@@ -164,3 +164,30 @@ VCuboidFit được thiết kế để tương thích với đa dạng hạ tầ
 | `defaults.m` | 4 | Tối đa số frame mỗi scene |
 | `defaults.alpha/beta/gamma` | 1 / 0 / 0 | Trọng số Hiếm / Lạ với model / Chưa chắc |
 | `random_seeds` | 0–9 | 10 lần chọn ngẫu nhiên để so sánh |
+
+## 10. Engine rare_v24
+Chấm ứng viên VRU, gom frame rồi chọn bằng MMR. Profile/schema/mã thoát/số đo:
+[rare.md](../../../docs/rare.md); bối cảnh: [context.md](../../../docs/context.md).
+Cwd `model/worker`; J là job, D chứa `v1.0-*/`. Chuỗi PowerShell:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"
+.venv/Scripts/python -m c4.cli.lidar_index --data-root D --job-dir J
+.venv/Scripts/python -m c4.cli.lidar_t0 --data-root D --job-dir J
+.venv/Scripts/python -m c4.cli.rare run --data-root D --job-dir J --profile lidar_only
+# Venv torch chỉ chạy encoder; import c4 từ worker hiện tại
+$env:PYTHONPATH=(Get-Location).Path
+../../../../vcuboidfit/worker/.venv/Scripts/python -m c4.cli.extract_clip --data-root D --job-dir J --device cuda
+.venv/Scripts/python -m c4.cli.context cv --data-root D --job-dir J
+# Chuẩn bị J/split_manifest.csv từ lidar/index.parquet trước fit
+.venv/Scripts/python -m c4.cli.context fit --job-dir J --split V
+.venv/Scripts/python -m c4.cli.context run --data-root D --job-dir J
+../../../../vcuboidfit/worker/.venv/Scripts/python -m c4.cli.rare crops --data-root D --job-dir J --device cuda
+.venv/Scripts/python -m c4.cli.rare run --data-root D --job-dir J --profile multisensor
+```
+
+Venv chính chạy index/Tầng 0/context/run CPU; venv cũ có torch/OpenCLIP chỉ dùng encoder ảnh/crops,
+không sửa code cây cũ. Colab dùng một venv đủ dependency. crops cần rare_objects từ run đầu và index camera;
+multisensor cần context_frame + cache crops. Mini thêm `--pool-split all --ref-split all` vào rare run
+(và dùng ngưỡng context mini đã chuẩn bị): in-sample minh hoạ. Pool mặc định T/V;
+không chạy benchmark `--mode pool` local (Đ29). Capture B (dạng hiếm) chính, A (frame bất kỳ) phụ.
