@@ -49,8 +49,10 @@ def _load_open_clip(name: str, pretrained: str, device: str):
     import open_clip
 
     try:
+        # trọng số `openai` train với QuickGELU; thiếu cờ này open_clip dựng GELU thường ⇒ embedding lệch
         model, _, _ = open_clip.create_model_and_transforms(
-            name, pretrained=pretrained, cache_dir=str(d), device=device)
+            name, pretrained=pretrained, cache_dir=str(d), device=device,
+            force_quick_gelu=(pretrained == "openai"))
     except (OSError, RuntimeError, ValueError) as e:
         raise FileNotFoundError(f"{missing_weights(f'OpenCLIP {name}')} [{e}]") from e
     return model.eval()
@@ -122,7 +124,7 @@ def extract_clip(job_dir, data_root, *, profile="local-4060", resume=False, limi
     T = OpenClipTextEncoder(name, pretrained).encode([q["text"] for q in queries])
 
     shard_dir = job / "cache" / "clip_shards"
-    prepare_shard_dir(shard_dir, signature("clip", fake, name, pretrained, *frames["img_path"]),
+    prepare_shard_dir(shard_dir, signature("clip", fake, name, pretrained, "quickgelu", *frames["img_path"]),
                       resume)
     run_shards(lambda x: embed(x).astype(np.float32),
                Images(frames, data_root, (CLIP_SIZE, CLIP_SIZE)), shard_dir,
