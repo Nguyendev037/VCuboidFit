@@ -30,3 +30,12 @@ def test_oracle_bounds_every_method():
     rep = evaluate({"naive": topk_selector(scores)}, frame, inst, frac=0.15)
     assert rep["B"] == budget(20, 0.15) == 3
     assert rep["oracle"]["iy"] >= rep["methods"]["naive"]["iy"]
+
+
+def test_bootstrap_fixed_keeps_selection_and_pairs_methods():
+    from c4.rare.eval import bootstrap_fixed, paired_ci
+    frame, inst = _gt()
+    tf = target_frames(inst)
+    boot = bootstrap_fixed({"good": ["f0", "f10", "f11"], "bad": ["f0", "f1", "f2"]}, frame, tf, n_boot=200)
+    ci = paired_ci(boot, "good", "bad")
+    assert len(boot) == 200 and ci["delta"] > 0 and ci["hi"] >= ci["lo"]

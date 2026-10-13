@@ -117,3 +117,43 @@ def evaluate(selectors: dict[str, Selector], gt_frame: pd.DataFrame, gt_inst: pd
         m["lift"] = m["iy"] / iy_rand if iy_rand > 0 else None
         out["methods"][name] = m
     return out
+
+
+def bootstrap_fixed(sels: dict[str, list[str]], gt_frame: pd.DataFrame, tf: dict[str, set[str]],
+                    n_boot: int = 1000, seed: int = 20261013) -> pd.DataFrame:
+    """CI chính (planning/11 SPEC-P04 §3): lô chọn CỐ ĐỊNH, rút scene có hoàn lại (scene lặp đếm lặp),
+    IY_b = Σ cap_s / Σ |Sel ∩ s|. Hợp lệ vì mỗi instance chỉ thuộc một scene. Dòng = lượt, cột = phương pháp."""
+    scene_of = dict(zip(gt_frame["sample_token"], gt_frame["scene_token"]))
+    names = sorted(set(scene_of.values()))
+    pos = {n: k for k, n in enumerate(names)}
+    cap = {m: np.zeros(len(names)) for m in sels}
+    nsel = {m: np.zeros(len(names)) for m in sels}
+    for m, sel in sels.items():
+        for t in sel:
+            nsel[m][pos[scene_of[t]]] += 1
+        for i in captured(sel, tf):
+            cap[m][pos[scene_of[next(iter(tf[i]))]]] += 1
+    rng = np.random.default_rng(seed)
+    rows = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, len(names), size=len(names))
+        rows.append({m: cap[m][idx].sum() / max(nsel[m][idx].sum(), 1.0) for m in sels})
+    return pd.DataFrame(rows)
+
+
+def paired_ci(boot: pd.DataFrame, a: str, b: str, level: float = 0.95) -> dict:
+    d = boot[a] - boot[b]
+    lo, hi = np.percentile(d, [(1 - level) / 2 * 100, (1 + level) / 2 * 100])
+    return dict(delta=float(d.mean()), lo=float(lo), hi=float(hi), n_boot=int(len(d)))
+
+
+def context_coverage(sel: list[str], ctx: pd.DataFrame, axes=("glare_sun",)) -> dict[str, dict]:
+    """Phủ bối cảnh: cov = |Sel ∩ F_a| / B, base = |F_a| / N, lift = cov / base. `ctx`: sample_token, context_tags ('a|b')."""
+    tags = ctx.set_index("sample_token")["context_tags"].fillna("").str.split("|")
+    out, B, N = {}, max(len(sel), 1), max(len(tags), 1)
+    s = set(sel)
+    for a in axes:
+        fa = {t for t, tg in tags.items() if a in tg}
+        cov, base = len(fa & s) / B, len(fa) / N
+        out[a] = dict(cov=cov, base=base, lift=(cov / base) if base > 0 else None)
+    return out
