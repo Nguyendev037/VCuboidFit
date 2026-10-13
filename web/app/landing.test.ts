@@ -1,4 +1,3 @@
-import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { it, expect } from "vitest";
 import Home from "./page";
@@ -9,9 +8,9 @@ it("builds encoded ZIP export URL with camera and LiDAR options",()=>{
  const query=new URL(url,"http://localhost").searchParams;
  expect(Object.fromEntries(query)).toEqual({budget:"0.05",cams:"front",lidar:"false"});
 });
-it("renders the hero, three v2 steps and dashboard entry",()=>{
- const html=renderToStaticMarkup(React.createElement(Home));
+it("renders the hero, five linked v2 steps and dashboard entry",async()=>{
+ const html=renderToStaticMarkup(await Home());
  expect(html).toContain("Tìm tình huống VRU hiếm");
- expect(html.match(/<article/g)).toHaveLength(3);
- expect(html).toContain("OpenCLIP + OpenCV");expect(html).toContain('href="/dashboard"');expect(html).toContain("Vào dashboard");expect(html).toContain("Đang đo");
+ expect(html.match(/<li>/g)).toHaveLength(5);
+ expect(html).toContain("OpenCLIP + OpenCV");expect(html).toContain('href="/dashboard"');expect(html).toContain("Vào dashboard");expect(html).toContain("Số đo");
 });

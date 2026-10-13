@@ -10,9 +10,9 @@ export default async function ReviewPage({
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center p-8">
-          <div className="text-center text-xs text-slate-500 flex flex-col items-center gap-2">
-            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="min-h-screen bg-vcf-bg flex items-center justify-center p-8">
+          <div className="text-center text-xs text-vcf-subtle flex flex-col items-center gap-2">
+            <div className="w-6 h-6 border-2 border-vcf-accent border-t-transparent rounded-vcf-pill animate-spin" />
             <p>Đang tải Deep Review...</p>
           </div>
         </div>
