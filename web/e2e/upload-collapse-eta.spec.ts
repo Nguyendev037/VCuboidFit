@@ -33,7 +33,7 @@ test("C1-C4 + ETA: collapse long upload list, show check progress bar", async ({
     return route.fulfill({ json: report });
   });
 
-  await page.goto("/");
+  await page.goto("/dashboard");
   await page.evaluate(() => localStorage.removeItem("vcf.uploadListCollapsed"));
   const files = ["a", "b", "c", "d"].map((n) => ({ name: `${n}.zip`, mimeType: "application/zip", buffer: Buffer.alloc(2048, 1) }));
   await page.getByTestId("file-input").setInputFiles(files);

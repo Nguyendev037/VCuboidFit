@@ -21,7 +21,7 @@ test("H1-H4: delete one run through the confirm dialog", async ({ page }) => {
     return route.fulfill({ json: { deleted: [id] } });
   });
 
-  await page.goto("/");
+  await page.goto("/dashboard");
   const rows = page.getByRole("button", { name: "Xoá lần chạy" });
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(1)).toBeDisabled(); // job đang chạy

@@ -40,7 +40,7 @@ test("A1-A4, A5, A7: params panel without tier1 model, run tier1 on Colab", asyn
       : route.fulfill({ status: 404, json: { error: { code: "not_found", message: "Job chưa có việc Tầng 1 từ xa." } } });
   });
 
-  await page.goto("/");
+  await page.goto("/dashboard");
   await page.getByRole("button", { name: "Mở", exact: true }).first().click();
   const panel = page.getByRole("button", { name: /Tham số nâng cao/ });
   await expect(panel).toBeVisible();
