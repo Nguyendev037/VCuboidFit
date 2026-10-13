@@ -50,14 +50,25 @@ def _to_global(cx, cy, pose: dict) -> tuple[float, float]:
     return pose["ego_x"] + c * cx - s * cy, pose["ego_y"] + s * cx + c * cy
 
 
-def cluster_candidates(pcd_path, cfg: dict, ego_pose: dict, heuristic: dict | None = None) -> list[dict]:
-    """DBSCAN trên điểm không-mặt-đất, box chặt trục ego mỗi cụm (SPEC-P05 §3.1).
+def _lidar2ego(calib: dict | None) -> tuple[np.ndarray, np.ndarray, float]:
+    """Hiệu chuẩn LIDAR_TOP keyframe -> ego {R (3×3), t (3)} (`c4.rare.calib`). None => đồng nhất (giữ hệ cảm biến)."""
+    if calib is None:
+        return np.eye(3), np.zeros(3), 0.0
+    R = np.asarray(calib["R"], np.float64).reshape(3, 3)
+    return R, np.asarray(calib["t"], np.float64).reshape(3), math.atan2(R[1, 0], R[0, 0])
+
+
+def cluster_candidates(pcd_path, cfg: dict, ego_pose: dict, heuristic: dict | None = None,
+                       lidar_calib: dict | None = None) -> list[dict]:
+    """DBSCAN trên điểm không-mặt-đất (hệ cảm biến LIDAR_TOP); tâm/yaw box đưa về HỆ EGO bằng `lidar_calib`
+    (SPEC-P05 §3.1; H14: thiếu bước này box lệch -90° quanh z + ~1,84 m, crop camera sai 100%).
 
     `ego_pose` = {ego_x, ego_y, ego_yaw}. `pts` = số điểm thô (chưa voxel) trong box cụm, trên mặt đất.
     Không lọc theo kích thước ở đây (lọc VRU ở object_score). Frame > 100k điểm voxel: cắt ngẫu nhiên (seed 0)."""
     from sklearn.cluster import DBSCAN
 
     heuristic = heuristic if heuristic is not None else load_class_map()["cluster_heuristic"]
+    R, t, dyaw = _lidar2ego(lidar_calib)
     raw = load_pcd(pcd_path)
     p, v = preprocess(raw, cfg)
     b = cfg["blocks"]
@@ -79,11 +90,11 @@ def cluster_candidates(pcd_path, cfg: dict, ego_pose: dict, heuristic: dict | No
         q = pts[lab == k, :3]
         lo, hi = q.min(0), q.max(0)
         l, w, h = (hi - lo).tolist()
-        cx, cy, cz = ((lo + hi) / 2).tolist()
-        yaw = 0.0
+        cx, cy, cz = (R @ ((lo + hi) / 2) + t).tolist()
+        yaw = dyaw
         if len(q) >= 5:
             _, vec = np.linalg.eigh(np.cov(q[:, :2].T))
-            yaw = float(math.atan2(vec[1, -1], vec[0, -1]))
+            yaw = float(math.atan2(vec[1, -1], vec[0, -1])) + dyaw
         inside = ((p_ng[:, 0] >= lo[0]) & (p_ng[:, 0] <= hi[0]) & (p_ng[:, 1] >= lo[1])
                   & (p_ng[:, 1] <= hi[1]) & (p_ng[:, 2] >= lo[2]) & (p_ng[:, 2] <= hi[2]))
         gx, gy = _to_global(cx, cy, ego_pose)
@@ -192,12 +203,12 @@ def track(objs_by_frame: dict[str, list[dict]], ego_poses: dict[str, tuple[float
             prev = (objs, g, timestamps[tok])
 
 
-def _cluster_job(path, cfg, pose, heuristic):
-    return cluster_candidates(path, cfg, pose, heuristic)
+def _cluster_job(path, cfg, pose, heuristic, calib=None):
+    return cluster_candidates(path, cfg, pose, heuristic, calib)
 
 
 def build_candidates(job_dir, data_root, cfg: dict, rare_cfg: RareDefV24, class_map: dict,
-                     scoring: dict | None = None) -> pd.DataFrame:
+                     scoring: dict | None = None, lidar_calib: dict[str, dict] | None = None) -> pd.DataFrame:
     """-> rare_objects (chưa chấm: score_* = 0, s_obj = 0) cho MỌI frame keep=True của index (SPEC-P05 §3.6).
 
     Tầng 1 chỉ dùng khi có `<job>/t1/preds_orig.pkl`; thiếu => cluster_only (không lỗi). Ego pose/timestamp lấy từ
@@ -215,11 +226,14 @@ def build_candidates(job_dir, data_root, cfg: dict, rare_cfg: RareDefV24, class_
              for t, r in zip(toks, index.itertuples())}
     todo = [i for i in range(len(index)) if keep[i]]
     heur = class_map["cluster_heuristic"]
+    cal = lidar_calib or {}
     if len(todo) > 8:
         t0s = Parallel(n_jobs=-1, backend="loky")(
-            delayed(_cluster_job)(root / index["lidar_path"].iloc[i], cfg, poses[toks[i]], heur) for i in todo)
+            delayed(_cluster_job)(root / index["lidar_path"].iloc[i], cfg, poses[toks[i]], heur, cal.get(toks[i]))
+            for i in todo)
     else:
-        t0s = [_cluster_job(root / index["lidar_path"].iloc[i], cfg, poses[toks[i]], heur) for i in todo]
+        t0s = [_cluster_job(root / index["lidar_path"].iloc[i], cfg, poses[toks[i]], heur, cal.get(toks[i]))
+               for i in todo]
     objs_by_frame = {}
     for i, t0 in zip(todo, t0s):
         t1 = pp_candidates(preds[i], class_map) if preds is not None else []

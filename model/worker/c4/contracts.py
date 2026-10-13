@@ -134,6 +134,9 @@ RARE_OBJ_CAM = dict(  # planning/11 SPEC-P06 §3 · c4.rare.project ghi; bbox đ
     sample_token="string", object_id="string", cam="string",
     x1="float32", y1="float32", x2="float32", y2="float32", visible_frac="float32")
 
+LIDAR_CALIB = dict(  # planning/11 §1 (H15) · c4.rare.calib ghi/đọc cache; R = 9 số hàng-ngang 3×3, t = 3 số: LIDAR_TOP keyframe -> ego
+    sample_token="string", R="list", t="list")
+
 SPEC = dict(  # tên -> (schema, khóa chính)
     features_cache=(FEATURES_CACHE, ["sample_token", "cam"]),
     frame_scores=(FRAME_SCORES, ["sample_token"]),
@@ -155,7 +158,8 @@ SPEC = dict(  # tên -> (schema, khóa chính)
     context_frame=(CONTEXT_FRAME, ["sample_token", "cam"]),
     rare_objects=(RARE_OBJECTS, ["sample_token", "object_id"]),
     rare_frames=(RARE_FRAMES, ["sample_token"]),
-    rare_obj_cam=(RARE_OBJ_CAM, ["sample_token", "object_id"]))
+    rare_obj_cam=(RARE_OBJ_CAM, ["sample_token", "object_id"]),
+    lidar_calib=(LIDAR_CALIB, ["sample_token"]))
 
 
 class ContractError(Exception):

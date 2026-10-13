@@ -13,6 +13,7 @@ from c4.contracts import _git_sha, read_table, write_table
 from c4.lidar import load_lidar_config
 from c4.lidar.extract import load_filter
 from c4.lidar.uncertainty import load_signals
+from c4.rare.calib import calib_sha256, lidar_to_ego
 from c4.rare.candidates import build_candidates, load_class_map
 from c4.rare.config import load_rare_def
 from c4.rare.eval import budget
@@ -26,7 +27,7 @@ DEFAULT_SCORING = {
     "w_shape": 0.15, "w_slice": 0.35, "w_vru": 0.30, "w_unc": 0.20,   # SPEC-P05 §5.2
     "w_obj": 0.70, "w_crowd": 0.15, "w_ctx": 0.15,                     # SPEC-P05 §6.1
     "gate_ood_sigma": 3.0, "iou_thr": 0.3, "d_max": 1.5, "v_max": 3.0,
-    "mmr_lambda": 0.7, "quota_m": 3, "min_ref_vru": 50, "w_sem": 0.20,
+    "mmr_lambda": 0.7, "quota_m": "even", "min_ref_vru": 50, "w_sem": 0.20,
 }
 PROFILES = ("lidar_only", "multisensor")
 SPLITS_POOL = ("T", "V", "all")
@@ -68,7 +69,9 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
     has_pp = (job / "t1" / "preds_orig.pkl").is_file()
     mode = "cluster+pp_frozen" if has_pp else "cluster_only"
 
-    cand = build_candidates(job, root, cfg, rare_cfg, class_map, sc)
+    calib = lidar_to_ego(root, index["sample_token"], job / "cache" / "lidar_calib.parquet")
+    pre_warn = [] if len(calib) == len(index) else ["LIDAR_CALIB_MISSING"]  # thiếu => giữ hành vi cũ (hệ cảm biến)
+    cand = build_candidates(job, root, cfg, rare_cfg, class_map, sc, lidar_calib=calib)
     gate_df = gate_all(cand, index, z0, keep, {"gate_ood_sigma": sc["gate_ood_sigma"], "min_pts": rare_cfg.min_pts})
 
     split = index["split"].to_numpy()
@@ -101,7 +104,7 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
     B = budget(n_elig, budget_frac) if n_elig else 0
     frames = select_rare(frames, scored, z0, index, B, sc, eligible=elig)
     B = int(frames.attrs["B"])
-    warnings = list(frames.attrs["warningCodes"])
+    warnings = pre_warn + list(frames.attrs["warningCodes"])
     ranking = list(frames.attrs["ranking"])
 
     manifest = {
@@ -116,7 +119,10 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
         "frame_weights": {k: sc[k] for k in ("w_obj", "w_crowd", "w_ctx")},
         "gate_config": {"ood_sigma": sc["gate_ood_sigma"]},
         "tracker_config": {"d_max": sc["d_max"], "v_max": sc["v_max"]},
-        "mmr_config": {"lambda": sc["mmr_lambda"], "quota_m": sc["quota_m"]},
+        "mmr_config": {"lambda": sc["mmr_lambda"], "quota_m": sc["quota_m"],
+                       "quota_m_resolved": frames.attrs.get("quota_m")},
+        "candidate_frame": "partial" if pre_warn else "ego",
+        "lidar_calib_sha256": calib_sha256(calib),
         "scoring_extra": {"iou_thr": sc["iou_thr"], "min_ref_vru": sc["min_ref_vru"], "ref_vru_only": True},
         "warnings": warnings}
     sid = hashlib.sha1(f"rare_v24|{json.dumps(manifest, sort_keys=True, default=str)}|{_fingerprint(job)}"

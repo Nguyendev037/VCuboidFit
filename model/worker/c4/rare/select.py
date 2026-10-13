@@ -1,5 +1,6 @@
 """M2c · dedup theo track + MMR chọn B frame (planning/11 SPEC-P05 §6.2 + §14.1). Frame suspect/outlier và
 frame ngoài pool KHÔNG BAO GIỜ vào lô chọn (A5). Không đọc nhãn."""
+import math
 from collections.abc import Sequence
 
 import numpy as np
@@ -56,7 +57,9 @@ def select_rare(rare_frames: pd.DataFrame, rare_objects: pd.DataFrame, z0: np.nd
     Z = l2n(z0)
     scene = index["scene_token"].astype("category").cat.codes.to_numpy()
     fidx = index["frame_idx"].to_numpy()
-    lam, m = float(cfg.get("mmr_lambda", 0.7)), int(cfg.get("quota_m", 3))
+    lam, m_cfg = float(cfg.get("mmr_lambda", 0.7)), cfg.get("quota_m", 3)
+    # "even" (H14 P2): trần mỗi scene = ceil(B / số scene eligible) => phủ scene đều; không dùng nhãn
+    m = max(1, math.ceil(B / max(len(np.unique(scene[elig])), 1))) if m_cfg == "even" else int(m_cfg)
     order: list[tuple[int, float]] = []  # (vị trí trong index, max_sim)
     if n_elig:
         picks = mmr_select(S, Z, scene, fidx, elig & ~pen, n_elig, n_elig, lam=lam, m=m, min_gap=1)
@@ -81,4 +84,5 @@ def select_rare(rare_frames: pd.DataFrame, rare_objects: pd.DataFrame, z0: np.nd
     df.attrs["ranking"] = [tokens[i] for i, _ in order]
     df.attrs["warningCodes"] = warnings
     df.attrs["B"] = B
+    df.attrs["quota_m"] = m
     return df
