@@ -186,7 +186,7 @@ export function AnalysisPanel({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {poolCards.map((card) => {
               const isActive = selectedFilter === card.id;
               return (
@@ -195,6 +195,8 @@ export function AnalysisPanel({
                   type="button"
                   onClick={() => onFilterChange?.(card.id)}
                   className={`min-w-0 p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                    card.id === "rare_gt" ? "col-span-2" : ""
+                  } ${
                     isActive
                       ? card.activeBg
                       : `bg-card ${card.color} hover:bg-slate-50`
@@ -202,13 +204,13 @@ export function AnalysisPanel({
                   data-testid={`metric-card-${card.id}`}
                 >
                   {/* Tiêu đề: cho phép xuống tối đa 2 dòng, không cắt chữ; giữ chiều cao đồng nhất giữa các thẻ */}
-                  <div className="min-w-0 whitespace-normal text-[11px] font-medium text-slate-500 leading-snug min-h-[2.75em] break-words">
+                  <div className="min-w-0 min-h-[2.75em] whitespace-normal break-words text-[11px] font-medium leading-snug line-clamp-2 text-slate-500">
                     {card.title}
                   </div>
                   <div className="text-lg font-bold font-mono my-0.5 text-slate-900">
                     {card.value}
                   </div>
-                  <div className="text-[10px] text-slate-400 leading-snug break-words">
+                  <div className="text-[10px] leading-snug text-slate-400 break-words line-clamp-2">
                     {card.sub}
                   </div>
                 </button>

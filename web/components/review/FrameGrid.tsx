@@ -123,7 +123,7 @@ export function FrameGrid({
           }
         }}
         onDoubleClick={() => onOpenViewer?.(frame)}
-        className={`group relative flex flex-col rounded-xl border bg-card text-card-foreground overflow-hidden cursor-pointer transition-all duration-150 select-none ${
+        className={`group relative flex h-full min-w-0 flex-col rounded-xl border bg-card text-card-foreground overflow-hidden cursor-pointer transition-all duration-150 select-none ${
           isSelected
             ? "ring-2 ring-inset ring-blue-600 border-blue-600 shadow-md"
             : "border-border hover:border-slate-300 hover:shadow-sm"
@@ -173,7 +173,7 @@ export function FrameGrid({
         </div>
 
         {/* Thông tin mô tả bên dưới */}
-        <div className="p-3 flex flex-col gap-1.5 flex-1 justify-between bg-white">
+        <div className="flex flex-1 flex-col gap-1.5 bg-white p-3">
           <div>
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
               <span className="font-semibold text-slate-700">{frame.sceneName}</span>
@@ -185,20 +185,30 @@ export function FrameGrid({
             </p>
           </div>
 
-          <div className="flex items-center justify-between pt-1 border-t border-slate-100 mt-1">
-            <div className="flex items-center gap-1 flex-wrap">
-              {frame.tags.map((tag) => (
+          <div className="mt-1 flex min-h-[40px] items-start justify-between gap-2 border-t border-slate-100 pt-1">
+            <div className="flex max-h-[38px] min-w-0 flex-1 flex-wrap content-start items-start gap-1 overflow-hidden">
+              {frame.tags.slice(0, 4).map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-[10px] py-0 px-1.5">
                   {predictionTags ? `${PRED_TAG_LABELS[tag] ?? tag} (dự đoán)` : pipeline === "lidar" ? gtTagLabel(tag) : LIDAR_TAG_LABELS[tag] ?? tag}
                   {pipeline === "lidar" && GT_GROUPS[tag] && <Tooltip label={GT_GROUPS[tag].label} content={GT_GROUPS[tag].tooltip} />}
                 </Badge>
               ))}
+              {frame.tags.length > 4 && (
+                <span className="inline-flex h-5 items-center rounded bg-slate-100 px-1.5 text-[10px] font-medium text-slate-500">
+                  +{frame.tags.length - 4}
+                </span>
+              )}
             </div>
-            <span className="text-[10px] text-slate-400 font-mono">
-              {pipeline === "lidar" && frame.bestCam === "LIDAR_TOP"
-                ? "Ảnh camera trước (minh hoạ)"
-                : frame.bestCam.replace("CAM_", "")}
-            </span>
+            {pipeline === "lidar" && frame.bestCam === "LIDAR_TOP" ? (
+              <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold text-vcf-accent-ink">
+                Ảnh
+                <Tooltip label="Ảnh camera trước (minh hoạ)" content="Ảnh camera trước dùng để minh hoạ cho frame LiDAR." />
+              </span>
+            ) : (
+              <span className="shrink-0 text-[10px] font-mono text-slate-400">
+                {frame.bestCam.replace("CAM_", "")}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -306,7 +316,7 @@ export function FrameGrid({
                   width: "100%",
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4"
+                className="grid grid-cols-1 gap-4 pb-4 md:grid-cols-2 xl:grid-cols-[repeat(auto-fill,minmax(320px,1fr))]"
               >
                 {rowFrames.map((frame, colIdx) =>
                   renderCard(frame, startIdx + colIdx)
@@ -316,7 +326,7 @@ export function FrameGrid({
           })}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
           {frames.map((frame, idx) => renderCard(frame, idx))}
         </div>
       )}

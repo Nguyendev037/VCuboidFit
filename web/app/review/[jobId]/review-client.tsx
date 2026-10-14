@@ -241,8 +241,8 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
       </header>
 
       {/* 2. Action Bar theo Figma 03 (Screens 03 Action Row) */}
-      <div className="bg-vcf-surface border-b border-vcf-border px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="bg-vcf-surface border-b border-vcf-border">
+        <div data-testid="review-toolbar" className="max-w-[1600px] mx-auto min-w-0 overflow-hidden px-6 py-3 flex flex-wrap items-center gap-3">
           <Link
             href={`/dashboard?job=${encodeURIComponent(jobId)}${datasetId ? `&dataset=${encodeURIComponent(datasetId)}` : ""}${sel ? `&sel=${encodeURIComponent(sel)}` : ""}`}
             className="px-3 py-1.5 text-xs font-semibold text-vcf-muted hover:text-vcf-text bg-vcf-bg hover:bg-vcf-surface-muted rounded-vcf-control border border-vcf-border flex items-center gap-1.5 transition-colors"
@@ -252,14 +252,14 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
           <span className="px-2.5 py-1 text-xs font-medium rounded-vcf-pill bg-vcf-accent-soft text-vcf-accent-ink border border-vcf-accent-soft">
             Ngân sách {pct(budget)} · {rawList.length} frame
           </span>
-          <span className="px-2.5 py-1 text-xs font-medium rounded-vcf-pill bg-vcf-surface-muted text-vcf-muted border border-vcf-border capitalize">
+          <span className="max-w-[45vw] truncate px-2.5 py-1 text-xs font-medium rounded-vcf-pill bg-vcf-surface-muted text-vcf-muted border border-vcf-border capitalize">
             ID lựa chọn: {sel}
           </span>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="max-w-[1600px] mx-auto min-w-0 overflow-hidden px-6 py-3 flex items-center gap-3">
           {/* Ô tìm kiếm scene */}
-          <div className="relative">
+          <div className="relative w-44 shrink-0">
             <svg
               className="w-3.5 h-3.5 text-vcf-subtle absolute left-2.5 top-1/2 -translate-y-1/2"
               fill="none"
@@ -275,87 +275,95 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Tìm frame theo scene"
-              className="text-xs pl-8 pr-3 py-1.5 border border-vcf-border rounded-vcf-control bg-vcf-bg focus:bg-vcf-surface focus:outline-none focus:ring-1 focus:ring-vcf-accent w-44"
+              className="w-full text-xs pl-8 pr-3 py-1.5 border border-vcf-border rounded-vcf-control bg-vcf-bg focus:bg-vcf-surface focus:outline-none focus:ring-1 focus:ring-vcf-accent"
             />
           </div>
 
-          {/* Filter chips theo Figma */}
-          {(isRare ? Object.keys(PRED_TAG_LABELS) : isLidar ? LIDAR_FILTER_TAGS : CAMERA_FILTER_TAGS).map((tag) => {
-            const isActive = selectedTag === tag;
-            const label = isRare ? `${PRED_TAG_LABELS[tag]} (dự đoán)` : isLidar ? LIDAR_TAG_LABELS[tag] ?? tag : tag;
-            return (
+          <div className="relative min-w-0 flex-1">
+            <div className="min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-testid="review-filter-chips">
+              <div className="flex w-max items-center gap-2 pr-6">
+                {(isRare ? Object.keys(PRED_TAG_LABELS) : isLidar ? LIDAR_FILTER_TAGS : CAMERA_FILTER_TAGS).map((tag) => {
+                  const isActive = selectedTag === tag;
+                  const label = isRare ? `${PRED_TAG_LABELS[tag]} (dự đoán)` : isLidar ? LIDAR_TAG_LABELS[tag] ?? tag : tag;
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => { setSelectedTag(isActive ? null : tag); setPage(1); }}
+                      className={`shrink-0 px-2.5 py-1 rounded-vcf-pill text-xs font-medium border transition-colors ${
+                        isActive
+                          ? "bg-vcf-accent text-vcf-on-accent border-vcf-accent"
+                          : "bg-vcf-bg hover:bg-vcf-surface-muted text-vcf-muted border-vcf-border"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-vcf-surface to-transparent" />
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3" data-testid="review-gate-controls">
+            {isRare && <label className="flex shrink-0 items-center gap-1 text-xs">Gate <select aria-label="Lọc gate" value={gate} onChange={e=>setGate(e.target.value)}><option value="all">Tất cả</option><option value="valid">Hợp lệ</option><option value="suspect">Đáng ngờ</option><option value="outlier">Ngoại lệ</option></select></label>}
+            {/* Sắp xếp */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "rank" | "score")}
+              aria-label="Sắp xếp frame"
+              className="shrink-0 text-xs border border-vcf-border rounded-vcf-control px-2 py-1.5 text-vcf-muted bg-vcf-surface"
+            >
+              <option value="rank">Sắp xếp: Rank</option>
+              <option value="score">Sắp xếp: Score S</option>
+            </select>
+
+            {/* View toggle */}
+            <div className="flex shrink-0 items-center border border-vcf-border rounded-vcf-control p-0.5 bg-vcf-bg">
               <button
-                key={tag}
                 type="button"
-                onClick={() => { setSelectedTag(isActive ? null : tag); setPage(1); }}
-                className={`px-2.5 py-1 rounded-vcf-pill text-xs font-medium border transition-colors ${
-                  isActive
-                    ? "bg-vcf-accent text-vcf-on-accent border-vcf-accent"
-                    : "bg-vcf-bg hover:bg-vcf-surface-muted text-vcf-muted border-vcf-border"
-                }`}
+                onClick={() => setViewMode("grid")}
+                title="Lưới"
+                aria-label="Xem dạng lưới"
+                aria-pressed={viewMode === "grid"}
+                className={`p-1 rounded-vcf-small ${viewMode === "grid" ? "bg-vcf-surface shadow-xs text-vcf-accent" : "text-vcf-subtle"}`}
               >
-                {label}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
               </button>
-            );
-          })}
-
-          {isRare && <label className="text-xs">Gate <select aria-label="Lọc gate" value={gate} onChange={e=>setGate(e.target.value)}><option value="all">Tất cả</option><option value="valid">Hợp lệ</option><option value="suspect">Đáng ngờ</option><option value="outlier">Ngoại lệ</option></select></label>}
-          {/* Sắp xếp */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as "rank" | "score")}
-            aria-label="Sắp xếp frame"
-            className="text-xs border border-vcf-border rounded-vcf-control px-2 py-1.5 text-vcf-muted bg-vcf-surface"
-          >
-            <option value="rank">Sắp xếp: Rank</option>
-            <option value="score">Sắp xếp: Score S</option>
-          </select>
-
-          {/* View toggle */}
-          <div className="flex items-center border border-vcf-border rounded-vcf-control p-0.5 bg-vcf-bg">
-            <button
-              type="button"
-              onClick={() => setViewMode("grid")}
-              title="Lưới"
-              aria-label="Xem dạng lưới"
-              aria-pressed={viewMode === "grid"}
-              className={`p-1 rounded-vcf-small ${viewMode === "grid" ? "bg-vcf-surface shadow-xs text-vcf-accent" : "text-vcf-subtle"}`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              title="Danh sách"
-              aria-label="Xem dạng danh sách"
-              aria-pressed={viewMode === "list"}
-              className={`p-1 rounded-vcf-small ${viewMode === "list" ? "bg-vcf-surface shadow-xs text-vcf-accent" : "text-vcf-subtle"}`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                title="Danh sách"
+                aria-label="Xem dạng danh sách"
+                aria-pressed={viewMode === "list"}
+                className={`p-1 rounded-vcf-small ${viewMode === "list" ? "bg-vcf-surface shadow-xs text-vcf-accent" : "text-vcf-subtle"}`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-8"><a className="text-xs text-vcf-accent-ink underline" href={exportUrl(jobId,sel,budget)}>Xuất CSV</a><ExportImages jobId={jobId} sid={sel} budget={budget}/><Link className="text-xs text-vcf-accent-ink underline" href={`/review/context?job=${encodeURIComponent(jobId)}&sel=${encodeURIComponent(sel)}`}>Hàng đợi duyệt bối cảnh</Link></div>
-      {isRare && <p className="px-8 text-xs text-vcf-subtle">Lô đã chọn chỉ chứa gate hợp lệ; ứng viên đáng ngờ và ngoại lệ không được trộn vào lô.</p>}
+      <div data-testid="review-export-actions" className="max-w-[1600px] mx-auto w-full flex flex-wrap items-center justify-start gap-3 px-6 py-3"><a className="text-xs text-vcf-accent-ink underline" href={exportUrl(jobId,sel,budget)}>Xuất CSV</a><ExportImages jobId={jobId} sid={sel} budget={budget}/><Link className="text-xs text-vcf-accent-ink underline" href={`/review/context?job=${encodeURIComponent(jobId)}&sel=${encodeURIComponent(sel)}`}>Hàng đợi duyệt bối cảnh</Link></div>
+      {isRare && <p className="max-w-[1600px] mx-auto w-full px-6 text-xs text-vcf-subtle">Lô đã chọn chỉ chứa gate hợp lệ; ứng viên đáng ngờ và ngoại lệ không được trộn vào lô.</p>}
       {/* Hiển thị lỗi nếu có */}
       {/* 3. Bố cục chính 2 cột: Cột trái (Lưới frames) & Cột phải (Analysis Panel) */}
-      <main className="max-w-[1440px] mx-auto p-4 sm:p-6 w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+      <main className="max-w-[1600px] mx-auto px-6 py-6 w-full grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6 flex-1 items-start">
         {/* ============ CỘT TRÁI (LƯỚI FRAMES - 8 CỘT) ============ */}
-        <section className="min-w-0 lg:col-span-9 flex flex-col gap-4">
+        <section className="min-w-0 flex flex-col gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-bold text-sm text-vcf-text">
               Danh sách Frame ({filteredList.length} / {rawList.length})
@@ -366,7 +374,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
           </div>
 
           {framesQuery.isPending ? (
-            <div role="status" aria-live="polite" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div role="status" aria-live="polite" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
               {Array.from({ length: 6 }, (_, index) => (
                 <div key={index} aria-hidden="true" className="aspect-video rounded-vcf-card border border-vcf-border bg-vcf-surface animate-pulse" />
               ))}
@@ -405,7 +413,7 @@ export default function ReviewClient({ jobId }: ReviewClientProps) {
         </section>
 
         {/* ============ CỘT PHẢI (BẢNG PHÂN TÍCH - 4 CỘT) ============ */}
-        <aside className="min-w-0 lg:col-span-3 sticky top-20 flex flex-col gap-4">
+        <aside className="min-w-0 xl:sticky xl:top-20 flex flex-col gap-4">
           {analysisData ? (
             <AnalysisPanel
               analysis={analysisData}
