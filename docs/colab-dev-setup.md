@@ -1,7 +1,7 @@
 # Chạy VCuboidFIT trên Google Colab
 
 Có 2 cách. **Cách 1** là cách chính: máy bạn chạy web, Colab chỉ làm phần nặng (Tầng 1, cần GPU).
-Ngoài ra có notebook benchmark nghiên cứu ở cuối tài liệu. T đã hoàn tất trên A100; đó là luồng riêng, không chứng minh cầu nối Tầng 1 từ xa đã đạt gate Colab thật. Không mở lại tập T để thử hướng dẫn này. [Số đo và gate còn lại](project-status.md).
+Ngoài ra có notebook benchmark nghiên cứu và notebook seed PointPillars trainval (chẩn đoán trên V) ở cuối tài liệu. T đã hoàn tất trên A100; đó là luồng riêng, không chứng minh cầu nối Tầng 1 từ xa đã đạt gate Colab thật. Không mở lại tập T để thử hướng dẫn này. [Số đo và gate còn lại](project-status.md).
 
 | Cách | Dùng khi | Notebook |
 |---|---|---|
@@ -176,3 +176,31 @@ Kết quả và log lưu ngay tại `MyDrive/vcf_results/<run_id>/`: `timing.jso
 log từng CLI, hai thư mục `mini/` và `pool/` riêng, cùng bản sao job.
 VRAM là đỉnh bộ nhớ GPU toàn thiết bị qua `nvidia-smi`, lấy mẫu 1 giây;
 không phải peak allocator riêng của PyTorch. Lượt T thực tế có tổng thời gian 1.236 s; chỉ báo VRAM nếu evidence chứa số đo thiết bị tương ứng. Nguồn và phạm vi ở [project-status](project-status.md).
+
+## Seed PointPillars trên trainval + chẩn đoán trên V
+
+Notebook: [vcf_night_pp_trainval.ipynb](../model/notebooks/vcf_night_pp_trainval.ipynb) · script
+[colab_pp_night.py](../model/scripts/colab_pp_night.py). Runtime **A100 + High-RAM**, **Run all**.
+Không đụng T: không có `bench_pitch --mode pool`, `diag --split T` thoát mã 3. Kết quả V là **chẩn đoán**
+(tham chiếu fit và chấm cùng trên V), không thay prereg `pitch-v2`.
+
+- Train seed từ đầu trên S của pool (7 scene, 279 keyframe) + 70 scene TRAIN chính thức ngoài pool
+  (`scene-1007…1110`, 2.818 keyframe, Singapore đêm). Không bao giờ V, T, P hoặc scene VAL. `sweeps = 1` vì các gói
+  không có sweeps (đủ sweeps cần thêm ~58 GB).
+- Suy luận trên mọi frame của job pool (không đọc nhãn), rồi `rare_v24` trên V: A `cluster_only` lidar_only,
+  B `cluster+pp` lidar_only, C `cluster+pp` multisensor (+A2 tuỳ chọn). Đo IY@B capture B, reach 1 m, bootstrap cụm scene.
+
+Chuẩn bị (sau khi commit, vì code ZIP = `git archive HEAD`; lệnh từ chối cây chưa commit):
+```powershell
+model\worker\.venv\Scripts\python.exe model\scripts\colab_pp_night.py pack-seed --data-root E:/nuscenes_trainval `
+  --pool-index model/workspace/jobs/pool_v24/lidar/index.parquet --out F:/vcf_pack/seed_pp_v1 --code
+```
+Chép cả thư mục `F:/vcf_pack/seed_pp_v1/` vào `MyDrive/datatest/seed_pp_v1/`. Gói pool cũ (`pool_v24`) được tìm ở
+`MyDrive/datatest/pool_v24`, `MyDrive/vcf_pack/pool_v24` hoặc `MyDrive/pool_v24`. Notebook đọc `repo_sha` từ
+manifest gói seed — không cần sửa tay.
+
+Ngắt runtime: kết nối lại A100 và **Run all** với cùng `RUN_ID`; bước đã lưu trên Drive được bỏ qua, checkpoint giữa
+chừng được đồng bộ mỗi 5 phút. Kết quả ở `MyDrive/vcf_results/<RUN_ID>/` (`diag/diag_table.md`, `seed/seed_latest.pth`
+kèm `.sha256`, `SHA256SUMS.txt`). Checkpoint chỉ để trong Drive riêng, không chia sẻ công khai.
+Thời gian dự kiến là **ước tính** 2,2–4,2 giờ (train chiếm phần lớn); chi tiết từng ô, điểm cần người quyết và
+rollback nằm trong hồ sơ kế hoạch 15 của workspace quản trị (`planning/15_2026-10-14_colab-pp-trainval/`).
