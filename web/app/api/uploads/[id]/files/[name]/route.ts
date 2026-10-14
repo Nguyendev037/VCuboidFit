@@ -25,7 +25,7 @@ const RANGE_RE = /^bytes (\d+)-(\d+)\/(\d+)$/;
 class LengthMismatch extends Error {}
 
 /**
- * Một chunk ≤ 50 MB, `Content-Range: bytes start-end/total`.
+ * Một đoạn truyền ≤ 50 MB (cỡ đoạn nội bộ, KHÔNG giới hạn cỡ file), `Content-Range: bytes start-end/total`.
  * Chunk được ghi vào `<name>.part` rồi mới nối vào `<name>` khi đã nhận ĐỦ, nên chunk đứt giữa chừng
  * không để lại byte nào trong file đích; client tiếp tục từ `received`.
  */

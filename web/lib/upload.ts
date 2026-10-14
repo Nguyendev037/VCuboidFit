@@ -1,4 +1,5 @@
-// Uploader trình duyệt: chunk 50 MB tuần tự, tiếp tục được, thử lại 3 lần, tạm dừng bằng AbortSignal.
+// Uploader trình duyệt: gửi tuần tự từng đoạn 50 MB (cỡ đoạn truyền nội bộ, KHÔNG giới hạn cỡ file),
+// tiếp tục được khi mất mạng, thử lại 3 lần, tạm dừng bằng AbortSignal.
 import { createUpload, uploadStatus } from "@/lib/api/client";
 import { ApiError, genericMessage } from "@/lib/api/errors";
 import { CHUNK, isAllowedUploadName } from "@/lib/constants";
@@ -142,6 +143,49 @@ export async function uploadFiles(files: File[], opts: UploadOptions): Promise<{
     }
   }
   return { uploadId };
+}
+
+/** Cùng hình dạng với `getUploadLimits()` (01-CONTRACTS §4). */
+export interface UploadLimits {
+  maxUploadBytes: number;
+  freeBytes: number | null;
+}
+
+export interface UploadLimitVerdict {
+  /** Tổng vượt trần máy chủ ⇒ chặn trước khi gửi. */
+  blocked: boolean;
+  /** Câu báo chặn (`role="alert"`); null khi không chặn. */
+  error: string | null;
+  /** Câu cảnh báo dung lượng trống, KHÔNG chặn; null khi không có. */
+  warning: string | null;
+}
+
+/**
+ * So tổng dung lượng người dùng chọn với trần máy chủ, trước khi gửi (01-CONTRACTS §4).
+ * `limits` null/undefined (chưa lấy được) ⇒ không chặn, không cảnh báo.
+ * `formatSize` do caller truyền để câu chữ khớp `formatBytes` của dashboard.
+ */
+export function checkUploadLimits(
+  totalBytes: number,
+  limits: UploadLimits | null | undefined,
+  formatSize: (bytes: number) => string,
+): UploadLimitVerdict {
+  if (!limits) return { blocked: false, error: null, warning: null };
+  if (totalBytes > limits.maxUploadBytes) {
+    return {
+      blocked: true,
+      error: `Tổng ${formatSize(totalBytes)} vượt giới hạn ${formatSize(limits.maxUploadBytes)} của máy chủ.`,
+      warning: null,
+    };
+  }
+  if (limits.freeBytes !== null && totalBytes * 2 > limits.freeBytes) {
+    return {
+      blocked: false,
+      error: null,
+      warning: `Máy chủ còn ${formatSize(limits.freeBytes)} trống; cần khoảng ${formatSize(totalBytes * 2)} để tải và giải nén.`,
+    };
+  }
+  return { blocked: false, error: null, warning: null };
 }
 
 // ---- Danh sách upload rút gọn + thanh thời gian dự đoán xét tệp (SPEC-P05) ----

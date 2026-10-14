@@ -71,6 +71,12 @@ export function finalizeUpload(id: string): Promise<DatasetReport> {
   return isMock() ? mockApi.finalizeUpload(id) : request("POST", `/api/uploads/${seg(id)}/finalize`);
 }
 
+/** Trần tổng + dung lượng trống của máy chủ để báo trước khi gửi (01-CONTRACTS §4). */
+export function getUploadLimits(): Promise<{ maxUploadBytes: number; freeBytes: number | null }> {
+  if (isMock()) return Promise.resolve({ maxUploadBytes: 100 * 1024 ** 3, freeBytes: null });
+  return request("GET", "/api/uploads/limits");
+}
+
 /** Tiến độ xét tệp; chưa có (404), chế độ mẫu hoặc lỗi mạng ⇒ null (thanh không xác định, không báo lỗi). */
 export async function getDatasetProgress(uploadId: string): Promise<DatasetProgress | null> {
   if (isMock()) return null;

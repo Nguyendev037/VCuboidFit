@@ -1,5 +1,5 @@
 // Route handlers gọi trực tiếp bằng Request thật trên WORKSPACE tạm (TESTING-ACCEPTANCE §2 ca 1, 2).
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import { promises as fsPromises, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,7 @@ import { CHUNK } from "@/lib/constants";
 import { GET as getStatus } from "./[id]/route";
 import { POST as finalize } from "./[id]/finalize/route";
 import { PUT as putChunk } from "./[id]/files/[name]/route";
+import { GET as getUploadLimits } from "./limits/route";
 import { POST as createUpload } from "./route";
 
 let ws: string;
@@ -275,5 +276,32 @@ describe("finalize", () => {
     expect(await r.json()).toEqual({
       error: { code: "worker_down", message: "Không kết nối được worker xử lý. Hãy kiểm tra worker đã chạy chưa." },
     });
+  });
+});
+
+describe("GET /api/uploads/limits (T-B1)", () => {
+  it("(a) mặc định trả trần 100 GB và freeBytes là số ≥ 0 hoặc null", async () => {
+    const res = await getUploadLimits();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.maxUploadBytes).toBe(100 * 1024 ** 3);
+    expect(body.freeBytes === null || (typeof body.freeBytes === "number" && body.freeBytes >= 0)).toBe(true);
+  });
+
+  it("(b) MAX_UPLOAD_GB=2 ⇒ trần 2 GB", async () => {
+    process.env.MAX_UPLOAD_GB = "2";
+    const body = await (await getUploadLimits()).json();
+    expect(body.maxUploadBytes).toBe(2 * 1024 ** 3);
+  });
+
+  it("(c) statfs không hỗ trợ ⇒ freeBytes null, vẫn 200 và không ném", async () => {
+    const spy = vi.spyOn(fsPromises, "statfs").mockRejectedValue(Object.assign(new Error("ENOSYS"), { code: "ENOSYS" }));
+    try {
+      const res = await getUploadLimits();
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ maxUploadBytes: 100 * 1024 ** 3, freeBytes: null });
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

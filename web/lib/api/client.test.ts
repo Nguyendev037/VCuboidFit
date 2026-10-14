@@ -133,6 +133,13 @@ describe("real mode", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("/api/jobs/a%2Fb%20c");
   });
 
+  it("getUploadLimits is a GET of /api/uploads/limits (T-B1)", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ maxUploadBytes: 2 * 1024 ** 3, freeBytes: 512 }));
+    expect(await api.getUploadLimits()).toEqual({ maxUploadBytes: 2 * 1024 ** 3, freeBytes: 512 });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/uploads/limits");
+    expect(fetchMock.mock.calls[0][1].method).toBe("GET");
+  });
+
   it("exportUrl points at export.csv with the current budget", () => {
     expect(api.exportUrl("j1", "s1", 0.05)).toBe("/api/jobs/j1/selections/s1/export.csv?budget=0.05");
   });
@@ -188,6 +195,11 @@ describe("mock mode (NEXT_PUBLIC_MOCK=1)", () => {
     expect((await api.getDataset("d")).datasetId).toBeTruthy();
     expect((await api.createJob("d")).jobId).toBeTruthy();
     await api.cancelJob("j");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("getUploadLimits trả trần mặc định, không gọi mạng (T-B1)", async () => {
+    expect(await api.getUploadLimits()).toEqual({ maxUploadBytes: 100 * 1024 ** 3, freeBytes: null });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

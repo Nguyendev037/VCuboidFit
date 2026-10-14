@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/client";
 
-import { formatEta, summarizeUploads, uploadFiles } from "./upload";
+import { checkUploadLimits, formatEta, summarizeUploads, uploadFiles } from "./upload";
 
 const CS = 1000; // chunkSize nhỏ cho test
 const mkFile = (name: string, size: number, seed = 1) =>
@@ -249,5 +249,40 @@ describe("summarizeUploads / formatEta", () => {
   it("định dạng ETA mm:ss", () => {
     expect(formatEta(75)).toBe("01:15");
     expect(formatEta(null)).toBe("đang ước tính…");
+  });
+});
+
+describe("checkUploadLimits (T-B5)", () => {
+  const fmt = (n: number) => `${n}B`;
+  const noFree = { maxUploadBytes: 100, freeBytes: null };
+
+  it("tổng vượt trần ⇒ chặn kèm câu báo, không cảnh báo", () => {
+    expect(checkUploadLimits(101, noFree, fmt)).toEqual({
+      blocked: true,
+      error: "Tổng 101B vượt giới hạn 100B của máy chủ.",
+      warning: null,
+    });
+  });
+
+  it("tổng đúng bằng trần ⇒ không chặn", () => {
+    expect(checkUploadLimits(100, noFree, fmt).blocked).toBe(false);
+  });
+
+  it("tổng×2 vượt dung lượng trống ⇒ cảnh báo nhưng KHÔNG chặn", () => {
+    expect(checkUploadLimits(60, { maxUploadBytes: 1000, freeBytes: 100 }, fmt)).toEqual({
+      blocked: false,
+      error: null,
+      warning: "Máy chủ còn 100B trống; cần khoảng 120B để tải và giải nén.",
+    });
+  });
+
+  it("freeBytes null ⇒ không cảnh báo", () => {
+    expect(checkUploadLimits(60, { maxUploadBytes: 1000, freeBytes: null }, fmt))
+      .toEqual({ blocked: false, error: null, warning: null });
+  });
+
+  it("chưa lấy được limits (fetch lỗi) ⇒ không chặn, không cảnh báo", () => {
+    expect(checkUploadLimits(10 ** 12, null, fmt)).toEqual({ blocked: false, error: null, warning: null });
+    expect(checkUploadLimits(10 ** 12, undefined, fmt)).toEqual({ blocked: false, error: null, warning: null });
   });
 });

@@ -1,7 +1,28 @@
-import { checkProgressPct, formatEta, PHASE_LABELS } from "@/lib/upload";
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { getUploadLimits } from "@/lib/api/client";
+import { UPLOAD_HELP } from "@/lib/glossary";
+import { checkUploadLimits, checkProgressPct, formatEta, PHASE_LABELS } from "@/lib/upload";
+import type { UploadLimitVerdict, UploadLimits } from "@/lib/upload";
 import { isDatasetUsable, datasetValidationMessage } from "@/lib/datasetValidation";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { formatBytes, pct } from './dashboardState';
 import type { DashboardState } from './useDashboard';
+
+/** Đường dẫn trong `UPLOAD_HELP.notice.tooltip` in bằng `<code>`; phần chữ giữ nguyên. */
+const NOTICE_PATH_RE = /(data\/v1\.0-\*\/|data\/samples\/LIDAR_TOP\/…|data\/)/g;
+
+function NoticeBody({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(NOTICE_PATH_RE).map((part, i) =>
+        i % 2 === 1 ? <code key={i}>{part}</code> : <span key={i}>{part}</span>,
+      )}
+    </>
+  );
+}
 
 export function UploadPanel(state: Pick<
   DashboardState,
@@ -40,6 +61,22 @@ export function UploadPanel(state: Pick<
     uploadSummary,
     uploading,
   }=state;
+
+  const [limits, setLimits] = useState<UploadLimits | null>(null);
+  const [limitNotice, setLimitNotice] = useState<UploadLimitVerdict | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getUploadLimits()
+      .then((l) => { if (alive) setLimits(l); })
+      .catch(() => { if (alive) setLimits(null); }); // lỗi/non-200 ⇒ chữ dự phòng, KHÔNG chặn tải
+    return () => { alive = false; };
+  }, []);
+
+  const limitLabel = limits
+    ? UPLOAD_HELP.limit.label.replace("{max}", formatBytes(limits.maxUploadBytes))
+    : UPLOAD_HELP.limitFallback.label;
+
   return (
     <div className="bg-white rounded-xl border border-[#E2E8F0] p-6 shadow-xs flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -78,10 +115,11 @@ export function UploadPanel(state: Pick<
         </div>
         <div>
           <p className="font-semibold text-sm text-slate-800">
-            Kéo thả file .zip / .rar / .7z vào đây
+            {UPLOAD_HELP.dropzone.label}
           </p>
-          <p className="text-xs text-slate-500 mt-1">
-            Chọn nhiều phần cùng lúc · tải lên theo chunk 50 MB, tiếp tục được khi mất mạng
+          <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center justify-center gap-1.5">
+            <span>{limitLabel}</span>
+            <Tooltip label={limitLabel} content={UPLOAD_HELP.limit.tooltip} />
           </p>
         </div>
         <span className="mt-1 inline-flex min-h-10 items-center rounded-lg bg-blue-600 px-5 py-2 text-xs font-medium text-white shadow-xs">Chọn file</span>
@@ -95,15 +133,32 @@ export function UploadPanel(state: Pick<
           disabled={uploading}
           onChange={(e) => {
             const files=Array.from(e.target.files??[]);
-            if(files.length) {
-              uploadIdRef.current=undefined;
-              setItems([]);
-              setDataset(null);
-              void startUpload(files);
+            if(!files.length) return;
+            const verdict=checkUploadLimits(files.reduce((sum,f)=>sum+f.size,0), limits, formatBytes);
+            setLimitNotice(verdict);
+            if(verdict.blocked) {
+              e.target.value=""; // cho phép chọn lại đúng tệp đó sau khi bớt dung lượng
+              return;
             }
+            uploadIdRef.current=undefined;
+            setItems([]);
+            setDataset(null);
+            void startUpload(files);
           }}
         />
       </div>
+
+      {/* Kiểm tổng dung lượng trước khi gửi (SPEC-P02 U5) */}
+      {limitNotice?.error&&(
+        <p role="alert" data-testid="upload-limit-error" className="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-medium">
+          {limitNotice.error}
+        </p>
+      )}
+      {limitNotice?.warning&&(
+        <p data-testid="upload-limit-warning" className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs font-medium">
+          {limitNotice.warning}
+        </p>
+      )}
 
       {/* Điều khiển upload khi đang tiến hành */}
       {uploading&&!checking&&(
@@ -193,13 +248,11 @@ export function UploadPanel(state: Pick<
         </div>
       )}
 
-      {/* Hộp lưu ý data/ nguyên văn spec §5.2 */}
+      {/* Hộp lưu ý cấu trúc data/ (SPEC-P02 U4): chữ lấy từ UPLOAD_HELP.notice */}
       <div className="p-3.5 bg-blue-50/80 border border-blue-200 text-blue-950 rounded-xl flex items-start gap-2.5 text-xs leading-relaxed">
         <span className="text-blue-600 font-bold text-sm leading-none mt-0.5">ℹ</span>
         <p data-testid="data-notice">
-          Mỗi file nén phải chứa thư mục <strong>data/</strong> ở gốc, theo cấu trúc nuScenes (<code>data/v1.0-*/</code>,{" "}
-          <code>data/samples/CAM_*/</code>, <code>data/samples/LIDAR_TOP/</code>). Dataset lớn: dùng <strong>vcf-pack</strong> để chia thành
-          các phần 50 MB rồi chọn tất cả cùng lúc.
+          <NoticeBody text={UPLOAD_HELP.notice.tooltip} />
         </p>
       </div>
 
