@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import * as THREE from "three";
 import {
@@ -9,12 +11,20 @@ import {
   LIDAR_POINT_STYLE,
   getCameraFrustumLines,
   cornersToCuboid,
+  EGO_EXCLUSION_BOX,
+  EGO_VEHICLE_DIMENSIONS,
+  getEgoVehicleCorners,
+  buildEgoVehicleLines,
+  isEgoVehiclePoint,
+  filterLidarPointCloud,
 } from "./lidarDecoder";
 import {
   groupCamerasByPosition,
   handleViewerKeyDown,
   type ViewerActions,
 } from "./viewerUtils";
+import { DEFAULT_LAYER_TOGGLES } from "./LidarScene";
+import { POINTPILLARS_COLOR } from "./ViewerLegend";
 import type { Cam, CamDetail } from "@/lib/api/types";
 import { getCamCompactName, getCamFriendlyName } from "./CameraImage";
 
@@ -420,5 +430,154 @@ describe("Keyboard Shortcuts & Navigation", () => {
 
     // Phím khác không xử lý
     expect(press("x").handled).toBe(false);
+  });
+
+  it("xử lý phím tắt C để bật/tắt frustum và I để thu gọn ảnh theo SPEC-P02 §3", () => {
+    const actions: ViewerActions = {
+      toggleFrustums: vi.fn(),
+      toggleImages: vi.fn(),
+    };
+
+    const press = (key: string) => {
+      const preventDefault = vi.fn();
+      const handled = handleViewerKeyDown({ key, preventDefault }, actions);
+      return { handled, preventDefault };
+    };
+
+    expect(press("c").handled).toBe(true);
+    expect(actions.toggleFrustums).toHaveBeenCalledTimes(1);
+
+    expect(press("C").handled).toBe(true);
+    expect(actions.toggleFrustums).toHaveBeenCalledTimes(2);
+
+    expect(press("i").handled).toBe(true);
+    expect(actions.toggleImages).toHaveBeenCalledTimes(1);
+
+    expect(press("I").handled).toBe(true);
+    expect(actions.toggleImages).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("CVAT 3D Viewer enhancements (SPEC-P02)", () => {
+  it("layer toggles mặc định: GT bật, Cụm bật, PointPillars bật, frustums TẮT (01-CONTRACTS §3)", () => {
+    expect(DEFAULT_LAYER_TOGGLES).toEqual({
+      gt: true,
+      cluster: true,
+      pointpillars: true,
+      frustums: false,
+    });
+  });
+
+  it("màu riêng cho PointPillars khác màu GT/Cụm", () => {
+    expect(POINTPILLARS_COLOR).toBe("#a855f7");
+    expect(POINTPILLARS_COLOR).not.toBe(getCategoryColor("vehicle.car"));
+  });
+});
+
+describe("Ego Vehicle & Body Point Filtering (SPEC-P06)", () => {
+  it("hằng số web ego_exclusion phải khớp 100% với file yaml ../model/worker/configs/candidates_v1.yaml", () => {
+    const yamlPath = path.resolve(__dirname, "../../../model/worker/configs/candidates_v1.yaml");
+    expect(fs.existsSync(yamlPath)).toBe(true);
+    const yamlContent = fs.readFileSync(yamlPath, "utf-8");
+    const match = yamlContent.match(/ego_exclusion:\s*\{([^}]+)\}/);
+    expect(match).not.toBeNull();
+    const parsed = Object.fromEntries(
+      match![1].split(",").map((item) => {
+        const [k, v] = item.split(":").map((s) => s.trim());
+        return [k, parseFloat(v)];
+      }),
+    );
+    expect(EGO_EXCLUSION_BOX.xMin).toBe(parsed.x_min); // -1.5
+    expect(EGO_EXCLUSION_BOX.xMax).toBe(parsed.x_max); // 3.5
+    expect(EGO_EXCLUSION_BOX.yMin).toBe(parsed.y_min); // -1.2
+    expect(EGO_EXCLUSION_BOX.yMax).toBe(parsed.y_max); // 1.2
+    expect(EGO_EXCLUSION_BOX.zMax).toBe(2.2);
+  });
+
+  it("hộp EgoVehicle theo xe nuScenes Renault Zoe dựng qua egoToThree: tâm x=1.34, y=0, dài 4.08, rộng 1.73, cao 1.56, mũi tên +x", () => {
+    expect(EGO_VEHICLE_DIMENSIONS.centerX).toBe(1.34);
+    expect(EGO_VEHICLE_DIMENSIONS.centerY).toBe(0);
+    expect(EGO_VEHICLE_DIMENSIONS.length).toBe(4.08);
+    expect(EGO_VEHICLE_DIMENSIONS.width).toBe(1.73);
+    expect(EGO_VEHICLE_DIMENSIONS.height).toBe(1.56);
+
+    const egoCorners = getEgoVehicleCorners();
+    expect(egoCorners).toHaveLength(8);
+
+    // 8 góc ego [x, y, z]
+    // xMin = 1.34 - 2.04 = -0.70; xMax = 1.34 + 2.04 = 3.38
+    // yMin = -0.865; yMax = 0.865
+    // zMin = 0; zMax = 1.56
+    expect(egoCorners[0][0]).toBeCloseTo(-0.70, 3);
+    expect(egoCorners[1][0]).toBeCloseTo(3.38, 3);
+    expect(egoCorners[0][1]).toBeCloseTo(-0.865, 3);
+    expect(egoCorners[2][1]).toBeCloseTo(0.865, 3);
+    expect(egoCorners[0][2]).toBe(0);
+    expect(egoCorners[4][2]).toBe(1.56);
+
+    const lines = buildEgoVehicleLines();
+    // 12 cạnh hộp * 2 = 24 đỉnh + 3 đoạn mũi tên * 2 = 6 đỉnh -> 30 đỉnh -> 90 floats
+    expect(lines.length).toBe(30 * 3);
+    expect(Array.from(lines).every(Number.isFinite)).toBe(true);
+
+    // Mũi tên hướng +x: đỉnh nhọn (xMax + 1.0) qua egoToThree có x lớn hơn chân mũi tên (xMax)
+    // Hệ Three: x = xEgo
+    const arrowStemStartX = lines[24 * 3]; // đỉnh thứ 25 (chân mũi tên)
+    const arrowStemEndX = lines[25 * 3];   // đỉnh thứ 26 (đầu mũi tên)
+    expect(arrowStemEndX).toBeGreaterThan(arrowStemStartX);
+  });
+
+  it("bộ lọc điểm thân xe: điểm trong hộp bị ẩn khi bật, hiện lại khi tắt", () => {
+    // Giả lập 4 điểm:
+    // P0: (1.34, 0, 1.0) -> trong hộp ego_exclusion (x: -1.5..3.5, y: -1.2..1.2, z < 2.2)
+    // P1: (0.0, 0, 0.5) -> trong hộp ego_exclusion
+    // P2: (10.0, 5.0, 1.0) -> ngoài hộp (xa xe)
+    // P3: (1.34, 0, 2.5) -> ngoài hộp vì z >= 2.2
+    const rawPositions = new Float32Array([
+      1.34, 0, 1.0,
+      0.0, 0, 0.5,
+      10.0, 5.0, 1.0,
+      1.34, 0, 2.5,
+    ]);
+    const threePositions = new Float32Array([
+      1.34, 1.0, 0,
+      0.0, 0.5, 0,
+      10.0, 1.0, -5.0,
+      1.34, 2.5, 0,
+    ]);
+    const intensities = new Float32Array([0.1, 0.2, 0.3, 0.4]);
+    const colors = new Float32Array(12).fill(0.5);
+
+    const pointCloud = {
+      count: 4,
+      rawPositions,
+      threePositions,
+      intensities,
+      colors,
+      minZ: 0.5,
+      maxZ: 2.5,
+    };
+
+    // Khi lọc BẬT (filterEgo = true) -> 2 điểm thân xe bị ẩn, chỉ còn 2 điểm ngoài hộp
+    const filteredOn = filterLidarPointCloud(pointCloud, true);
+    expect(filteredOn.count).toBe(2);
+    // Điểm P0 và P1 không còn trong rawPositions
+    expect(filteredOn.rawPositions[0]).toBeCloseTo(10.0);
+    expect(filteredOn.rawPositions[1]).toBeCloseTo(5.0);
+    expect(filteredOn.rawPositions[3]).toBeCloseTo(1.34);
+    expect(filteredOn.rawPositions[5]).toBeCloseTo(2.5);
+
+    // Không còn điểm nào nằm trong hộp ego
+    for (let i = 0; i < filteredOn.count; i++) {
+      const x = filteredOn.rawPositions[i * 3];
+      const y = filteredOn.rawPositions[i * 3 + 1];
+      const z = filteredOn.rawPositions[i * 3 + 2];
+      expect(isEgoVehiclePoint(x, y, z)).toBe(false);
+    }
+
+    // Khi lọc TẮT (filterEgo = false) -> hiện lại tất cả các điểm kể cả điểm thân xe
+    const filteredOff = filterLidarPointCloud(pointCloud, false);
+    expect(filteredOff.count).toBe(4);
+    expect(filteredOff).toBe(pointCloud); // giữ nguyên tham chiếu và dữ liệu
   });
 });

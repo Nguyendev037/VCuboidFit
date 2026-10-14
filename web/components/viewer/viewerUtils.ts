@@ -57,11 +57,14 @@ export interface ViewerActions {
   toggleLidarOverlay?: () => void;
   toggleInfoPanel?: () => void;
   reset3dView?: () => void;
+  toggleFrustums?: () => void;
+  toggleImages?: () => void;
+  toggleCollapseCams?: () => void;
 }
 
 /**
- * Xử lý phím tắt cho Frame Viewer theo spec tổng §5.4.
- * ←/→, Esc, 0, 1–6, 7/L, B, P, I, R.
+ * Xử lý phím tắt cho Frame Viewer theo spec tổng §5.4 và SPEC-P02 §3.
+ * ←/→, Esc, 0, 1–6, 7/L, B, P, C, I, R.
  */
 export function handleViewerKeyDown(
   e: { key: string; code?: string; preventDefault?: () => void },
@@ -126,6 +129,11 @@ export function handleViewerKeyDown(
       e.preventDefault?.();
       actions.toggleBoxes?.();
       return true;
+    case "c":
+    case "C":
+      e.preventDefault?.();
+      actions.toggleFrustums?.();
+      return true;
     case "p":
     case "P":
       e.preventDefault?.();
@@ -134,7 +142,13 @@ export function handleViewerKeyDown(
     case "i":
     case "I":
       e.preventDefault?.();
-      actions.toggleInfoPanel?.();
+      if (actions.toggleImages) {
+        actions.toggleImages();
+      } else if (actions.toggleCollapseCams) {
+        actions.toggleCollapseCams();
+      } else {
+        actions.toggleInfoPanel?.();
+      }
       return true;
     case "r":
     case "R":

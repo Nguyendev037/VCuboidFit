@@ -242,7 +242,7 @@ export interface CamDetail {
 export interface RareObject {
   sample_token: string;
   object_id: string;
-  source: "cluster" | "pointpillars" | "merged";
+  source?: "cluster" | "pointpillars" | "merged";
   cls_pred: string;
   cx: number; cy: number; cz: number;
   l: number; w: number; h: number; yaw: number;
@@ -277,7 +277,7 @@ export interface FrameDetail extends FrameSummary {
   cams: CamDetail[];
   lidar: { url: string; numPoints: number; format?: "f16-xyzi" | string } | null;
   /** hệ ego; corners = 8 góc × xyz */
-  boxes3d: { category: string; corners: number[] }[];
+  boxes3d: { category: string; corners: number[]; candidate?: boolean; source?: "gt" | "cluster" | "pointpillars" | "merged" }[];
   camPoses: { cam: Cam; translation: number[]; rotation: number[]; intrinsic: number[][] }[];
 }
 

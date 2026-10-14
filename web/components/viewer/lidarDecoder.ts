@@ -114,7 +114,7 @@ export function cornersToCuboid(corners: number[]): CuboidTransform | null {
 }
 
 /** Ego nuScenes (x tiến, y trái, z lên) → Three.js (x, z, -y); cùng ánh xạ với điểm LiDAR và cuboid. */
-function egoToThree(x: number, y: number, z: number): [number, number, number] {
+export function egoToThree(x: number, y: number, z: number): [number, number, number] {
   return [x, z, -y || 0];
 }
 
@@ -310,4 +310,189 @@ export function getCategoryColor(category: string): string {
     return "#c084fc"; // Purple
   }
   return "#4ade80"; // Green
+}
+
+/**
+ * Kích thước và thông số hộp xe nuScenes (Renault Zoe) theo SPEC-P06 §3.
+ * Hệ EGO: x tiến, y trái, z lên.
+ * Tâm x = 1.34 m, y = 0; dài 4.08 m (trục x tiến), rộng 1.73 m (trục y), cao 1.56 m (z: 0 -> 1.56).
+ */
+export const EGO_VEHICLE_DIMENSIONS = {
+  centerX: 1.34,
+  centerY: 0,
+  length: 4.08,
+  width: 1.73,
+  height: 1.56,
+  zMin: 0,
+  zMax: 1.56,
+} as const;
+
+/**
+ * Hộp ego_exclusion từ candidates_v1.yaml: x: -1.5 -> 3.5, y: -1.2 -> 1.2, z < 2.2 m (SPEC-P06 §3).
+ */
+export const EGO_EXCLUSION_BOX = {
+  xMin: -1.5,
+  xMax: 3.5,
+  yMin: -1.2,
+  yMax: 1.2,
+  zMax: 2.2,
+} as const;
+
+/**
+ * Lấy 8 góc của xe Ego (Renault Zoe) trong hệ EGO (nuScenes).
+ */
+export function getEgoVehicleCorners(): [number, number, number][] {
+  const halfLength = EGO_VEHICLE_DIMENSIONS.length / 2; // 2.04
+  const halfWidth = EGO_VEHICLE_DIMENSIONS.width / 2;   // 0.865
+  const xMin = EGO_VEHICLE_DIMENSIONS.centerX - halfLength; // -0.70
+  const xMax = EGO_VEHICLE_DIMENSIONS.centerX + halfLength; // 3.38
+  const yMin = EGO_VEHICLE_DIMENSIONS.centerY - halfWidth;  // -0.865
+  const yMax = EGO_VEHICLE_DIMENSIONS.centerY + halfWidth;  // 0.865
+  const { zMin, zMax } = EGO_VEHICLE_DIMENSIONS;
+
+  return [
+    [xMin, yMin, zMin], // 0: đáy sau phải
+    [xMax, yMin, zMin], // 1: đáy trước phải
+    [xMax, yMax, zMin], // 2: đáy trước trái
+    [xMin, yMax, zMin], // 3: đáy sau trái
+    [xMin, yMin, zMax], // 4: nóc sau phải
+    [xMax, yMin, zMax], // 5: nóc trước phải
+    [xMax, yMax, zMax], // 6: nóc trước trái
+    [xMin, yMax, zMax], // 7: nóc sau trái
+  ];
+}
+
+/**
+ * Dựng các đoạn thẳng wireframe cho EgoVehicle (hệ Three.js):
+ * Dựng 8 góc ở hệ EGO rồi qua egoToThree; mũi tên hướng +x (SPEC-P06 §3).
+ */
+export function buildEgoVehicleLines(): Float32Array {
+  const egoCorners = getEgoVehicleCorners();
+  const threeCorners = egoCorners.map(([x, y, z]) => egoToThree(x, y, z));
+
+  // 12 cạnh hộp
+  const edges: [number, number][] = [
+    // Đáy
+    [0, 1], [1, 2], [2, 3], [3, 0],
+    // Nóc
+    [4, 5], [5, 6], [6, 7], [7, 4],
+    // Cột đứng
+    [0, 4], [1, 5], [2, 6], [3, 7],
+  ];
+
+  const xMax = EGO_VEHICLE_DIMENSIONS.centerX + EGO_VEHICLE_DIMENSIONS.length / 2;
+  // Mũi tên hướng +x ở hệ Ego (độ cao z = 0.3m)
+  const arrowStemStart: [number, number, number] = [xMax, 0, 0.3];
+  const arrowStemEnd: [number, number, number] = [xMax + 1.0, 0, 0.3];
+  const arrowBarbLeft: [number, number, number] = [xMax + 0.6, 0.35, 0.3];
+  const arrowBarbRight: [number, number, number] = [xMax + 0.6, -0.35, 0.3];
+
+  const arrowSegments: [[number, number, number], [number, number, number]][] = [
+    [arrowStemStart, arrowStemEnd],
+    [arrowBarbLeft, arrowStemEnd],
+    [arrowBarbRight, arrowStemEnd],
+  ];
+
+  const totalSegments = edges.length + arrowSegments.length;
+  const result = new Float32Array(totalSegments * 6);
+  let ptr = 0;
+
+  for (const [from, to] of edges) {
+    const p1 = threeCorners[from];
+    const p2 = threeCorners[to];
+    result[ptr++] = p1[0]; result[ptr++] = p1[1]; result[ptr++] = p1[2];
+    result[ptr++] = p2[0]; result[ptr++] = p2[1]; result[ptr++] = p2[2];
+  }
+
+  for (const [p1Ego, p2Ego] of arrowSegments) {
+    const p1 = egoToThree(...p1Ego);
+    const p2 = egoToThree(...p2Ego);
+    result[ptr++] = p1[0]; result[ptr++] = p1[1]; result[ptr++] = p1[2];
+    result[ptr++] = p2[0]; result[ptr++] = p2[1]; result[ptr++] = p2[2];
+  }
+
+  return result;
+}
+
+/**
+ * Kiểm tra điểm (x, y, z ở hệ EGO) có nằm trong vùng ego_exclusion thân xe không.
+ */
+export function isEgoVehiclePoint(
+  x: number,
+  y: number,
+  z: number,
+  box: { xMin: number; xMax: number; yMin: number; yMax: number; zMax: number } = EGO_EXCLUSION_BOX,
+): boolean {
+  return (
+    x >= box.xMin &&
+    x <= box.xMax &&
+    y >= box.yMin &&
+    y <= box.yMax &&
+    z < box.zMax
+  );
+}
+
+/**
+ * Bộ lọc điểm thân xe (SPEC-P06 §3):
+ * Ẩn các điểm nằm trong hộp ego_exclusion (x -1.5->3.5, y -1.2->1.2, z < 2.2).
+ * Trả về point cloud mới cho hiển thị, không làm biến đổi dữ liệu buffer gốc.
+ */
+export function filterLidarPointCloud(
+  pointCloud: LidarPointCloud,
+  filterEgo: boolean,
+  box: { xMin: number; xMax: number; yMin: number; yMax: number; zMax: number } = EGO_EXCLUSION_BOX,
+): LidarPointCloud {
+  if (!filterEgo) return pointCloud;
+
+  const { count, rawPositions, threePositions, intensities, colors, minZ, maxZ } = pointCloud;
+  let keptCount = 0;
+  for (let i = 0; i < count; i++) {
+    const x = rawPositions[i * 3];
+    const y = rawPositions[i * 3 + 1];
+    const z = rawPositions[i * 3 + 2];
+    if (!isEgoVehiclePoint(x, y, z, box)) {
+      keptCount++;
+    }
+  }
+
+  if (keptCount === count) return pointCloud;
+
+  const keptThree = new Float32Array(keptCount * 3);
+  const keptRaw = new Float32Array(keptCount * 3);
+  const keptIntensities = new Float32Array(keptCount);
+  const keptColors = new Float32Array(keptCount * 3);
+
+  let dst = 0;
+  for (let i = 0; i < count; i++) {
+    const x = rawPositions[i * 3];
+    const y = rawPositions[i * 3 + 1];
+    const z = rawPositions[i * 3 + 2];
+    if (!isEgoVehiclePoint(x, y, z, box)) {
+      keptRaw[dst * 3] = x;
+      keptRaw[dst * 3 + 1] = y;
+      keptRaw[dst * 3 + 2] = z;
+
+      keptThree[dst * 3] = threePositions[i * 3];
+      keptThree[dst * 3 + 1] = threePositions[i * 3 + 1];
+      keptThree[dst * 3 + 2] = threePositions[i * 3 + 2];
+
+      keptIntensities[dst] = intensities[i];
+
+      keptColors[dst * 3] = colors[i * 3];
+      keptColors[dst * 3 + 1] = colors[i * 3 + 1];
+      keptColors[dst * 3 + 2] = colors[i * 3 + 2];
+
+      dst++;
+    }
+  }
+
+  return {
+    count: keptCount,
+    threePositions: keptThree,
+    rawPositions: keptRaw,
+    intensities: keptIntensities,
+    colors: keptColors,
+    minZ,
+    maxZ,
+  };
 }

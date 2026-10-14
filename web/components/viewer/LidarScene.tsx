@@ -8,9 +8,12 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { RareObject } from "@/lib/api/types";
 import type { Cam } from "@/lib/api/types";
 import { candidateBoxCorners } from "./CandidateObjects";
+import { POINTPILLARS_COLOR } from "./ViewerLegend";
 import {
+  buildEgoVehicleLines,
   cornersToCuboid,
   decodeFloat16Lidar,
+  filterLidarPointCloud,
   getCameraFrustumLines,
   getCategoryColor,
   getLidarColors,
@@ -19,7 +22,16 @@ import {
   type LidarPointCloud,
 } from "./lidarDecoder";
 
-type Box3D = { category: string; corners: number[]; candidate?: boolean };
+export type BoxSource = "gt" | "cluster" | "pointpillars" | "merged";
+export type Box3D = { category: string; corners: number[]; candidate?: boolean; source?: BoxSource };
+export interface LayerToggles { gt: boolean; cluster: boolean; pointpillars: boolean; frustums: boolean }
+export const DEFAULT_LAYER_TOGGLES: LayerToggles = {
+  gt: true,
+  cluster: true,
+  pointpillars: true,
+  frustums: false,
+};
+
 type CameraPose = { cam: Cam; translation: number[]; rotation: number[]; intrinsic: number[][] };
 type ViewMode = "free" | "top" | "rear";
 type SceneView = "main" | "top" | "side" | "front";
@@ -33,6 +45,10 @@ export interface LidarSceneProps {
   onSelectCam?: (cam: Cam) => void;
   resetTrigger?: number;
   className?: string;
+  layerToggles?: LayerToggles;
+  onToggleLayer?: (layer: keyof LayerToggles) => void;
+  filterEgo?: boolean;
+  onToggleFilterEgo?: () => void;
 }
 
 function CameraController({ viewMode, resetTrigger }: { viewMode: ViewMode; resetTrigger: number }) {
@@ -51,7 +67,7 @@ function CameraController({ viewMode, resetTrigger }: { viewMode: ViewMode; rese
       camera.up.set(0, 1, 0);
       controls.target.set(0, 1.2, -12);
     } else {
-      camera.position.set(16, 20, 22);
+      camera.position.set(13, 16, 18);
       camera.up.set(0, 1, 0);
       controls.target.set(0, 0, 0);
     }
@@ -121,6 +137,10 @@ function Cuboid({
   const boxGeometry = useMemo(() => new THREE.BoxGeometry(sizeX, sizeY, sizeZ), [sizeX, sizeY, sizeZ]);
   const geometry = useMemo(() => new THREE.EdgesGeometry(boxGeometry), [boxGeometry]);
   useEffect(() => () => { geometry.dispose(); boxGeometry.dispose(); }, [boxGeometry, geometry]);
+
+  const isPP = box.source === "pointpillars";
+  const lineColor = isPP ? POINTPILLARS_COLOR : color;
+
   return (
     <group
       position={transform.center}
@@ -130,15 +150,18 @@ function Cuboid({
     >
       <mesh>
         <boxGeometry args={transform.size} />
-        <meshBasicMaterial color={color} transparent opacity={hovered ? 0.14 : 0.045} depthWrite={false} />
+        <meshBasicMaterial color={lineColor} transparent opacity={hovered ? 0.14 : 0.045} depthWrite={false} />
       </mesh>
       <lineSegments geometry={geometry} onUpdate={line => line.computeLineDistances()}>
         {box.candidate
-          ? <lineDashedMaterial color={hovered ? "#ffffff" : color} dashSize={0.25} gapSize={0.15} transparent opacity={hovered ? 1 : 0.9} />
-          : <lineBasicMaterial color={hovered ? "#ffffff" : color} transparent opacity={hovered ? 1 : 0.9} linewidth={2} />}
+          ? <lineDashedMaterial color={hovered ? "#ffffff" : lineColor} dashSize={0.25} gapSize={0.15} transparent opacity={hovered ? 1 : 0.9} />
+          : <lineBasicMaterial color={hovered ? "#ffffff" : lineColor} transparent opacity={hovered ? 1 : 0.9} linewidth={2} />}
       </lineSegments>
       {hovered && <Html position={[0, transform.size[1] / 2 + 0.25, 0]} center distanceFactor={18}>
-        <span className="whitespace-nowrap rounded border border-white/20 bg-black/90 px-2 py-1 text-[11px] font-medium text-white shadow">{box.category}{box.candidate ? " · Chưa xác nhận" : ""}</span>
+        <span className="whitespace-nowrap rounded border border-white/20 bg-black/90 px-2 py-1 text-[11px] font-medium text-white shadow">
+          {box.category}
+          {box.candidate ? (isPP ? " · PointPillars" : box.source === "merged" ? " · Cụm/PP" : " · Cụm LiDAR") : " · GT"}
+        </span>
       </Html>}
     </group>
   );
@@ -146,25 +169,19 @@ function Cuboid({
 
 function EgoVehicle() {
   const geometry = useMemo(() => {
-    const w = 0.95; const h = 1.6; const l = 2.25;
-    const coords = [
-      -w, 0.2, -l, w, 0.2, -l, w, 0.2, -l, w, 0.2, l,
-      w, 0.2, l, -w, 0.2, l, -w, 0.2, l, -w, 0.2, -l,
-      -w, h, -l, w, h, -l, w, h, -l, w, h, l,
-      w, h, l, -w, h, l, -w, h, l, -w, h, -l,
-      -w, 0.2, -l, -w, h, -l, w, 0.2, -l, w, h, -l,
-      w, 0.2, l, w, h, l, -w, 0.2, l, -w, h, l,
-      0, 0.3, -l, 0, 0.3, -l - 1.2, -0.4, 0.3, -l - 0.7, 0, 0.3, -l - 1.2,
-      0.4, 0.3, -l - 0.7, 0, 0.3, -l - 1.2,
-    ];
-    return new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(coords, 3));
+    const coords = buildEgoVehicleLines();
+    return new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(coords, 3));
   }, []);
   useEffect(() => () => geometry.dispose(), [geometry]);
-  return <lineSegments geometry={geometry}><lineBasicMaterial color="#38bdf8" /></lineSegments>;
+  return <lineSegments geometry={geometry}><lineBasicMaterial color="#38bdf8" transparent opacity={0.5} /></lineSegments>;
 }
 
 function CameraFrustums({ camPoses, onSelectCam }: { camPoses: CameraPose[]; onSelectCam?: (cam: Cam) => void }) {
-  return <group>{camPoses.map((pose) => <CameraFrustum key={pose.cam} pose={pose} onSelectCam={onSelectCam} />)}</group>;
+  return (
+    <group name="camera-frustums" userData={{ isFrustum: true }}>
+      {camPoses.map((pose) => <CameraFrustum key={pose.cam} pose={pose} onSelectCam={onSelectCam} />)}
+    </group>
+  );
 }
 
 function CameraFrustum({ pose, onSelectCam }: { pose: CameraPose; onSelectCam?: (cam: Cam) => void }) {
@@ -189,6 +206,7 @@ function SceneContents({
   boxes3d,
   showBoxes,
   camPoses,
+  showFrustums = false,
   onSelectCam,
   viewMode = "free",
   resetTrigger = 0,
@@ -200,16 +218,24 @@ function SceneContents({
   boxes3d: Box3D[];
   showBoxes: boolean;
   camPoses: CameraPose[];
+  showFrustums?: boolean;
   onSelectCam?: (cam: Cam) => void;
   viewMode?: ViewMode;
   resetTrigger?: number;
 }) {
+  const { scene } = useThree();
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as unknown as { __vcf_scene?: THREE.Scene }).__vcf_scene = scene;
+    }
+  }, [scene]);
+
   return <>
     <color attach="background" args={["#080d15"]} />
     <ambientLight intensity={0.85} />
     <directionalLight position={[10, 18, 12]} intensity={0.65} />
     {view === "main" ? <>
-      <PerspectiveCamera makeDefault fov={50} near={0.1} far={500} position={[16, 20, 22]} />
+      <PerspectiveCamera makeDefault fov={50} near={0.1} far={500} position={[13, 16, 18]} />
       <CameraController viewMode={viewMode} resetTrigger={resetTrigger} />
     </> : <>
       <OrthographicCamera makeDefault position={
@@ -228,7 +254,7 @@ function SceneContents({
       />
     )}
     {showBoxes && <Boxes3DMesh boxes3d={boxes3d} />}
-    {view === "main" && <CameraFrustums camPoses={camPoses} onSelectCam={onSelectCam} />}
+    {view === "main" && showFrustums && <CameraFrustums camPoses={camPoses} onSelectCam={onSelectCam} />}
   </>;
 }
 
@@ -241,12 +267,66 @@ export function LidarScene({
   onSelectCam,
   resetTrigger = 0,
   className = "",
+  layerToggles: propLayerToggles,
+  onToggleLayer,
+  filterEgo: propFilterEgo,
+  onToggleFilterEgo,
 }: LidarSceneProps) {
-  const displayBoxes: Box3D[] = [...boxes3d, ...objects.map(o => {
-    // F2 · H25: 8 góc ứng viên dựng theo CÙNG quy ước với box GT (`geometry.box_corners`) — xem
-    // `candidateBoxCorners`; dựng tay thứ tự khác làm cuboid lệch 90° và tráo trục kích thước.
-    return {category:o.cls_pred, corners:candidateBoxCorners(o), candidate:true};
-  })];
+  const [internalLayers, setInternalLayers] = useState<LayerToggles>(DEFAULT_LAYER_TOGGLES);
+  const activeLayers = propLayerToggles ?? internalLayers;
+  const [internalFilterEgo, setInternalFilterEgo] = useState(true);
+  const filterEgo = propFilterEgo ?? internalFilterEgo;
+
+  const handleToggle = (key: keyof LayerToggles) => {
+    if (onToggleLayer) {
+      onToggleLayer(key);
+    } else {
+      setInternalLayers((prev) => ({ ...prev, [key]: !prev[key] }));
+    }
+  };
+
+  const toggleFilterEgo = () => {
+    if (onToggleFilterEgo) {
+      onToggleFilterEgo();
+    } else {
+      setInternalFilterEgo((prev) => !prev);
+    }
+  };
+
+  const displayBoxes: Box3D[] = useMemo(() => {
+    if (!showBoxes) return [];
+    const all: Box3D[] = [
+      ...boxes3d.map((b) => ({
+        ...b,
+        source: b.source ?? "gt",
+        candidate: b.candidate ?? false,
+      })),
+      ...objects.map((o) => {
+        const source: BoxSource =
+          o.source === "pointpillars"
+            ? "pointpillars"
+            : o.source === "merged"
+            ? "merged"
+            : "cluster";
+        return {
+          category: o.cls_pred,
+          corners: candidateBoxCorners(o),
+          candidate: true,
+          source,
+        };
+      }),
+    ];
+
+    return all.filter((box) => {
+      const src = box.source ?? (box.candidate ? "cluster" : "gt");
+      if (src === "gt") return activeLayers.gt;
+      if (src === "cluster") return activeLayers.cluster;
+      if (src === "pointpillars") return activeLayers.pointpillars;
+      if (src === "merged") return activeLayers.cluster || activeLayers.pointpillars;
+      return true;
+    });
+  }, [showBoxes, boxes3d, objects, activeLayers.gt, activeLayers.cluster, activeLayers.pointpillars]);
+
   const [pointCloud, setPointCloud] = useState<LidarPointCloud | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -256,8 +336,15 @@ export function LidarScene({
   const [pointSize, setPointSize] = useState<number>(LIDAR_POINT_STYLE.defaultSize);
   const [cameraReset, setCameraReset] = useState(0);
   const [mobileControlsOpen, setMobileControlsOpen] = useState(false);
-  const colors = useMemo(() => pointCloud ? getLidarColors(pointCloud, colorMode) : null, [colorMode, pointCloud]);
-  const activePointCloud = lidarUrl ? pointCloud : null;
+  const filteredPointCloud = useMemo(
+    () => (pointCloud ? filterLidarPointCloud(pointCloud, filterEgo) : null),
+    [pointCloud, filterEgo],
+  );
+  const colors = useMemo(
+    () => (filteredPointCloud ? getLidarColors(filteredPointCloud, colorMode) : null),
+    [colorMode, filteredPointCloud],
+  );
+  const activePointCloud = lidarUrl ? filteredPointCloud : null;
   const activeError = lidarUrl ? error : null;
   const activeLoading = Boolean(lidarUrl && loading);
 
@@ -278,9 +365,21 @@ export function LidarScene({
     return () => { active = false; };
   }, [lidarUrl, retryVersion]);
 
-  return <div className={`relative isolate h-full min-h-[220px] overflow-hidden rounded-lg bg-[#080d15] text-white ${className}`} data-testid="lidar-scene">
+  return <div className={`relative isolate h-full min-h-[220px] overflow-hidden rounded-lg bg-[#080d15] text-white ${className}`} data-testid="lidar-scene" data-frustums={activeLayers.frustums ? "1" : "0"} data-filter-ego={filterEgo ? "1" : "0"}>
     <Canvas dpr={[1, 1.5]} gl={{ antialias: true, powerPreference: "high-performance" }} className="absolute inset-0">
-      <SceneContents view="main" pointCloud={activePointCloud} colors={colors} pointSize={pointSize} boxes3d={displayBoxes} showBoxes={showBoxes} camPoses={camPoses} onSelectCam={onSelectCam} viewMode={viewMode} resetTrigger={resetTrigger + cameraReset} />
+      <SceneContents
+        view="main"
+        pointCloud={activePointCloud}
+        colors={colors}
+        pointSize={pointSize}
+        boxes3d={displayBoxes}
+        showBoxes={showBoxes}
+        camPoses={camPoses}
+        showFrustums={activeLayers.frustums}
+        onSelectCam={onSelectCam}
+        viewMode={viewMode}
+        resetTrigger={resetTrigger + cameraReset}
+      />
     </Canvas>
 
     <button type="button" aria-expanded={mobileControlsOpen} onClick={() => setMobileControlsOpen((open) => !open)} className="absolute left-2 top-2 z-10 rounded-md border border-white/10 bg-black/75 px-2 py-1.5 text-[10px] text-white md:hidden">
@@ -292,6 +391,50 @@ export function LidarScene({
       <button type="button" aria-label="Đặt lại góc nhìn LiDAR" title="Đặt lại camera" onClick={() => { setViewMode("free"); setCameraReset((value) => value + 1); }} className="rounded bg-white/10 px-2 py-1 hover:bg-white/20">Đặt lại</button>
       <span className="mx-0.5 h-4 border-l border-white/20" />
       {([ ["height", "Độ cao"], ["intensity", "Intensity"] ] as const).map(([mode, label]) => <button key={mode} type="button" onClick={() => setColorMode(mode)} aria-pressed={colorMode === mode} className={`rounded px-2 py-1 ${colorMode === mode ? "bg-blue-600 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}>{label}</button>)}
+      <span className="mx-0.5 h-4 border-l border-white/20" />
+      <span className="px-1 text-white/60">Lớp:</span>
+      <button
+        type="button"
+        onClick={() => handleToggle("gt")}
+        aria-pressed={activeLayers.gt}
+        className={`rounded px-2 py-1 ${activeLayers.gt ? "bg-blue-600 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+      >
+        GT
+      </button>
+      <button
+        type="button"
+        onClick={() => handleToggle("cluster")}
+        aria-pressed={activeLayers.cluster}
+        className={`rounded px-2 py-1 ${activeLayers.cluster ? "bg-blue-600 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+      >
+        Cụm LiDAR
+      </button>
+      <button
+        type="button"
+        onClick={() => handleToggle("pointpillars")}
+        aria-pressed={activeLayers.pointpillars}
+        className={`rounded px-2 py-1 ${activeLayers.pointpillars ? "bg-blue-600 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+      >
+        PointPillars
+      </button>
+      <button
+        type="button"
+        onClick={() => handleToggle("frustums")}
+        aria-pressed={activeLayers.frustums}
+        className={`rounded px-2 py-1 ${activeLayers.frustums ? "bg-blue-600 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+      >
+        Camera (C)
+      </button>
+      <button
+        type="button"
+        onClick={toggleFilterEgo}
+        aria-pressed={!filterEgo}
+        data-filter-ego={filterEgo ? "on" : "off"}
+        className={`rounded px-2 py-1 ${!filterEgo ? "bg-blue-600 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+        title={filterEgo ? "Hiện điểm thân xe" : "Ẩn điểm thân xe"}
+      >
+        Điểm thân xe
+      </button>
     </div>
     <div className="absolute right-2 top-2 z-10 rounded-md border border-white/10 bg-black/75 px-2 py-1.5 text-[10px] text-white/80 sm:right-3 sm:top-3 sm:text-xs" role={loading ? "status" : undefined} aria-live="polite">
       {activeLoading ? "Đang nạp LiDAR…" : activePointCloud ? `${activePointCloud.count.toLocaleString()} điểm` : "Không có LiDAR"}

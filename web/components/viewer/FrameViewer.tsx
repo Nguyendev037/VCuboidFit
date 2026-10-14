@@ -4,10 +4,10 @@ import { DataError, EmptyState, LoadingState } from "@/components/ui/DataState";
 import { ViewerLegend } from "./ViewerLegend";
 import { ContextPanel } from "@/components/context/ContextPanel";
 import { CandidateObjects } from "./CandidateObjects";
-import React, { useEffect, useState, useMemo, useSyncExternalStore } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useSyncExternalStore } from "react";
 import type { Cam, FrameDetail } from "@/lib/api/types";
 import { getFrame } from "@/lib/api/client";
-import { LidarScene } from "./LidarScene";
+import { DEFAULT_LAYER_TOGGLES, LidarScene, type LayerToggles } from "./LidarScene";
 import { CameraImage, getCamFriendlyName } from "./CameraImage";
 import { FRAME_SCORES, GT_GROUPS, gtTagLabel, reasonText } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -26,6 +26,16 @@ export interface FrameViewerProps {
   onNext?: () => void;
   onClose: () => void;
 }
+
+const CAMS_COLLAPSED_KEY = "vcf.viewer.camsCollapsed";
+const getInitialCollapsed = (): boolean => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(CAMS_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
 
 const subscribeToSampleMode = (callback: () => void) => {
   window.addEventListener("storage", callback);
@@ -53,7 +63,7 @@ export function FrameViewer({
   const [error, setError] = useState<Error | null>(null);
   const [retryVersion, setRetryVersion] = useState(0);
 
-  // Chế độ xem: surround (3 cam trước - LiDAR - 3 cam sau) hoặc focus
+  // Chế độ xem: surround (LiDAR lớn + 1 dải camera) hoặc focus
   const [mode, setMode] = useState<"surround" | "focus">("surround");
   const [focusTarget, setFocusTarget] = useState<Cam | "lidar" | "bev">("CAM_FRONT");
 
@@ -62,6 +72,28 @@ export function FrameViewer({
   const [showLidarOverlay, setShowLidarOverlay] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(true);
   const [reset3dTrigger, setReset3dTrigger] = useState(0);
+
+  // SPEC-P02: Thu gọn dải ảnh (lưu localStorage, mặc định MỞ)
+  const [collapseCams, setCollapseCams] = useState(getInitialCollapsed);
+
+  // SPEC-P02: Lớp hiển thị (GT, Cụm, PointPillars, frustum mặc định TẮT)
+  const [layerToggles, setLayerToggles] = useState<LayerToggles>(DEFAULT_LAYER_TOGGLES);
+
+  const toggleCollapseCams = useCallback(() => {
+    setCollapseCams((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(CAMS_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        // bỏ qua lỗi nếu storage bị chặn
+      }
+      return next;
+    });
+  }, []);
+
+  const handleToggleLayer = useCallback((layer: keyof LayerToggles) => {
+    setLayerToggles((prev) => ({ ...prev, [layer]: !prev[layer] }));
+  }, []);
 
   // Tải dữ liệu frame hiện tại
   useEffect(() => {
@@ -104,8 +136,11 @@ export function FrameViewer({
       toggleLidarOverlay: () => setShowLidarOverlay((p) => !p),
       toggleInfoPanel: () => setShowInfoPanel((i) => !i),
       reset3dView: () => setReset3dTrigger((t) => t + 1),
+      toggleFrustums: () => setLayerToggles((l) => ({ ...l, frustums: !l.frustums })),
+      toggleImages: toggleCollapseCams,
+      toggleCollapseCams,
     }),
-    [onPrev, onNext, onClose]
+    [onPrev, onNext, onClose, toggleCollapseCams]
   );
 
   // Lắng nghe sự kiện bàn phím toàn cục
@@ -129,6 +164,11 @@ export function FrameViewer({
   const cameraGroups = useMemo(() => {
     return groupCamerasByPosition(frame?.cams);
   }, [frame?.cams]);
+
+  // Toàn bộ camera hiển thị thành 1 dải duy nhất theo quy ước CVAT
+  const allCameras = useMemo(() => {
+    return [...cameraGroups.front, ...cameraGroups.back];
+  }, [cameraGroups.front, cameraGroups.back]);
 
   const focusedCamDetail = useMemo(() => {
     if (focusTarget === "lidar" || focusTarget === "bev" || !frame) return null;
@@ -222,6 +262,20 @@ export function FrameViewer({
           )}
           <button
             type="button"
+            onClick={toggleCollapseCams}
+            aria-pressed={collapseCams}
+            aria-label={collapseCams ? "Hiện ảnh" : "Thu gọn ảnh"}
+            data-testid="toggle-collapse-cams"
+            className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
+              collapseCams
+                ? "bg-white/5 text-slate-400 border-white/10 hover:text-white"
+                : "bg-blue-500/20 text-blue-300 border-blue-500/40"
+            }`}
+          >
+            {collapseCams ? "Hiện ảnh (I)" : "Thu gọn ảnh (I)"}
+          </button>
+          <button
+            type="button"
             onClick={() => setShowBoxes((b) => !b)}
             aria-pressed={showBoxes}
             className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${
@@ -242,7 +296,7 @@ export function FrameViewer({
                 : "bg-white/5 text-slate-400 border-white/10 hover:text-white"
             }`}
           >
-            Thông tin (I)
+            Thông tin
           </button>
           <button
             type="button"
@@ -265,40 +319,18 @@ export function FrameViewer({
           ) : error ? (
             <DataError error={error} onRetry={() => setRetryVersion(v => v + 1)} />
           ) : !frame ? <EmptyState message="Không có dữ liệu frame." /> : mode === "surround" ? (
-            // ================== BỐ CỤC SURROUND ==================
+            // ================== BỐ CỤC SURROUND (CVAT: LiDAR lớn + 1 dải camera duy nhất) ==================
             <div className="flex-1 flex flex-col gap-2 min-h-0">
-              {/* Hàng 1: 3 camera trước (CAM_FRONT_LEFT, CAM_FRONT, CAM_FRONT_RIGHT) */}
-              {cameraGroups.front.length > 0 && (
-                <div
-                  className="grid gap-2 h-[24%] md:h-[28%]"
-                  style={{
-                    gridTemplateColumns: `repeat(${cameraGroups.front.length}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {cameraGroups.front.map((cam) => (
-                    <CameraImage
-                      key={cam.cam}
-                      camDetail={cam}
-                      showBoxes={showBoxes}
-                      showLidarOverlay={showLidarOverlay}
-                      hideCameraScore={isLidarFrame}
-                      onClick={() => {
-                        setMode("focus");
-                        setFocusTarget(cam.cam);
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Hàng 2: LiDAR 3D Scene ở giữa */}
-              <div className="flex-1 min-h-[180px]">
+              {/* Khung LiDAR 3D Scene chiếm phần lớn không gian (≥ 70% vùng main) */}
+              <div className="flex-1 min-h-[220px] relative">
                 <LidarScene
                   lidarUrl={frame.lidar?.url}
                   boxes3d={frame.boxes3d}
                   objects={frame.objects}
                   camPoses={frame.camPoses}
                   showBoxes={showBoxes}
+                  layerToggles={layerToggles}
+                  onToggleLayer={handleToggleLayer}
                   resetTrigger={reset3dTrigger}
                   onSelectCam={(cam) => {
                     setMode("focus");
@@ -307,15 +339,16 @@ export function FrameViewer({
                 />
               </div>
 
-              {/* Hàng 3: 3 camera sau (CAM_BACK_LEFT, CAM_BACK, CAM_BACK_RIGHT) */}
-              {cameraGroups.back.length > 0 && (
+              {/* Dải ảnh camera duy nhất (cao md:h-[15%], mobile h-[18%], thu gọn được) */}
+              {!collapseCams && allCameras.length > 0 && (
                 <div
-                  className="grid gap-2 h-[24%] md:h-[28%]"
+                  className="grid gap-2 h-[18%] md:h-[15%] shrink-0"
                   style={{
-                    gridTemplateColumns: `repeat(${cameraGroups.back.length}, minmax(0, 1fr))`,
+                    gridTemplateColumns: `repeat(${allCameras.length}, minmax(0, 1fr))`,
                   }}
+                  data-testid="cams-strip"
                 >
-                  {cameraGroups.back.map((cam) => (
+                  {allCameras.map((cam) => (
                     <CameraImage
                       key={cam.cam}
                       camDetail={cam}
@@ -340,9 +373,11 @@ export function FrameViewer({
                   <LidarScene
                     lidarUrl={frame.lidar?.url}
                     boxes3d={frame.boxes3d}
-                  objects={frame.objects}
+                    objects={frame.objects}
                     camPoses={frame.camPoses}
                     showBoxes={showBoxes}
+                    layerToggles={layerToggles}
+                    onToggleLayer={handleToggleLayer}
                     resetTrigger={reset3dTrigger}
                     onSelectCam={(cam) => setFocusTarget(cam)}
                   />
@@ -591,7 +626,9 @@ export function FrameViewer({
           <span>·</span>
           <span>B Hộp 3D</span>
           <span>·</span>
-          <span>I Thông tin</span>
+          <span>C Camera</span>
+          <span>·</span>
+          <span>I Thu gọn ảnh</span>
           <span>·</span>
           <span>R Đặt lại 3D</span>
         </div>
