@@ -24,7 +24,7 @@ web, worker và Tầng 0 vẫn chạy, chỉ riêng checkpoint là không dùng 
 
 | Có | Không có (tự chuẩn bị) |
 |---|---|
-| Toàn bộ code, test, docs, `web/public/demo/bench_pitch.json` + 3 PNG (trang chủ, `/vi-sao`) | Dữ liệu nuScenes và các `vcf_part_*.zip` (xem mục "Dữ liệu nuScenes" bên dưới) |
+| Toàn bộ code, test, docs, ảnh hero, `web/public/demo/bench_pitch.json` + 3 PNG (`/vi-sao`) | Dữ liệu nuScenes, các `vcf_part_*.zip` và `web/public/mock-media/` (xem [web.md](web.md) để dựng media mẫu trước khi chạy showcase/Vitest) |
 | `dataset/01_small_3scenes/vcf_manifest.json` (chỉ manifest) | Job demo `m2_mini`, `night_v24`, `pool_v24`... (`model/workspace/` bị gitignore; không phải lỗi) |
 | 1 checkpoint 80 epoch: `model/workspace/experiments/mini-e80/t1/pcdet_output/exp/t1/cfg/pp_seed/seed_c6b39360/ckpt/checkpoint_epoch_80.pth` (LFS, ~70 MB) | Seed Tầng 1 đúng bố cục mà `dev_up.ps1` và `c4.cli.lidar_t1` đòi: `index.parquet`, `t1/cfg/pp_seed.yaml`, `t1/ckpt/seed_latest.pth`. Thí nghiệm `mini-e80` chỉ có checkpoint trên nên `dev_up.ps1` KHÔNG chọn nó và worker chạy Tầng 0. Checkpoint này là trọng số mặc định cho Colab (`model/scripts/colab_agent.py` tải từ GitHub) |
 | | Trọng số YOLO11 / DINOv2 / OpenCLIP (`model/workspace/weights/`; tải bằng `fetch_weights.py`) |

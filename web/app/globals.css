@@ -42,7 +42,7 @@
   --color-vcf-danger-soft: var(--vcf-danger-soft);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -185,3 +185,344 @@ html[data-present="1"] { font-size: 18px; }
 html[data-present="1"] [data-presentation-banner] { display: block; }
 html[data-present="1"] a[href^="/dev/"],
 html[data-present="1"] [data-advanced-params] { display: none !important; }
+
+/* ===== VCuboidFIT Perception HUD (dark) =====
+   Ghi đè bảng màu Tailwind trong phạm vi .vcf-hud để toàn bộ class cũ (bg-white, text-slate-*, bg-blue-600…)
+   tự chuyển sang tông tối theo DESIGN.md. Khung viewer 3D đã tối sẵn bọc trong .vcf-raw để giữ bảng màu gốc. */
+.vcf-hud {
+  --hud-bg: #f4f7fb;
+  --hud-lowest: #ffffff;
+  --hud-low: #f8fafc;
+  --hud-surface: #ffffff;
+  --hud-high: #f1f5f9;
+  --hud-highest: #e2e8f0;
+  --hud-outline: #cbd5e1;
+  --hud-text: #0f172a;
+  --hud-muted: #475569;
+  --hud-card-border: #dbe3ee;
+  --hud-glass: rgb(255 255 255 / 0.86);
+  --hud-glow-a: rgb(14 165 233 / 0.13);
+  --hud-glow-b: rgb(139 92 246 / 0.08);
+  --hud-glow-c: rgb(16 185 129 / 0.08);
+  --hud-grid: rgb(14 165 233 / 0.13);
+  color-scheme: light;
+  background: var(--hud-bg);
+  color: var(--hud-text);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* biến shadcn dùng bởi Card/Badge/Button */
+  --background: #f4f7fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0369a1;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #526077;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --border: #dbe3ee;
+  --input: #cbd5e1;
+  --ring: #0ea5e9;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #5d6c82;
+  --color-slate-500: #526077;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-blue-50: #e0f2fe;
+  --color-blue-100: #bae6fd;
+  --color-blue-200: #7dd3fc;
+  --color-blue-300: #38bdf8;
+  --color-blue-400: #0ea5e9;
+  --color-blue-500: #0ea5e9;
+  --color-blue-600: #0369a1;
+  --color-blue-700: #075985;
+  --color-blue-800: #0c4a6e;
+  --color-blue-900: #082f49;
+  --color-blue-950: #052e45;
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #047857;
+  --color-emerald-700: #047857;
+  --color-emerald-800: #065f46;
+  --color-emerald-900: #064e3b;
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-600: #b45309;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  --color-rose-50: #fff1f2;
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #be123c;
+  --color-rose-700: #be123c;
+  --color-rose-800: #9f1239;
+  --color-rose-900: #881337;
+  --color-red-50: #fef2f2;
+  --color-red-200: #fecaca;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-violet-50: #f5f3ff;
+  --color-violet-200: #ddd6fe;
+  --color-violet-500: #8b5cf6;
+  --color-violet-700: #6d28d9;
+}
+
+.vcf-hud[data-theme="dark"] {
+  --hud-bg: #10131a;
+  --hud-lowest: #0b0e15;
+  --hud-low: #191b23;
+  --hud-surface: #1d1f27;
+  --hud-high: #272a32;
+  --hud-highest: #32353d;
+  --hud-outline: #3e484f;
+  --hud-text: #e1e2ec;
+  --hud-muted: #bdc8d1;
+  --hud-primary: #38bdf8;
+  --hud-primary-soft: #8ed5ff;
+  --hud-secondary: #c0c1ff;
+  --hud-tertiary: #56e5a9;
+  --hud-card-border: rgb(62 72 79 / 0.55);
+  --hud-glass: rgb(16 19 26 / 0.82);
+  --hud-glow-a: rgb(56 189 248 / 0.10);
+  --hud-glow-b: rgb(192 193 255 / 0.08);
+  --hud-glow-c: rgb(86 229 169 / 0.07);
+  --hud-grid: rgb(56 189 248 / 0.07);
+  color-scheme: dark;
+  background: var(--hud-bg);
+  color: var(--hud-text);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* biến shadcn dùng bởi Card/Badge/Button */
+  --background: #10131a;
+  --foreground: #e1e2ec;
+  --card: #1d1f27;
+  --card-foreground: #e1e2ec;
+  --popover: #1d1f27;
+  --popover-foreground: #e1e2ec;
+  --primary: #38bdf8;
+  --primary-foreground: #004965;
+  --secondary: #272a32;
+  --secondary-foreground: #e1e2ec;
+  --muted: #272a32;
+  --muted-foreground: #9aa5ad;
+  --accent: #272a32;
+  --accent-foreground: #e1e2ec;
+  --border: rgb(62 72 79 / 0.6);
+  --input: rgb(62 72 79 / 0.8);
+  --ring: #38bdf8;
+
+  --color-white: #1d1f27;
+  --color-black: #000000;
+  --color-slate-50: #191b23;
+  --color-slate-100: #272a32;
+  --color-slate-200: #32353d;
+  --color-slate-300: #3e484f;
+  --color-slate-400: #98a3ab;
+  --color-slate-500: #9aa5ad;
+  --color-slate-600: #bdc8d1;
+  --color-slate-700: #cdd6dd;
+  --color-slate-800: #e1e2ec;
+  --color-slate-900: #f1f2f8;
+  --color-blue-50: #11303f;
+  --color-blue-100: #15394d;
+  --color-blue-200: #1f5772;
+  --color-blue-300: #5bbcea;
+  --color-blue-400: #7bd0ff;
+  --color-blue-500: #38bdf8;
+  --color-blue-600: #38bdf8;
+  --color-blue-700: #8ed5ff;
+  --color-blue-800: #a9deff;
+  --color-blue-900: #c4e7ff;
+  --color-blue-950: #d6eeff;
+  --color-emerald-50: #0d2a20;
+  --color-emerald-100: #123828;
+  --color-emerald-200: #1d5a43;
+  --color-emerald-400: #4edea3;
+  --color-emerald-500: #56e5a9;
+  --color-emerald-600: #56e5a9;
+  --color-emerald-700: #6ffbbe;
+  --color-emerald-800: #9ff5d1;
+  --color-emerald-900: #c2f8df;
+  --color-amber-50: #2e2410;
+  --color-amber-100: #3a2d12;
+  --color-amber-200: #6b5217;
+  --color-amber-300: #e9b949;
+  --color-amber-400: #f2c455;
+  --color-amber-600: #f2c455;
+  --color-amber-700: #f7cf6b;
+  --color-amber-800: #fbe0a0;
+  --color-amber-900: #fdebc2;
+  --color-rose-50: #3a1618;
+  --color-rose-100: #4a1c1f;
+  --color-rose-200: #7a2a2e;
+  --color-rose-300: #9a3a3f;
+  --color-rose-500: #ff8f84;
+  --color-rose-600: #ffb4ab;
+  --color-rose-700: #ffb4ab;
+  --color-rose-800: #ffd0ca;
+  --color-rose-900: #ffe1de;
+  --color-red-50: #3a1618;
+  --color-red-200: #7a2a2e;
+  --color-red-700: #ffb4ab;
+  --color-red-800: #ffd0ca;
+  --color-violet-50: #1f1d45;
+  --color-violet-200: #3d3a8a;
+  --color-violet-500: #a5a7ff;
+  --color-violet-700: #c0c1ff;
+}
+
+/* Khung đã tối sẵn (viewer 3D, ảnh camera): trả lại bảng màu mặc định của Tailwind. */
+.vcf-raw {
+  --color-white: #fff;
+  --color-black: #000;
+  --color-slate-50: oklch(98.4% 0.003 247.858);
+  --color-slate-100: oklch(96.8% 0.007 247.896);
+  --color-slate-200: oklch(92.9% 0.013 255.508);
+  --color-slate-300: oklch(86.9% 0.022 252.894);
+  --color-slate-400: oklch(70.4% 0.04 256.788);
+  --color-slate-500: oklch(55.4% 0.046 257.417);
+  --color-slate-600: oklch(44.6% 0.043 257.281);
+  --color-slate-700: oklch(37.2% 0.044 257.287);
+  --color-slate-800: oklch(27.9% 0.041 260.031);
+  --color-slate-900: oklch(20.8% 0.042 265.755);
+  --color-blue-300: oklch(80.9% 0.105 251.813);
+  --color-blue-400: oklch(70.7% 0.165 254.624);
+  --color-blue-500: oklch(62.3% 0.214 259.815);
+  --color-blue-600: oklch(54.6% 0.245 262.881);
+  --color-blue-700: oklch(48.8% 0.243 264.376);
+  --color-emerald-400: oklch(76.5% 0.177 163.223);
+  --color-emerald-500: oklch(69.6% 0.17 162.48);
+  --color-amber-300: oklch(87.9% 0.169 91.605);
+  --color-amber-400: oklch(82.8% 0.189 84.429);
+}
+
+/* Nền khí quyển: các quầng sáng mờ cyan / emerald / indigo */
+.hud-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 8% -10%, var(--hud-glow-a), transparent 60%),
+    radial-gradient(50rem 36rem at 100% 10%, var(--hud-glow-b), transparent 60%),
+    radial-gradient(50rem 36rem at 60% 110%, var(--hud-glow-c), transparent 60%);
+}
+
+.hud-glass {
+  background: var(--hud-glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.hud-card {
+  background: var(--hud-surface);
+  border: 1px solid var(--hud-card-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.hud-glow {
+  box-shadow: 0 6px 20px rgb(3 105 161 / 0.28);
+}
+
+.font-display { font-family: var(--font-space-grotesk), var(--font-inter), sans-serif; }
+.font-data { font-family: var(--font-jetbrains-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+.vcf-hud ::selection { background: rgb(56 189 248 / 0.35); }
+.vcf-hud :where(a, button, input, select, textarea, [tabindex]):focus-visible { outline-color: #8ed5ff; }
+.vcf-hud input[type="range"] { accent-color: #0369a1; color-scheme: light; }
+.vcf-hud[data-theme="dark"] input[type="range"] { accent-color: #38bdf8; color-scheme: dark; }
+.vcf-hud progress { accent-color: #0369a1; }
+
+/* Phản hồi tương tác: con trỏ và trạng thái vô hiệu rõ ràng */
+.vcf-hud button:not(:disabled), .vcf-hud a[href], .vcf-hud [role="button"] { cursor: pointer; }
+.vcf-hud button:disabled { cursor: not-allowed; }
+
+/* ===== Hiệu ứng HUD (tắt tự động khi người dùng chọn giảm chuyển động) ===== */
+.hud-grid {
+  background-image:
+    linear-gradient(var(--hud-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hud-grid) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+}
+
+@keyframes hud-scan {
+  0% { top: 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: calc(100% - 2px); opacity: 0; }
+}
+.hud-scan {
+  height: 2px;
+  top: 0;
+  background: linear-gradient(90deg, transparent, rgb(86 229 169 / 0.9), transparent);
+  box-shadow: 0 0 18px 2px rgb(86 229 169 / 0.45);
+  animation: hud-scan 5s ease-in-out infinite;
+}
+
+@keyframes hud-reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+.reveal { animation: hud-reveal 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: var(--d, 0ms); }
+
+@keyframes hud-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.hud-float { animation: hud-float 6s ease-in-out infinite; }
+
+@keyframes hud-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(56 189 248 / 0.45); }
+  100% { box-shadow: 0 0 0 14px rgb(56 189 248 / 0); }
+}
+.hud-pulse { animation: hud-pulse-ring 2.2s ease-out infinite; }
+
+.hud-gradient-text {
+  background: linear-gradient(90deg, #8ed5ff, #38bdf8 40%, #56e5a9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hud-card-lift { transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; }
+.hud-card-lift:hover { transform: translateY(-3px); border-color: rgb(56 189 248 / 0.5); box-shadow: 0 10px 30px rgb(56 189 248 / 0.12); }
+
+.hud-bg-photo { background-size: cover; background-position: center; filter: blur(2px) saturate(1.1); }
+
+.vcf-hud code, .vcf-hud kbd { font-family: var(--font-jetbrains-mono), ui-monospace, monospace; font-size: 0.92em; }
+
+/* Thanh trượt ngân sách: rãnh sáng, phần đã chọn màu xanh, núm tròn */
+.hud-range { -webkit-appearance: none; appearance: none; width: 100%; height: 32px; background: transparent; cursor: pointer; }
+.hud-range::-webkit-slider-runnable-track { height: 8px; border-radius: 9999px; background: linear-gradient(to right, #0369a1 var(--p, 50%), #cbd5e1 var(--p, 50%)); }
+.hud-range::-moz-range-track { height: 8px; border-radius: 9999px; background: #cbd5e1; }
+.hud-range::-moz-range-progress { height: 8px; border-radius: 9999px; background: #0369a1; }
+.hud-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; margin-top: -6px; border-radius: 50%; background: #fff; border: 3px solid #0369a1; box-shadow: 0 1px 4px rgb(15 23 42 / 0.3); }
+.hud-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #0369a1; box-shadow: 0 1px 4px rgb(15 23 42 / 0.3); }
+.hud-range:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 4px; border-radius: 9999px; }
+
+.landing-enter { animation: hud-reveal var(--duration, 0.6s) ease both; animation-delay: var(--d, 0s); }

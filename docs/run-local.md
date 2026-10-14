@@ -53,6 +53,8 @@ profile `multisensor` (OpenCLIP, YOLO, OpenCV): cài torch CUDA từ `https://do
 
 ## 2. Web (Next.js)
 
+Giao diện v0.6.6: trang chủ có mô phỏng 3D và góc nhìn sử dụng; `/vi-sao` chứa phương pháp và số T. Media mẫu không nằm trong Git: sau `npm ci`, chạy `node scripts/fetch-mock-media.mjs --from H:/ --frames 6` tại `web/` với đường dẫn dữ liệu của bạn. Xem [web.md](web.md) về font, nguồn số, fallback, kiểm thử và lưu ý cache Turbopack.
+
 ```powershell
 cd web
 copy .env.example .env.local        # WORKER_URL=http://127.0.0.1:8001, WORKSPACE=../model/workspace

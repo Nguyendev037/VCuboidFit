@@ -1,6 +1,8 @@
 # Tình trạng dự án và kế hoạch còn lại
 
-Cập nhật 2026-10-14 · phiên bản hiện hành **v0.6.5** (tag `v0.6.5` = `8bcc9c0`, HEAD `f88fd87`; chuẩn bị đóng hồ sơ 11 ở mốc 0.7.0 và hồ sơ 12 ở mốc 0.8.0 sau demo 15/10).
+Frontend v0.6.6 (2026-10-14): trang chủ thay khối benchmark bằng góc nhìn người sử dụng, ghi rõ là tiêu chí đánh giá, chưa phải lời chứng thực. Số benchmark T giữ ở `/vi-sao#bang-chung`; phần `/vi-sao#phuong-phap` giải thích M0–M3, IY capture B, cùng ngân sách và bootstrap CI95. Nhấn mạnh giá trị vận hành của VCuboidFIT, không kết luận hơn baseline. Tiêu đề mục dùng Newsreader 30–48 px, nội dung thẻ 16–18 px. Chi tiết chạy, media và bàn giao ở [web.md](web.md). Hồ sơ 13 vẫn chờ nghiệm thu tổng thể; chưa tạo tag phát hành.
+
+Cập nhật 2026-10-14 · cấu hình hiện hành **v0.6.6**, tag gần nhất `v0.6.5` = `8bcc9c0`. Lượt engine/viewer/Deep Review đã push tới `87389ef`; lượt trang chủ, `/vi-sao` và tài liệu theo sau trên `main`. Hồ sơ 11/12 còn mốc 0.7.0/0.8.0 và nghiệm thu demo 15/10.
 **v0.6.3–v0.6.5**: notebook Colab chạy Tầng 1, cầu nối Colab ổn định, tái dùng trọng số seed pretrained. Từ đó đã mở rộng thêm: hồ sơ 10 (chuẩn hoá định nghĩa "hiếm" RHCIO v2.4 theo instance), hồ sơ 11 (engine mới `rare_v24`, tầng bối cảnh OpenCLIP không VLM, benchmark prereg `pitch-v2` chạy tập T trên Colab A100), hồ sơ 12 (UI demo ngày 15/10/2026 15:00, số T lên trang chủ, trang `/vi-sao`, xuất ảnh hiếm ZIP).
 
 Repo này là **ROOT duy nhất** của sản phẩm (xem [README](../README.md)): code, tài liệu, Docker, notebook đều sửa và push tại đây.

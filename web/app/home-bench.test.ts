@@ -1,7 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFile, access } from "node:fs/promises";
 import { beforeEach, expect, it, vi } from "vitest";
-import Home from "./page";
+import React from "react";
+import { Benchmark } from "@/components/home/Benchmark";
+import { loadDemoBench } from "@/lib/server/demoBench";
+
+// Assert the benchmark contract independently of the landing hero and sample media.
+async function Home() {
+  const { bench, figureUrl } = await loadDemoBench();
+  return React.createElement("section", null, "Số đo", React.createElement(Benchmark, { bench, figureUrl }));
+}
 
 vi.mock("node:fs/promises", () => ({ readFile: vi.fn(), access: vi.fn() }));
 

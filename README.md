@@ -4,7 +4,7 @@ Chọn **5 % keyframe LiDAR đáng gán nhãn 3D nhất** từ một bộ dữ l
 ego pose và timestamp (không camera, không nhãn). Có engine Python (CPU, thêm tầng PointPillars
 tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tham số, xem kết quả, soi từng frame.
 
-> **Repo này là ROOT duy nhất của dự án** (bản hoàn chỉnh nhất, phiên bản hiện tại v0.6.5). Mọi thay đổi
+> **Repo này là ROOT duy nhất của dự án** (phiên bản v0.6.6). Mọi thay đổi
 > code, tài liệu, Docker, notebook đều làm, commit và push thẳng tại đây — không sinh lại từ nơi khác.
 
 ## Bắt đầu nhanh sau khi clone
@@ -38,7 +38,7 @@ Chi tiết, bảng lỗi và dữ liệu: [docs/getting-started.md](docs/getting
 
 | Mục | Sau clone |
 |---|---|
-| Trang chủ `/` (bảng benchmark T), `/vi-sao`, `/huong-dan` | **Chạy ngay**, không cần worker: đọc `web/public/demo/bench_pitch.json` + 3 ảnh PNG đã commit |
+| Trang chủ `/`, `/vi-sao`, `/huong-dan` | Phần giới thiệu chạy không cần worker; phương pháp và benchmark T ở `/vi-sao`. Mô phỏng mẫu cần dựng `web/public/mock-media/` (không commit), xem [docs/web.md](docs/web.md) |
 | Giao diện với dữ liệu mẫu | `NEXT_PUBLIC_MOCK=1` (không cần worker), dữ liệu ở `web/mocks/` |
 | `/dashboard`, `/review/**`, Frame Viewer thật | Cần worker + **dữ liệu nuScenes tự chuẩn bị** (repo không chứa; xem [dataset/README.md](dataset/README.md)) |
 | Job demo (`m2_mini`, `night_v24`, `pool_v24`...) | **Không có** trong repo (`model/workspace/` bị gitignore); tự chạy lại theo [docs/model-workflow.md](docs/model-workflow.md) mục 10 |
@@ -156,6 +156,7 @@ Chi tiết từng bước và xử lý lỗi: [docs/run-local.md](docs/run-local
 * [docs/model-workflow.md](docs/model-workflow.md) - model chọn 5% frame chạy như thế nào (từng bước)
 * [docs/glossary.md](docs/glossary.md) - "hiếm" là gì, ý nghĩa từng chỉ số và tham số
 * [docs/project-status.md](docs/project-status.md) - tình trạng dự án, số đo hiện có và kế hoạch còn lại theo phase
+* [docs/web.md](docs/web.md) - trang chủ, phương pháp kiểm chứng, typography, media mẫu và bàn giao agent frontend
 
 ## Biến môi trường
 

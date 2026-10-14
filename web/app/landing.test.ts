@@ -1,5 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import React from "react";
 import { it, expect } from "vitest";
+import Providers from "./providers";
 import Home from "./page";
 import { exportImagesUrl } from "@/lib/api/client";
 it("builds encoded ZIP export URL with camera and LiDAR options",()=>{
@@ -8,9 +10,15 @@ it("builds encoded ZIP export URL with camera and LiDAR options",()=>{
  const query=new URL(url,"http://localhost").searchParams;
  expect(Object.fromEntries(query)).toEqual({budget:"0.05",cams:"front",lidar:"false"});
 });
-it("renders the hero, five linked v2 steps and dashboard entry",async()=>{
- const html=renderToStaticMarkup(await Home());
- expect(html).toContain("Tìm tình huống VRU hiếm");
- expect(html.match(/<li>/g)).toHaveLength(5);
- expect(html).toContain("OpenCLIP + OpenCV");expect(html).toContain('href="/dashboard"');expect(html).toContain("Vào dashboard");expect(html).toContain("Số đo");
+it("renders the source hero, three workflow steps, honest sample label and benchmark entry",async()=>{
+ const html=renderToStaticMarkup(React.createElement(Providers,null,await Home()));
+ expect(html).toContain("Frame hiếm");
+ for (const step of ["Nạp dữ liệu nuScenes", "Phân tích và chọn lô", "Kiểm tra và xuất ZIP"]) expect(html).toContain(step);
+ expect(html).toContain("OpenCLIP + OpenCV");expect(html).toContain('href="/dashboard"');expect(html).toContain("Mở Dashboard");
+ expect(html).toContain("Góc nhìn người sử dụng");expect(html).toContain("chưa phải lời chứng thực");expect(html).not.toContain("Số đo trên tập T");
+ expect(html).toContain("DỮ LIỆU nuScenes MẪU");
+ expect(html).toContain('href="/vi-sao#phuong-phap"');
+ expect(html).toContain("Motional");
+ expect(html).not.toContain("120 frame");
+ expect(html).not.toContain("PCA 64");
 });

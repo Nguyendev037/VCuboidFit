@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Frontend handoff
+
+Read `../docs/web.md` before changing the landing page or `/vi-sao`. It documents routes, typography, benchmark provenance, sample media setup, verification, and build cache pitfalls. Keep benchmark values source-driven and preserve the current unproven conclusion. `ReviewPerspective` contains evaluation criteria, not customer testimonials. Sample media under `public/mock-media/` stays ignored; generate it locally before the full Vitest suite.
