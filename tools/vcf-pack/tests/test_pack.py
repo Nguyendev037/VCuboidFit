@@ -27,6 +27,7 @@ def test_parse_size():
     assert parse_size("50MB") == 50 * 1024 * 1024
     assert parse_size("200KB") == 200 * 1024
     assert parse_size("1gb") == 1024**3
+    assert parse_size("0") == 0
     with pytest.raises(ValueError):
         parse_size("abc")
 
@@ -85,7 +86,7 @@ def test_maps_only_with_flag(nus_root, tmp_path):
 
 def test_manifest_matches_parts(nus_root, tmp_path):
     manifest, zips = _run(nus_root, tmp_path / "out")
-    assert manifest["tool"] == "vcf-pack 0.1"
+    assert manifest["tool"] == "vcf-pack 0.2"
     assert manifest["version"] == "v1.0-mini"
     assert manifest["scenes"] == 2 and manifest["frames"] == 12
     assert manifest["createdAt"]
@@ -138,6 +139,29 @@ def test_plan_parts_rules():
     parts = plan_parts(files[:6], 150, group_of=group_of)
     assert parts == [["v1.0-mini/a.json", "v1.0-mini/b.json", "samples/x1.jpg", "samples/x2.jpg"],
                      ["samples/y1.jpg", "samples/y2.jpg"]]
+    # part_size = 0: không chia, mọi file vào đúng một part
+    assert plan_parts(files, 0, group_of=group_of) == [[rel for rel, _ in files]]
+
+
+def test_default_part_size_packs_one_part(nus_root, tmp_path):
+    """Không truyền --part-size ⇒ mặc định 0 ⇒ đúng 1 zip, manifest 1 part, giải nén khớp byte."""
+    out = tmp_path / "out"
+    assert main([str(nus_root), "--out", str(out)]) == 0
+    manifest = json.loads((out / "vcf_manifest.json").read_text(encoding="utf-8"))
+    assert len(manifest["parts"]) == 1
+    assert manifest["parts"][0]["name"] == "vcf_part_001.zip"
+    assert manifest["tool"] == "vcf-pack 0.2"
+    # Cùng bộ dữ liệu này với --part-size 200KB phải ra nhiều part (test_every_part_* ở trên)
+    zips = [out / p["name"] for p in manifest["parts"]]
+    dest = tmp_path / "unz"
+    for z in zips:
+        zipfile.ZipFile(z).extractall(dest)
+    src_files = [p for p in nus_root.rglob("*")
+                 if p.is_file() and p.relative_to(nus_root).parts[0] != "sweeps"]
+    assert src_files
+    for p in src_files:
+        rel = p.relative_to(nus_root)
+        assert (dest / "data" / rel).read_bytes() == p.read_bytes(), rel
 
 
 def test_write_parts_compression_and_overrides(nus_root, tmp_path):

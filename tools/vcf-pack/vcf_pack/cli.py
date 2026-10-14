@@ -1,4 +1,4 @@
-"""vcf-pack: chia một thư mục nuScenes thành các part zip <= part-size (mặc định 50 MB).
+"""vcf-pack: chia một thư mục nuScenes thành các part zip <= part-size (mặc định 0 = một part).
 
 Mỗi arcname bắt đầu bằng ``data/`` để web upload ghép lại thành ``data/v1.0-*/`` và
 ``data/samples/CAM_*/`` đúng cấu trúc worker đọc. Part 1 luôn chứa metadata.
@@ -15,7 +15,7 @@ from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from pathlib import Path
 
-TOOL = "vcf-pack 0.1"
+TOOL = "vcf-pack 0.2"
 META_GROUP = "__meta__"
 # Ước lượng chi phí header zip cho mỗi entry (local header + central directory + slack).
 ZIP_ENTRY_OVERHEAD = 200
@@ -41,7 +41,10 @@ def plan_parts(files: list[tuple[str, int]], part_size: int,
     File liên tiếp cùng ``group_of`` là một nhóm (một sample token) và không bị tách giữa
     hai part; nhóm không vừa phần còn lại thì mở part mới. Nhóm lớn hơn ``part_size`` được
     xé theo từng file, file lớn hơn ``part_size`` chiếm một part riêng.
+    ``part_size`` <= 0 nghĩa là KHÔNG chia: mọi file vào đúng một part.
     """
+    if part_size <= 0:
+        return [[rel for rel, _ in files]]
     group_of = group_of or _default_group
     groups: list[tuple[list[str], int]] = []
     last_key = None
@@ -192,7 +195,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="vcf-pack", description=__doc__.splitlines()[0])
     ap.add_argument("nuscenes_root", help="thư mục chứa v1.0-*/ và samples/")
     ap.add_argument("--out", required=True, help="thư mục ghi vcf_part_*.zip + vcf_manifest.json")
-    ap.add_argument("--part-size", default="50MB")
+    ap.add_argument("--part-size", default="0", help="cỡ mỗi part (vd 50MB); 0 = không chia, một part")
     ap.add_argument("--version", default="v1.0-mini")
     ap.add_argument("--scenes", type=int, default=None, help="chỉ giữ N scene đầu")
     ap.add_argument("--include-sweeps", action="store_true")

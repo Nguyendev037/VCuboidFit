@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vcf-pack"
-version = "0.1.0"
-description = "Split a nuScenes folder into ~50 MB zip parts for the VCuboidFIT web uploader"
+version = "0.2.0"
+description = "Pack a nuScenes folder into zip parts for the VCuboidFIT web uploader (one part by default)"
 requires-python = ">=3.11"
 dependencies = []
 
