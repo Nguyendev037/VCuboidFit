@@ -57,6 +57,6 @@ export function recoveryQueries(params: SelectParams | undefined, tags: string[]
 export function inheritedRunParams(params: SelectParams | undefined, overrides: { preset: boolean; diversity: boolean }): Partial<SelectParams> {
   const inherited = { ...params };
   if (overrides.preset) { delete inherited.alpha; delete inherited.beta; delete inherited.gamma; }
-  if (overrides.diversity) delete inherited.lam;
+  if (overrides.diversity) { delete inherited.lam; delete inherited.quotaOff; delete inherited.diversity; }
   return inherited;
 }

@@ -21,6 +21,7 @@ export function effectiveWeights(input: {
     const a = expert.alpha ?? 0;
     const b = expert.beta ?? 0;
     const g = expert.gamma ?? 0;
+    if (![a, b, g].every(Number.isFinite)) return null;
     const sum = a + b + g;
     if (sum <= 0) return null;
     return { rare: a / sum, novel: b / sum, unsure: g / sum };
@@ -28,6 +29,7 @@ export function effectiveWeights(input: {
 
   const presetTuple = input.presets?.[input.preset];
   if (presetTuple) {
+    if (!Array.isArray(presetTuple) || presetTuple.length !== 3 || !presetTuple.every(Number.isFinite)) return null;
     const [r, n, u] = presetTuple;
     const sum = r + n + u;
     if (sum <= 0) return null;
@@ -42,6 +44,11 @@ export const SPREAD_OFF = { diversity: 0.2, quotaOff: true } as const; // "low" 
 
 export function spreadParams(on: boolean): Partial<SelectParams> {
   return on ? { diversity: 0.5 } : { diversity: 0.2, quotaOff: true };
+}
+
+/** Lần chạy khôi phục mà người dùng chưa chạm công tắc ⇒ giữ nguyên diversity/quotaOff đã lưu (vd "high"). */
+export function spreadRequest(spread: boolean, keepRestored: boolean): Partial<SelectParams> {
+  return keepRestored ? {} : spreadParams(spread);
 }
 
 export function spreadFromParams(p: Partial<SelectParams>): boolean {

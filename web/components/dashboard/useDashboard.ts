@@ -9,7 +9,7 @@ import { isDatasetUsable } from "@/lib/datasetValidation";
 import { isAnalysisReady, isT1OnlyRunning } from "@/lib/tierStatus";
 import { clearRunBookmark, readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "@/lib/runRecovery";
 import { draftFromSchema, gateTier1, hasTier1, normalizeAdvancedParams, sanitizeDraft, sanitizeSelectParams, type AdvancedDraft, type AdvancedSubmitParams } from "@/lib/advancedParams";
-import { spreadParams, spreadFromParams } from "@/lib/panelParams";
+import { spreadParams, spreadFromParams, spreadRequest } from "@/lib/panelParams";
 import { ANALYSIS_STEPS, DEFAULT_QUERIES, LIDAR_ANALYSIS_STEPS, UPLOAD_COLLAPSED_KEY, getAdvancedPanelOpen, getDemo, invalidateRecovery, readUploadCollapsed, setAdvancedPanelOpen, setDemoFlag, subscribeAdvancedPanel, subscribeDemo } from './dashboardState';
 
 export function useDashboard() {
@@ -307,7 +307,7 @@ export function useDashboard() {
 
   useEffect(() => {
     const t=setTimeout(() => {
-      const sp=spreadParams(spread);
+      const sp=spreadRequest(spread, !!restored&&!basicOverrides.diversity);
       setDebounced({
         ...inheritedRunParams(restored?.params, basicOverrides),
         budget,

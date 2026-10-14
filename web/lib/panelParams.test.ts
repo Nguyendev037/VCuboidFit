@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { inheritedRunParams } from "./runRecovery";
 import {
+  spreadRequest,
   effectiveWeights,
   minScenes,
   SPREAD_OFF,
@@ -142,6 +144,34 @@ describe("panelParams", () => {
       expect(minScenes(10, 4, 10)).toBe(3);
       // without totalScenes
       expect(minScenes(10, 4)).toBe(3);
+    });
+  });
+
+  describe("plan 17 R05 fixes", () => {
+    it("F1: restored run keeps saved diversity until the switch is touched", () => {
+      expect(spreadRequest(true, true)).toEqual({});
+      const restored = { budget: 0.05, diversity: 0.8 };
+      const body = { ...inheritedRunParams(restored, { preset: false, diversity: false }), ...spreadRequest(true, true) };
+      expect(body.diversity).toBe(0.8);
+      expect(spreadRequest(true, false)).toEqual({ diversity: 0.5 });
+    });
+    it("F1: touching the switch drops inherited quotaOff/lam/diversity", () => {
+      const restored = { budget: 0.05, diversity: 0.2, quotaOff: true, lam: 0.9 };
+      const body = { ...inheritedRunParams(restored, { preset: false, diversity: true }), ...spreadRequest(true, false) };
+      expect(body).toEqual({ budget: 0.05, diversity: 0.5 });
+    });
+    it("F4: malformed weights give null instead of NaN", () => {
+      expect(effectiveWeights({ preset: "balanced", presets: { balanced: [0.5, 0.25] as unknown as [number, number, number] }, tier1Available: true })).toBeNull();
+      expect(effectiveWeights({ preset: "balanced", tier1Available: true, expert: { alpha: Number.NaN } })).toBeNull();
+    });
+    it("F5: string diversity from saved runs", () => {
+      expect(spreadFromParams({ diversity: "low" })).toBe(false);
+      expect(spreadFromParams({ diversity: "medium" })).toBe(true);
+      expect(spreadFromParams({ diversity: "high" })).toBe(true);
+    });
+    it("F3: unknown scene total leaves the estimate uncapped", () => {
+      expect(minScenes(100, 4, 0)).toBe(25);
+      expect(minScenes(100, 4, 10)).toBe(10);
     });
   });
 });
