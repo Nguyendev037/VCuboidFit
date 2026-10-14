@@ -143,6 +143,17 @@ def test_plan_parts_rules():
     assert plan_parts(files, 0, group_of=group_of) == [[rel for rel, _ in files]]
 
 
+def test_cli_default_part_size_is_zero(nus_root, tmp_path, monkeypatch):
+    """Fixture nhỏ hơn 50 MB nên test 1-part bên dưới không phân biệt được mặc định 0 với 50MB."""
+    import vcf_pack.cli as cli
+    seen = []
+    real = cli.plan_parts
+    monkeypatch.setattr(cli, "plan_parts", lambda files, size, *a, **k: seen.append(size) or real(files, size, *a, **k))
+    assert main([str(nus_root), "--out", str(tmp_path / "out")]) == 0
+    assert seen == [0]
+    assert len(plan_parts([("a", 60 * 1024**2), ("b", 60 * 1024**2)], 0)) == 1
+
+
 def test_default_part_size_packs_one_part(nus_root, tmp_path):
     """Không truyền --part-size ⇒ mặc định 0 ⇒ đúng 1 zip, manifest 1 part, giải nén khớp byte."""
     out = tmp_path / "out"
