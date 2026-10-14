@@ -42,9 +42,10 @@ test("A1-A4, A5, A7: params panel without tier1 model, run tier1 on Colab", asyn
 
   await page.goto("/dashboard");
   await page.getByRole("button", { name: "Mở", exact: true }).first().click();
-  const panel = page.getByRole("button", { name: /Tham số nâng cao/ });
-  await expect(panel).toBeVisible();
-  if ((await panel.getAttribute("aria-expanded")) !== "true") await panel.click();
+  const expertSummary = page.locator("[data-advanced-params] summary");
+  await expect(expertSummary).toBeVisible();
+  const expertDetails = page.locator("[data-advanced-params] details");
+  if (!(await expertDetails.getAttribute("open"))) await expertSummary.click();
   const box = page.locator("#advanced-settings");
 
   // A1/A2: hiện đủ, Tầng 1 bị khoá kèm lý do
@@ -60,7 +61,7 @@ test("A1-A4, A5, A7: params panel without tier1 model, run tier1 on Colab", asyn
     await expect(weight(name)).toHaveAttribute("title", /Đã khoá/);
   }
   // A4: chiến lược khoá
-  await expect(page.getByRole("button", { name: /Hiếm trước/ })).toBeDisabled();
+  await expect(page.locator("button[aria-pressed]").filter({ has: page.getByText("Cảnh hiếm", { exact: true }) })).toBeDisabled();
   // A5: request select không có tầng 1
   await box.getByRole("button", { name: "Áp dụng" }).click();
   await expect.poll(() => selectBodies.length).toBeGreaterThan(0);
@@ -70,8 +71,8 @@ test("A1-A4, A5, A7: params panel without tier1 model, run tier1 on Colab", asyn
     expect(b.gamma ?? 0).toBe(0);
   }
   // A7: nút Colab -> queued
-  await box.getByRole("button", { name: "Chạy Tầng 1 trên Colab" }).click();
-  await expect(box.getByTestId("colab-status")).toContainText("Đang chờ Colab nhận việc");
+  await page.getByRole("button", { name: "Chạy Tầng 1 trên Colab" }).click();
+  await expect(page.getByTestId("colab-status")).toContainText("Đang chờ Colab nhận việc");
   expect(postCalls).toBe(1);
   await page.screenshot({ path: `${EVIDENCE}/after_desktop_1440x900.png` });
 });

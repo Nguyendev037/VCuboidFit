@@ -315,6 +315,8 @@ export interface ParamsSchema {
   groups?: Record<string, ParamsSchemaGroup>;
   /** Chỉ có ở lược đồ theo máy (`GET /params-schema`): lý do Tầng 1 chưa chạy được, null khi sẵn sàng. */
   tier1Reason?: string | null;
+  /** Trọng số (Hiếm trong dữ liệu, Lạ với model, Model chưa chắc) của từng preset Tầng 1 — từ configs/lidar.yaml. Worker cũ không gửi ⇒ undefined. */
+  presets?: Partial<Record<Preset, [number, number, number]>>;
 }
 
 // ---- Tầng 1 chạy từ xa (Colab) — 01-CONTRACTS §2.2 ----

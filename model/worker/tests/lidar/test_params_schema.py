@@ -33,3 +33,11 @@ def test_schema_keeps_contract_keys_and_choice_options():
     assert tier["options"][1]["disabledReason"]  # chưa có model ⇒ lý do khoá
     assert params_schema(load_lidar_config(), [0, 1])["fields"][0]["options"][1][
         "disabledReason"] is None
+
+
+def test_schema_includes_presets():
+    cfg = load_lidar_config()
+    s = params_schema(cfg, [0, 1])
+    assert "presets" in s
+    expected = {k: [float(x) for x in v] for k, v in cfg["presets"].items()}
+    assert s["presets"] == expected

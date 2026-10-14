@@ -120,5 +120,11 @@
  "tierAvailable": [
   0,
   1
- ]
+ ],
+ "presets": {
+  "balanced": [0.5, 0.25, 0.25],
+  "rare_first": [0.8, 0.1, 0.1],
+  "hard_for_model": [0.2, 0.3, 0.5],
+  "safety_scenarios": [0.6, 0.0, 0.4]
+ }
 }

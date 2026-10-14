@@ -1,18 +1,18 @@
 "use client";
 
-import { Lock, Settings } from "lucide-react";
+import { Lock } from "lucide-react";
 import type { ParamsSchema, ParamsSchemaOption, RemoteTask } from "@/lib/api/types";
 import { TIER1_BALANCED, tier0LockNote, tier0LockTitle, weightPercents, type AdvancedDraft } from "@/lib/advancedParams";
 import { SETTINGS } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { TierStatus, type TierStatusProps } from "@/components/TierStatus";
+import type { TierStatusProps } from "@/components/TierStatus";
 
-interface AdvancedParamsPanelProps {
-  open: boolean;
+export interface AdvancedParamsPanelProps {
+  open?: boolean;
   schema?: ParamsSchema | null;
   draft: AdvancedDraft;
-  applied: boolean;
-  onToggle: () => void;
+  applied?: boolean;
+  onToggle?: () => void;
   onDraftChange: (next: AdvancedDraft) => void;
   onApply: () => void;
   onReset: () => void;
@@ -33,7 +33,7 @@ const COLAB_STATE_TEXT: Record<string, string> = {
   cancelled: "Việc đã bị huỷ",
 };
 
-function ColabBox({ colab }: { colab: NonNullable<AdvancedParamsPanelProps["colab"]> }) {
+export function ColabBox({ colab }: { colab: NonNullable<AdvancedParamsPanelProps["colab"]> }) {
   const state = colab.task?.state;
   const active = state === "queued" || state === "leased";
   return (
@@ -73,14 +73,14 @@ export function AdvancedParamsPanel({
   open,
   schema,
   draft,
-  applied,
-  onToggle,
+  applied: _applied,
+  onToggle: _onToggle,
   onDraftChange,
   onApply,
   onReset,
   schemaError,
   onRetrySchema,
-  colab,
+  colab: _colab,
   tierStatus,
 }: AdvancedParamsPanelProps) {
   const field = (key: string) => schema?.fields.find((f) => f.key === key);
@@ -141,30 +141,11 @@ export function AdvancedParamsPanel({
     return { tier, alpha, beta: noNovelty ? 0 : beta, gamma };
   };
 
-  return (
-    <div className="border-t border-slate-100 pt-3">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-controls="advanced-settings"
-        className="w-full flex items-center justify-between text-xs text-slate-600 font-medium hover:text-slate-900"
-      >
-        <span className="inline-flex items-center gap-1.5">
-          <Settings className="h-3.5 w-3.5" aria-hidden="true" />
-          Tham số nâng cao
-          {applied && (
-            <span className="rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
-              Tuỳ chỉnh
-            </span>
-          )}
-        </span>
-        <span className="font-mono text-slate-400">{open ? "▲" : "▼"}</span>
-      </button>
+  if (open === false) return null;
 
-      {open && (
-        <div id="advanced-settings" className="mt-3 p-3 bg-slate-50 rounded-lg text-[11px] text-slate-700 space-y-3">
-          {schemaError && (
+  return (
+    <div id="advanced-settings" aria-label="Tham số nâng cao" className="mt-3 p-3 bg-slate-50 rounded-lg text-[11px] text-slate-700 space-y-3">
+      {schemaError && (
             <div role="alert" className="flex items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-2 text-red-800">
               <span>Không tải được tham số của lần chạy này. {schemaError}</span>
               {onRetrySchema && (
@@ -202,7 +183,6 @@ export function AdvancedParamsPanel({
                 );
               })}
             </div>
-            {tierStatus && <TierStatus {...tierStatus} />}
           </div>
 
           <label className="flex flex-col gap-1">
@@ -295,7 +275,6 @@ export function AdvancedParamsPanel({
             {draft.tier === 0 && (
               <span className="text-[10px] text-slate-500">{tier0LockNote({ basicNote: weightGroup?.basicNote, tier1Available })}</span>
             )}
-            {draft.tier === 0 && !tier1Available && colab?.enabled && <ColabBox colab={colab} />}
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-1">
@@ -307,7 +286,5 @@ export function AdvancedParamsPanel({
             </button>
           </div>
         </div>
-      )}
-    </div>
   );
 }

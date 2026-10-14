@@ -9,6 +9,7 @@ import { isDatasetUsable } from "@/lib/datasetValidation";
 import { isAnalysisReady, isT1OnlyRunning } from "@/lib/tierStatus";
 import { clearRunBookmark, readRunBookmark, saveRunBookmark, recoveryParams, recoveryQueries, inheritedRunParams, paramsEqual } from "@/lib/runRecovery";
 import { draftFromSchema, gateTier1, hasTier1, normalizeAdvancedParams, sanitizeDraft, sanitizeSelectParams, type AdvancedDraft, type AdvancedSubmitParams } from "@/lib/advancedParams";
+import { spreadParams, spreadFromParams } from "@/lib/panelParams";
 import { ANALYSIS_STEPS, DEFAULT_QUERIES, LIDAR_ANALYSIS_STEPS, UPLOAD_COLLAPSED_KEY, getAdvancedPanelOpen, getDemo, invalidateRecovery, readUploadCollapsed, setAdvancedPanelOpen, setDemoFlag, subscribeAdvancedPanel, subscribeDemo } from './dashboardState';
 
 export function useDashboard() {
@@ -170,6 +171,7 @@ export function useDashboard() {
   const [budget, setBudget]=useState(0.05);
   const [preset, setPreset]=useState<Preset>("balanced");
   const [diversity, setDiversity]=useState(0.5);
+  const [spread, setSpread]=useState(true);
   const [queryTags, setQueryTags]=useState<string[]>(DEFAULT_QUERIES);
   const [newTagInput, setNewTagInput]=useState("");
   const showAdvanced=useSyncExternalStore(subscribeAdvancedPanel, getAdvancedPanelOpen, () => false);
@@ -255,6 +257,7 @@ export function useDashboard() {
       setBudget(params.budget);
       setPreset(params.preset??"balanced");
       setDiversity(params.diversity as number);
+      setSpread(spreadFromParams(params));
       setQueryTags((params.queries??DEFAULT_QUERIES).map((q) => typeof q==="string"? q:q.text));
       setAdvancedParams(null);
       setAdvancedDraft(saved&&summary.pipeline==="lidar"? {
@@ -304,19 +307,20 @@ export function useDashboard() {
 
   useEffect(() => {
     const t=setTimeout(() => {
+      const sp=spreadParams(spread);
       setDebounced({
         ...inheritedRunParams(restored?.params, basicOverrides),
         budget,
         pipeline: activePipeline,
         preset,
-        diversity,
+        ...sp,
         queries: activePipeline==="lidar"? undefined:recoveryQueries(restored?.params, queryTags),
         ...(advancedParams??{}),
         engineVersion, profile, strategy,
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [budget, preset, diversity, queryTags, activePipeline, advancedParams, restored, basicOverrides, engineVersion, profile, strategy]);
+  }, [budget, preset, spread, queryTags, activePipeline, advancedParams, restored, basicOverrides, engineVersion, profile, strategy]);
 
   useEffect(() => {
     const onKeyDown=(event: KeyboardEvent) => {
@@ -355,6 +359,7 @@ export function useDashboard() {
     setBudget(0.05);
     setPreset("balanced");
     setDiversity(0.5);
+    setSpread(true);
     setQueryTags(DEFAULT_QUERIES);
     setAdvancedParams(null);
     setAdvancedDraft(null);
@@ -391,6 +396,7 @@ export function useDashboard() {
     setBudget(0.05);
     setPreset("balanced");
     setDiversity(0.5);
+    setSpread(true);
     setQueryTags(DEFAULT_QUERIES);
     setNewTagInput("");
     setAdvancedDraft(null);
@@ -433,6 +439,15 @@ export function useDashboard() {
 
   const changeDiversity=(value: number) => {
     setDiversity(value);
+    setSpread(value > 0.35);
+    setBasicOverrides((previous) => ({ ...previous, diversity: true }));
+    setAdvancedParams(null);
+    setAdvancedDraft(null);
+  };
+
+  const changeSpread=(value: boolean) => {
+    setSpread(value);
+    setDiversity(spreadParams(value).diversity as number);
     setBasicOverrides((previous) => ({ ...previous, diversity: true }));
     setAdvancedParams(null);
     setAdvancedDraft(null);
@@ -464,6 +479,7 @@ export function useDashboard() {
     budget,
     changeDiversity,
     changePreset,
+    changeSpread,
     checkProgress,
     checking,
     collapsed,
@@ -513,8 +529,10 @@ export function useDashboard() {
     setItems,
     setNewTagInput,
     setProfile,
+    setSpread,
     setStrategy,
     showAdvanced,
+    spread,
     startJob,
     startUpload,
     strategy,

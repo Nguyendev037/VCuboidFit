@@ -110,4 +110,5 @@ def params_schema(cfg: dict, tier_available: list[int]) -> dict:
         label="Mức quan trọng của từng tiêu chí",
         help="Tự quy đổi để tổng luôn là 100%.",
         basicNote="Chế độ Cơ bản chỉ dùng tiêu chí Hiếm trong dữ liệu."))
-    return dict(fields=f, groups=groups, tierAvailable=tier_available)
+    return dict(fields=f, groups=groups, tierAvailable=tier_available,
+                presets={k: [float(x) for x in v] for k, v in cfg["presets"].items()})
