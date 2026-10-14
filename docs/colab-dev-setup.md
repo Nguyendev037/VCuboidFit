@@ -1,6 +1,7 @@
 # Chạy VCuboidFIT trên Google Colab
 
 Có 2 cách. **Cách 1** là cách chính: máy bạn chạy web, Colab chỉ làm phần nặng (Tầng 1, cần GPU).
+Ngoài ra có notebook benchmark nghiên cứu ở cuối tài liệu. T đã hoàn tất trên A100; đó là luồng riêng, không chứng minh cầu nối Tầng 1 từ xa đã đạt gate Colab thật. Không mở lại tập T để thử hướng dẫn này. [Số đo và gate còn lại](project-status.md).
 
 | Cách | Dùng khi | Notebook |
 |---|---|---|
@@ -37,11 +38,11 @@ TOKEN      = <chuỗi dài>
 2. Ô **1**: dán `SERVER_URL` (URL ở bước 1) và `TOKEN`.
 3. **Runtime → Run all.**
    - Ô 2 kiểm GPU, URL, token trong vài giây — sai là dừng ngay kèm lời nhắn cách sửa.
-   - Ô 3 cài môi trường: lần đầu mỗi phiên ~10–15 phút, kết thúc bằng `SETUP OK` / `✅ Cài xong`.
+   - Ô 3 cài môi trường: thời gian tham khảo lần đầu ~10–15 phút, phụ thuộc runtime/mạng; kết thúc bằng `SETUP OK` / `✅ Cài xong`.
    - Ô 4 chạy liên tục, chờ việc.
 
 **Không cần train:** mặc định Colab dùng **trọng số PointPillars có sẵn** (80 epoch, seed nuScenes-mini) thay vì
-train lại — một lượt chỉ còn tải dữ liệu + suy luận (~7–20 phút thay vì 20–35 phút). Thứ tự lấy trọng số:
+train lại — một lượt còn tải dữ liệu + suy luận. Các khoảng ~7–20 phút / ~20–35 phút có train là tham khảo vận hành, không phải thời gian benchmark T hoặc SLA. Thứ tự lấy trọng số:
 1. Worker gửi kèm việc nếu máy bạn có thí nghiệm riêng (`VCF_T1_EXP`, hoặc tự dò trong `model/workspace/experiments`).
 2. Không có thì tải bản mặc định trên GitHub (Git LFS, ~70 MB, kiểm sha256, cache trong phiên).
 
@@ -120,7 +121,7 @@ Ngân sách làm tròn và số frame hợp lệ có thể khiến số chọn k
 Đã có kết quả sau ô 4. Chỉ chạy ô cuối nếu muốn train PointPillars: đổi runtime sang T4 GPU,
 chạy lại ô 1–4 nếu runtime khởi động lại, đặt `RUN_GPU = True` ở ô cuối. Mặc định GPU tắt nên **Run all** vẫn chỉ chạy CPU. Ô GPU kiểm tra scene seed S theo cấu hình nuScenes,
 cài/build môi trường, train 20 epoch rồi suy luận, lưu kết quả ở `tier1/`.
-Không có scene seed S thì dừng và giữ kết quả CPU. GPU tùy runtime; chưa kiểm trên Colab/GPU thật.
+Không có scene seed S thì dừng và giữ kết quả CPU. GPU tùy runtime; gate chạy ô GPU này trên Colab thật chưa được xác nhận, khác với benchmark A100 đã hoàn tất.
 
 ### Lỗi thường gặp
 
@@ -159,10 +160,7 @@ Chuẩn bị Drive:
 4. Upload notebook trực tiếp vào Colab; sửa `REPO_SHA` bằng `repo_sha` trong manifest,
    sửa `DATA_ZIP`/`CODE_ZIP` nếu dùng thư mục khác. Notebook kiểm cả SHA Git archive và checksum.
 
-**Phụ thuộc H10:** code ZIP phải chứa CLI `c4.cli.bench_pitch` và các đầu vào đóng băng
-mà CLI yêu cầu. HEAD `f4a2abf` lúc đóng gói K1 chưa có CLI này; ô kiểm `--help` sẽ dừng.
-Sau khi người duyệt commit H10 tại local, đóng gói lại HEAD vào thư mục mới và cập nhật các biến trên.
-Không cần push; không dùng bản GitHub để thay code ZIP.
+Code ZIP phải chứa CLI `c4.cli.bench_pitch` và các đầu vào đóng băng mà CLI yêu cầu; kiểm `--help` trong chính ZIP/môi trường sẽ chạy. Code hiện tại đã có CLI này; gói K1 lịch sử `f4a2abf` chưa có và không dùng để tái lập T. Giữ code SHA của phép thử gốc cùng prereg/final config; không lấy HEAD mới để thay code thử nghiệm cũ.
 
 Notebook ghép cây `data/` của các ZIP sau khi kiểm SHA, kiểm prereg `pitch-v2`,
 chạy `lidar_index`, `lidar_t0`, `extract_clip`, `context cv/fit/run`, `rare run lidar_only`,
@@ -177,4 +175,4 @@ Exit 2/3: dừng và gửi log cho người duyệt, không sửa prereg hay t�
 Kết quả và log lưu ngay tại `MyDrive/vcf_results/<run_id>/`: `timing.json`, prereg,
 log từng CLI, hai thư mục `mini/` và `pool/` riêng, cùng bản sao job.
 VRAM là đỉnh bộ nhớ GPU toàn thiết bị qua `nvidia-smi`, lấy mẫu 1 giây;
-không phải peak allocator riêng của PyTorch. Thời gian/VRAM trên A100 chỉ có sau khi chạy Colab thật.
+không phải peak allocator riêng của PyTorch. Lượt T thực tế có tổng thời gian 1.236 s; chỉ báo VRAM nếu evidence chứa số đo thiết bị tương ứng. Nguồn và phạm vi ở [project-status](project-status.md).

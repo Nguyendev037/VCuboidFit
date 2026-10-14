@@ -160,12 +160,12 @@ thoát mã 4 kèm gợi ý chạy `fetch_weights.py`. Cache OpenCLIP đi theo `C
 trọng số/GPU: `C4_FAKE_MODELS=1` (embedding giả, chỉ để test).
 
 Chuỗi lệnh từ dữ liệu đến `multisensor` (index, Tầng 0, `rare run`, `extract_clip`, `context cv/fit/run`, `rare crops`):
-[model-workflow.md](model-workflow.md) mục 10; cờ từng lệnh: `python -m c4.cli.rare run --help`. `multisensor` cần
+[model-workflow.md](model-workflow.md) mục 6; cờ từng lệnh: `python -m c4.cli.rare run --help`. `multisensor` cần
 `context_frame` và cache `crops` tạo trước; chưa có thì chọn `lidar_only`.
 
 ## Chạy kiểm thử (cho người đóng góp)
 
-Số đo 2026-10-14 (đều xanh): worker 383 pass / 5 skip, web vitest 221, e2e 9.
+Số đo có phạm vi/snapshot riêng: web 235 pass, test backend xoá lịch sử 15 pass; snapshot full worker trước đó có lỗi nền, không phải toàn repo đều xanh. Xem [project-status](project-status.md) trước khi dùng số trong báo cáo. Test web cần dựng `public/mock-media/` theo [web.md](web.md); e2e job thật cần tạo job mới vì ba job demo đã bị người dùng xoá.
 
 ```powershell
 # worker

@@ -1,5 +1,7 @@
 # Website VCuboidFIT
 
+Đợt docs 0.6.8, 14/10/2026. Hướng dẫn tính năng bên dưới mô tả code; snapshot runtime/test có thời điểm đo riêng, không đi kèm clone. Báo cáo đã làm/giới hạn/bước tiếp ở [project-status](project-status.md).
+
 ## Trang và nguồn dữ liệu
 
 | Route | Mục đích | Nguồn |

@@ -1,5 +1,7 @@
 # dataset/ - bộ zip thử upload
 
+Các bảng bên dưới là bộ dữ liệu từng có trên máy tác giả, không phải dữ liệu được clone. Xoá lịch sử job không xoá dataset/weights, nhưng cần chạy job mới để khôi phục Review; ba job demo đã bị người dùng xoá ngày 14/10/2026. Trạng thái/số đo xem [project-status](../docs/project-status.md).
+
 Dữ liệu gốc: **nuScenes-mini** (CC BY-NC-SA 4.0, phi thương mại). Các file `.zip` **không** được commit
 (gitignore); chỉ `01_small_3scenes/vcf_manifest.json` và README nằm trong git. **Clone xong thư mục này KHÔNG có zip nào**:
 bạn phải tự tạo bộ part theo mục "Lấy dữ liệu" bên dưới. Manifest được commit chỉ mô tả bộ zip gốc của chủ dự án (SHA-256 của

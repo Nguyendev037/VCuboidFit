@@ -1,6 +1,7 @@
 # Thuê GPU chạy model chọn 5% LiDAR
 
 Tài liệu vận hành cho pipeline LiDAR.
+Các lệnh compose ở đây dành cho engine legacy/PointPillars, không tự tái lập benchmark `pitch-v2` hoặc profile `rare_v24 multisensor`. PointPillars đã chạy local, còn hiệu quả cấu hình mới chưa có benchmark độc lập; xem [tiến độ](project-status.md). Cấu hình máy bên dưới là ước lượng, không phải số trainval đã đo.
 Thiết kế gốc: C4-Rare-Scenario-Mining-MVP-Architecture.pdf.
 
 | Bản | Chạy gì | Cần gì | Khi nào dùng |
@@ -23,8 +24,10 @@ compose (`model/docker/tier1`, `model/docker/cloud`, `model/docker/worker`) đ�
 
 **Đóng gói trên máy local** (Git Bash):
 ```bash
-bash scripts/cloud/pack.sh --with-image   # dist/vcf-cloud-<sha>.tar.gz + dist/vcf-tier1.tar.gz (~7 GB)
+bash model/scripts/cloud/pack.sh --with-image   # model/dist/vcf-cloud-<sha>.tar.gz + model/dist/vcf-tier1.tar.gz
 ```
+Lệnh đóng gói trên chạy từ root repo; script tự đổi cwd sang `model/`. Gói được giải nén trên máy thuê có `worker/`, `docker/`, `scripts/` ở root của gói, vì vậy các lệnh `scripts/cloud/` và `docker/cloud/` dưới đây đúng cho gói đó. Nếu chạy từ bản clone đầy đủ thì dùng tiền tố `model/` hoặc `cd model` trước.
+
 `vcf-tier1.tar.gz` chỉ là **tên gói tar** (giữ nguyên cho tương thích `pack.sh`/`bootstrap.sh`); image bên trong
 là `vcuboidfit_pointpillars:0.1`. Không mang image thì máy thuê tự build (~20 phút) — gọn hơn khi upload chậm.
 
@@ -45,7 +48,7 @@ kiểm script, không kết luận).
 
 **Dữ liệu trainval** (cần tài khoản nuScenes của nhóm, đồng ý điều khoản): tải
 `v1.0-trainval_meta` + 10 blob `v1.0-trainval{01..10}_blobs` (chỉ cần `samples/LIDAR_TOP` và
-`sweeps/LIDAR_TOP`; có thể xoá camera/radar sau khi giải nén để còn ~ 300 GB). Link tải là link
+`sweeps/LIDAR_TOP` cho legacy LiDAR; profile đa cảm biến cần giữ camera). Dung lượng phụ thuộc thành phần tải. Link tải là link
 ký tạm từ trang nuScenes — dán vào `wget -c` trên máy thuê.
 
 **Chọn máy** (ước lượng, chưa đo trên trainval):
@@ -54,7 +57,7 @@ ký tạm từ trang nuScenes — dán vào `wget -c` trên máy thuê.
 |---|---|---|---|
 | RTX 4090 / L4 | 24 GB | 8 | rẻ, đủ cho PointPillars |
 | A10 / RTX 3090 | 24 GB | 8 | |
-| A100 40/80 GB | 40–80 GB | 16 | nhanh nhất, đắt |
+| A100 40/80 GB | 40–80 GB | 16 | batch gợi ý; thời gian/chi phí phụ thuộc workload và nhà cung cấp |
 | T4 | 16 GB | 4 | chậm, chỉ khi rẻ |
 
 Seed S ≈ 35 scene (~1 400 frame) ⇒ train seed nhanh; tốn thời gian nhất là infer 28 k frame × 2

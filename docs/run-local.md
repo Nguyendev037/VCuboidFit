@@ -65,80 +65,18 @@ Kiểm: `node node_modules/typescript/bin/tsc --noEmit` và `node node_modules/v
 [getting-started.md](getting-started.md) mục "Chạy kiểm thử"). Chạy không cần worker (dữ liệu mẫu):
 `$env:NEXT_PUBLIC_MOCK="1"; node node_modules/next/dist/bin/next dev`.
 
-## 2b. Chạy demo local (Demo UI 15 phút — OPERATIONS §3)
+## 2b. Chuẩn bị demo local
 
-Thực hiện theo `OPERATIONS.md` §3 và §6 cho buổi trình chiếu demo:
+Backend và frontend phải chạy đúng WORKSPACE như mục 1–2. Kiểm health backend, rồi mở Dashboard để upload dataset/chạy job mới; chỉ mở Deep Review khi job hoàn tất và media có sẵn.
 
-### 1. Khởi động Worker và Web
-Worker và Web phải có `WORKSPACE` khớp nhau và chung biến `VCF_PORT`:
-```powershell
-# Cửa sổ 1: Worker (Python)
-cd model\worker
-$env:WORKSPACE = (Resolve-Path ..).Path + "\workspace"     # = model\workspace
-$env:VCF_PORT = "8001"
-.venv\Scripts\python -m uvicorn service.main:create_app --factory --port $env:VCF_PORT
-# Kiểm tra sức khoẻ worker trước demo:
-curl.exe "http://127.0.0.1:8001/health"                    # phải trả {"ok":true,...}
+- Trình chiếu: http://localhost:3000/?present=1 (font 18 px, ẩn bớt chi tiết).
+- Dashboard: http://localhost:3000/dashboard.
+- Context review: /review/context?job=<jobId> sau khi đã có dữ liệu bối cảnh.
+- Số đo T/methods: /vi-sao, không cần worker hoặc job để đọc benchmark đã commit.
 
-# Cửa sổ 2: Web (Next.js - dùng node trực tiếp vì lỗi NVM4306 của npm)
-cd web
-$env:WORKSPACE = (Resolve-Path ..\model\workspace).Path   # biến môi trường KHÔNG đi theo từ cửa sổ 1
-$env:VCF_PORT = "8001"
-$env:PORT = "3000"
-node node_modules/next/dist/bin/next dev
-```
-Truy cập giao diện tại:
-- Chế độ trình chiếu (khuyên dùng khi pitch): <http://localhost:3000/?present=1> (phóng to cỡ chữ 18px, ẩn bớt chi tiết rườm rà).
-- Màn hình duyệt bối cảnh: <http://localhost:3000/review/context>.
-- Bảng điều khiển phân tích: <http://localhost:3000/dashboard>.
+Ba job m2_mini/night_v24/full_mini từng dùng trên máy tác giả đã bị người dùng xoá ngày 14/10/2026. Chúng không có trong Git. Dataset/trọng số local còn nhưng cần chạy job mới trước demo. Không tạo job.json/status.json ghi done chỉ để dựng lại tên khi kết quả pipeline đã bị xoá; việc đó không khôi phục index, media hay selection.
 
-### 2. Đăng ký Job sẵn có bằng `job.json`
-> Chỉ dành cho máy chủ dự án: các job `m2_mini`, `night_v24`, `pool_v24` **không có trong repo** (`model/workspace/` bị gitignore). Người mới clone
-> tự tạo job bằng upload dữ liệu trên web hoặc CLI ([getting-started.md](getting-started.md) mục "Dữ liệu nuScenes"); bỏ qua tiểu mục 2 và 3 của phần 2b này.
-
-Để giao diện web và API worker nhận diện được các job đã chạy trước (tránh lỗi 404/500 khi mở hoặc xuất ảnh), tạo tệp `job.json` và `status.json` trong thư mục job tương ứng (`model/workspace/jobs/<job_id>/`):
-
-Ví dụ với job `m2_mini` (`model/workspace/jobs/m2_mini/job.json`):
-```json
-{
-  "jobId": "m2_mini",
-  "datasetId": "d98cf3321dff",
-  "pipeline": "lidar",
-  "createdAt": "2026-10-13T14:29:23",
-  "state": "done"
-}
-```
-Và `model/workspace/jobs/m2_mini/status.json`:
-```json
-{
-  "state": "done",
-  "stage": "done",
-  "progress": 1.0,
-  "done": 404,
-  "total": 404
-}
-```
-
-Tương tự cho job `night_v24` (`model/workspace/jobs/night_v24/job.json`):
-```json
-{
-  "jobId": "night_v24",
-  "datasetId": "nuscenes_trainval",
-  "pipeline": "lidar",
-  "createdAt": "2026-10-13T22:57:24",
-  "state": "done"
-}
-```
-
-### 3. Liên kết dữ liệu ảnh tạm qua Junction (OPERATIONS §6)
-Màn duyệt bối cảnh của job `night_v24` yêu cầu ảnh camera nuScenes trainval. Tạo junction trỏ từ workspace dataset tới thư mục dữ liệu thật trên ổ `E:\`:
-```powershell
-New-Item -ItemType Junction -Path model\workspace\datasets\nuscenes_trainval\data -Target E:\nuscenes_trainval
-```
-> **Lưu ý dọn dẹp:** Khi hoàn tất demo hoặc trước khi xoá ổ `E:`, chỉ gỡ liên kết junction (không làm mất dữ liệu gốc trên `E:`):
-> ```powershell
-> Remove-Item model\workspace\datasets\nuscenes_trainval\data -Force
-> ```
+Chuẩn bị dữ liệu theo [dataset](../dataset/README.md), model theo [getting-started](getting-started.md), media fixture theo [web](web.md). Snapshot/số đo và gate demo ở [project-status](project-status.md). Test demo-flow A6 chủ động dừng worker; không chạy khi cần giữ dịch vụ.
 
 ## 3. Upload một bộ zip
 

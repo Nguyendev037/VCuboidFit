@@ -1,5 +1,7 @@
 # VCuboidFIT Design System
 
+> Tài liệu tham chiếu lịch sử cho mockup P03b. Các quy tắc “không gradient”, Inter-only, tỷ lệ màn cố định bên dưới không còn là hợp đồng của landing/viewer hiện hành. Hiện trạng lấy từ `app/globals.css`, `app/layout.tsx`, các component và [docs/web.md](../../docs/web.md): landing có Be Vietnam Pro/Newsreader, methods nền tối, viewer kiểu CVAT, layout responsive. Không sửa UI mới để ép khớp mockup cũ.
+
 Nguồn thiết kế chủ đạo cho P03b khi Figma MCP hết hạn mức. Antigravity triển khai UI theo file này, `tokens.css`, và 5 mockup HTML trong `web/design/mock/`.
 
 ## 1. Nguyên tắc

@@ -1,31 +1,32 @@
-# model/ - engine, service, GPU
+# Model, worker và GPU VCuboidFIT
 
 ```text
 model/
-  worker/      Python: c4/ (engine), service/ (FastAPI), configs/, tests/, pyproject.toml
-  docker/      tier1/ (image vcuboidfit_pointpillars, GPU), worker/ (image vcuboidfit_worker, CPU),
-               cloud/ (docker-compose cho máy thuê)
-  scripts/     tier1.ps1 / tier1.sh (chạy Tầng 1), colab_agent.py + colab_setup.sh (Tầng 1 qua Colab),
-               check_ports.py (bắt cổng ghi cứng), cloud/{pack,bootstrap}.sh, fetch_weights.py
-  notebooks/   vcf_colab_agent.ipynb (Colab chạy Tầng 1 cho worker), vcf_dev_setup_colab.ipynb (Colab tự chạy từ ZIP)
+├── worker/       c4/ engine, service/ FastAPI, configs/, tests/, pyproject.toml
+├── scripts/      dev_up.ps1, tier1.ps1/sh, fetch_weights.py, Colab và cloud
+├── docker/       worker CPU, tier1 GPU, gói cloud
+├── notebooks/    bridge Colab, Drive ZIP, benchmark A100
+└── workspace/    local ignored: uploads/datasets/jobs/experiments/weights
 ```
 
-## Chạy ở máy cá nhân (CPU)
+## Cài và chạy backend
+
+Từ root repo, Windows PowerShell:
 
 ```powershell
-cd model\worker
-python -m venv .venv
-.venv\Scripts\pip install -e ".[dev,service]"
-.venv\Scripts\python -m pytest -q -m "not perf and not gpu" tests/lidar tests/service/test_lidar.py tests/service/test_models.py
-$env:WORKSPACE = "..\workspace"        # = model/workspace, web phải trỏ cùng chỗ
-.venv\Scripts\python -m uvicorn service.main:create_app --factory --port 8001
+python -m venv model\worker\.venv
+model\worker\.venv\Scripts\python -m pip install -e "model\worker[dev,service]"
+powershell -NoProfile -ExecutionPolicy Bypass -File model/scripts/dev_up.ps1
 ```
 
-Thí nghiệm không qua web (CLI): `python -m c4.cli.lidar_experiment --data-root <nuScenes> --out ..\workspace\experiments\mini --split V --tune`.
+Script đặt `WORKSPACE=<repo>/model/workspace` và cổng 8001; nếu cổng đã bận thì không dừng listener hiện có. Seed tự dò phải có đủ index, cfg và checkpoint đúng bố cục; checkpoint LFS sau clone chưa đủ để được nhận làm seed local. Backend không tự đọc `.env`, xem [mẫu biến](worker/.env.example). Frontend chạy terminal riêng, cùng workspace: [README chính](../README.md).
 
-Tầng 1 (Docker + GPU), máy thuê, Colab: xem [docs/run-local.md](../docs/run-local.md),
-[docs/gpu-rental.md](../docs/gpu-rental.md), [docs/colab-dev-setup.md](../docs/colab-dev-setup.md).
-Các biến môi trường: [`worker/.env.example`](worker/.env.example) (worker không tự đọc `.env`,
-hãy đặt biến trong shell).
+Health: `http://127.0.0.1:8001/health`; API docs: `http://127.0.0.1:8001/docs`. Legacy `c4_legacy` là default; `rare_v24` có `lidar_only` và `multisensor` OpenCV/OpenCLIP. CPU đủ cho legacy Tầng 0 và bộ cụm LiDAR; PointPillars/CLIP cần môi trường tương ứng, không tự được tải khi chỉ clone code.
 
-Colab đơn giản: [4 ô đọc ZIP trong MyDrive/datatest](../docs/colab-dev-setup.md), CPU mặc định, GPU tùy chọn.
+## Model, đánh giá và dữ liệu
+
+PointPillars đã chạy local trên mini. Tầng 1 trong Docker, GPU thuê và Colab có cách chuẩn bị riêng. Benchmark T A100 của `pitch-v2` đã xong nhưng chưa chứng minh hơn baseline; không chạy lại T để thử hướng dẫn hoặc gán số đó cho detector mới.
+
+Các job demo và dataset/trọng số ngoài checkpoint LFS không đi kèm Git. Người dùng đã xoá lịch sử ba job demo ngày 14/10; tạo job mới để dùng Review. Không sửa `job.json` thành done khi pipeline thực tế chưa chạy.
+
+CLI/config, freeze, contract bảng và ranh giới nhãn: [model-workflow](../docs/model-workflow.md). Cài GPU và kiểm thử theo [getting-started](../docs/getting-started.md); vận hành [run-local](../docs/run-local.md), [gpu-rental](../docs/gpu-rental.md), [colab-dev-setup](../docs/colab-dev-setup.md). Số đo/cổng còn lại: [project-status](../docs/project-status.md).

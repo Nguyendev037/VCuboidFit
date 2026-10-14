@@ -1,6 +1,6 @@
 # Bảng thuật ngữ: "hiếm", điểm số và chỉ số đánh giá
 
-Nguồn chân lý cho mọi tooltip, nhãn UI và tài liệu. Mỗi mục có **Tên hiển thị** (dùng trên UI),
+Tài liệu tham chiếu thuật ngữ; nhãn/tooltip thực tế lấy từ source và API schema của từng engine. Các mục 1–6 dưới đây mô tả legacy `c4_legacy`; mục 7 bổ sung `rare_v24` và benchmark theo instance. Mỗi mục có **Tên hiển thị** (dùng trên UI),
 **Tooltip** (≤ 2 câu, lời thường, không ký hiệu toán) và **Chi tiết** (cho tài liệu). Khoá kỹ thuật
 (`rRar`, `nRecall`, …) chỉ để lập trình viên tra; KHÔNG hiện cho người dùng.
 
@@ -54,7 +54,27 @@ Dataset không có nhãn ⇒ chỉ có độ hiếm ước lượng, các chỉ 
 
 ## 5. Tham số người dùng chỉnh (panel "Tham số nâng cao")
 
-Nhãn/tooltip lấy từ API `GET /jobs/{id}/params-schema` (`label`, `help`) — sửa ở `worker/c4/lidar/params.py`.
+Nhãn/tooltip lấy từ API `GET /jobs/{id}/params-schema` (`label`, `help`) — source ở `model/worker/c4/lidar/params.py`. Panel kỹ thuật hiện mở qua **Chi tiết kỹ thuật** trên Dashboard.
+
+## 7. rare_v24 và chỉ số theo instance
+
+| Thuật ngữ | Cách đọc |
+|---|---|
+| VRU | Người đi bộ, xe đạp, xe máy; đối tượng trọng tâm của bài toán AEB |
+| RHCIO / GT v2.4 | Bộ định nghĩa tình huống hiếm trong source/config; các trục GT gồm lớp, combo khoảng cách/điểm, hành vi, khó, tương tác và bối cảnh đêm/mưa. Không đồng nhất với rare cell legacy |
+| Instance | Một đối tượng được theo dõi qua các frame; không đếm mỗi frame của cùng đối tượng thành instance mới |
+| Capture A (`any`) | Lô chọn có frame mà instance xuất hiện với điểm LiDAR, dù không phải đúng dạng hiếm |
+| Capture B (`rare_form`) | Chỉ thu được instance nếu frame được chọn chứa nó ở đúng dạng hiếm; đây là capture chính của pitch-v2 |
+| IY (Instance Yield) | Số instance đích khác nhau thu được chia số frame đã chọn; đơn vị instance/frame, không phải phần trăm accuracy |
+| IRecall | Phần instance đích thu được trên tổng instance đích; khác recall frame của legacy |
+| NY (Normalized Yield) | `(IY − IY_random) / (IY_oracle − IY_random)`; có thể âm khi dưới random, không có nghĩa nếu mẫu số không dương |
+| Oracle | Tham chiếu chọn bằng GT để so khả năng thu instance; không phải thuật toán chọn không nhãn để đưa vào vận hành |
+| Reach | Tỷ lệ mục tiêu có ứng viên trong bán kính kiểm; đo khâu candidates, không phải recall của lô cuối |
+| CI95 bootstrap scene | Độ bất định của phép đo khi lấy mẫu lại theo scene. Khi CI của chênh lệch chính chứa 0, chưa xác nhận lợi ích; không nhầm với CI riêng từng phương pháp |
+| `not shown / underpowered` | Phép thử chưa chứng minh lợi ích, bằng chứng còn yếu; không diễn giải thành đã thắng hoặc chắc chắn tương đương |
+| `lidar_only` / `multisensor` | Hai profile rare_v24: LiDAR hoặc thêm bối cảnh/ngữ nghĩa camera OpenCV/OpenCLIP, không VLM |
+
+Số T và kết luận hiện có ở [project-status](project-status.md). Thẻ dự đoán cần người duyệt, không tự là nhãn chuẩn; số mini hoặc bối cảnh job local không đại diện mọi thời tiết.
 
 | Khoá | Tên hiển thị | Tooltip mở rộng (dùng cho tooltip chi tiết) |
 |---|---|---|
