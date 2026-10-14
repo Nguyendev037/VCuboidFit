@@ -5,6 +5,115 @@ export interface GlossaryItem {
   howToRead?: string;
 }
 
+export interface HelpItem {
+  label: string;
+  tooltip: string;
+  desc?: string;
+}
+
+type PanelHelpKey =
+  | "budget"
+  | "priority"
+  | "formula"
+  | "spread"
+  | "expert"
+  | "engine"
+  | "profile"
+  | "tierLock"
+  | "preset.balanced"
+  | "preset.rare_first"
+  | "preset.hard_for_model"
+  | "preset.safety_scenarios"
+  | "w.rare"
+  | "w.novel"
+  | "w.unsure";
+
+export const PANEL_HELP: Record<PanelHelpKey, HelpItem> = {
+  budget: {
+    label: "Lấy bao nhiêu frame?",
+    tooltip: "Phần trăm frame được chọn ra từ toàn bộ dữ liệu để gửi gán nhãn. Tăng lên thì có nhiều frame hơn nhưng tốn công gán nhãn hơn. Chưa chắc thì để 5%.",
+  },
+  priority: {
+    label: "Ưu tiên tìm gì?",
+    tooltip: "Mỗi lựa chọn là một công thức trộn sẵn ba tiêu chí chấm điểm frame. Thanh Công thức bên dưới cho biết tỉ lệ trộn. Chưa chắc thì chọn Cân bằng.",
+  },
+  "preset.balanced": {
+    label: "Cân bằng",
+    desc: "Khuyến nghị · trộn cả ba tiêu chí",
+    tooltip: "Trộn độ hiếm của dữ liệu với độ khó đối với model. Hợp khi chưa biết model đang yếu ở đâu.",
+  },
+  "preset.rare_first": {
+    label: "Cảnh hiếm",
+    desc: "Ưu tiên hình dạng ít gặp",
+    tooltip: "Dồn điểm cho frame có hình dạng point cloud ít gặp trong bộ dữ liệu, như vật thể lạ hay bố cục đường bất thường. Hợp khi muốn mở rộng độ phủ dữ liệu.",
+  },
+  "preset.hard_for_model": {
+    label: "Model còn yếu",
+    desc: "Ưu tiên frame model chưa chắc",
+    tooltip: "Dồn điểm cho frame mà model hiện tại đoán dao động hoặc thiếu tự tin. Gán nhãn nhóm này thường giúp model tiến bộ nhanh nhất. Cần chạy Tầng 1.",
+  },
+  "preset.safety_scenarios": {
+    label: "Kịch bản an toàn",
+    desc: "Cảnh hiếm mà model còn lúng túng",
+    tooltip: "Dồn điểm cho frame vừa hiếm vừa làm model thiếu tự tin — nhóm dễ gây lỗi nguy hiểm khi xe chạy thật. Cần chạy Tầng 1.",
+  },
+  formula: {
+    label: "Công thức đang dùng",
+    tooltip: "Tỉ lệ đóng góp của ba tiêu chí vào điểm cuối của mỗi frame. Chỉ để xem; muốn chỉnh tay hãy mở Chế độ chuyên gia.",
+  },
+  "w.rare": {
+    label: "Hiếm trong dữ liệu",
+    tooltip: "Frame có hình dạng ít gặp so với phần còn lại của bộ dữ liệu.",
+  },
+  "w.novel": {
+    label: "Lạ với model",
+    tooltip: "Frame khác với những gì model đã được học.",
+  },
+  "w.unsure": {
+    label: "Model chưa chắc chắn",
+    tooltip: "Frame mà model đoán dao động hoặc thiếu tự tin.",
+  },
+  spread: {
+    label: "Trải đều nhiều cảnh",
+    tooltip: "Bật: mỗi cảnh (một đoạn lái ngắn) góp tối đa 4 frame, tránh chọn nhiều frame gần giống nhau. Tắt: lấy các frame điểm cao nhất, kể cả khi dồn vào vài cảnh.",
+  },
+  tierLock: {
+    label: "Đang ở chế độ Cơ bản",
+    tooltip: "Lần chạy này chưa có model (Tầng 1) nên chỉ dùng tiêu chí Hiếm trong dữ liệu. Chạy Tầng 1 để mở các lựa chọn còn lại.",
+  },
+  expert: {
+    label: "Chế độ chuyên gia",
+    tooltip: "Dành cho người làm benchmark: chỉnh trực tiếp từng tham số. Thay đổi ở đây ghi đè lựa chọn phía trên và cần bấm Áp dụng.",
+  },
+  engine: {
+    label: "Bộ máy chọn frame",
+    tooltip: "C4 hiện tại là bản mặc định đã kiểm chứng. Rare v2.4 là bản thử nghiệm, kết quả có thể khác.",
+  },
+  profile: {
+    label: "Cảm biến dùng để chấm",
+    tooltip: "Chỉ áp dụng cho Rare v2.4. Chọn LiDAR + camera khi dữ liệu có đủ ảnh camera; nếu không, giữ Chỉ LiDAR.",
+  },
+};
+
+export const UPLOAD_HELP: Record<"dropzone" | "limit" | "limitFallback" | "notice", HelpItem> = {
+  dropzone: {
+    label: "Kéo thả một hoặc nhiều file .zip / .rar / .7z — không giới hạn dung lượng mỗi file",
+    tooltip: "",
+  },
+  limit: {
+    label: "Tổng tối đa {max} mỗi lần tải · mất mạng thì tự gửi tiếp",
+    tooltip: "File lớn được tự chia nhỏ khi gửi nên bạn không cần nén thành nhiều phần. Giới hạn tổng do người quản trị máy chủ đặt.",
+  },
+  limitFallback: {
+    label: "Tổng dung lượng theo cấu hình máy chủ · mất mạng thì tự gửi tiếp",
+    tooltip: "",
+  },
+  notice: {
+    label: "Lưu ý cấu trúc",
+    tooltip: "Mỗi file nén phải chứa thư mục data/ ở gốc theo cấu trúc nuScenes (data/v1.0-*/, data/samples/LIDAR_TOP/…). Nén cả thư mục data/ thành một file .zip là đủ; công cụ vcf-pack chỉ cần khi muốn lọc bớt scene hoặc chia nhỏ để lưu trữ.",
+  },
+};
+
 export const RARITY_CONCEPTS: Record<string, GlossaryItem> = {
   rare_est: {
     label: "Độ hiếm (ước lượng)",

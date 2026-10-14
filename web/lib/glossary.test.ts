@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { reasonText, gtTagLabel, METRICS, RARITY_COMPARISON, SETTINGS } from "./glossary";
+import { PRESETS } from "./api/types";
+import { reasonText, gtTagLabel, METRICS, PANEL_HELP, RARITY_COMPARISON, SETTINGS, UPLOAD_HELP } from "./glossary";
 
 describe("glossary", () => {
   it("reasonText converts correctly", () => {
@@ -47,5 +48,48 @@ describe("reasonText top percent", () => {
   it("never shows top 0% (p100 is the top 1%)", () => {
     expect(reasonText("rarity p100")).toContain("top 1%");
     expect(reasonText("novelty p97")).toContain("top 3%");
+  });
+});
+
+describe("panel and upload help", () => {
+  const forbidden = /[αβγλ]|\bMMR\b|preset|quota|chunk|\btier\b|\bk=/i;
+
+  it("contains every contracted help key and every preset", () => {
+    expect(Object.keys(PANEL_HELP).sort()).toEqual([
+      "budget",
+      "engine",
+      "expert",
+      "formula",
+      "preset.balanced",
+      "preset.hard_for_model",
+      "preset.rare_first",
+      "preset.safety_scenarios",
+      "priority",
+      "profile",
+      "spread",
+      "tierLock",
+      "w.novel",
+      "w.rare",
+      "w.unsure",
+    ]);
+    expect(Object.keys(UPLOAD_HELP).sort()).toEqual(["dropzone", "limit", "limitFallback", "notice"]);
+    for (const preset of PRESETS) {
+      expect(PANEL_HELP[`preset.${preset}`]).toBeDefined();
+    }
+  });
+
+  it("keeps labels, descriptions, and tooltips within copy rules", () => {
+    for (const [key, item] of Object.entries(PANEL_HELP)) {
+      expect(item.label.length, key).toBeLessThanOrEqual(40);
+      expect(item.tooltip.length, key).toBeLessThanOrEqual(220);
+      if (item.desc) expect(item.desc.length, key).toBeLessThanOrEqual(45);
+      expect(`${item.label} ${item.desc ?? ""} ${item.tooltip}`, key).not.toMatch(forbidden);
+    }
+    for (const [key, item] of Object.entries(UPLOAD_HELP)) {
+      expect(item.label.length, key).toBeLessThanOrEqual(90);
+      if (key === "notice") expect(item.tooltip.length, key).toBeLessThanOrEqual(300);
+      else expect(item.tooltip.length, key).toBeLessThanOrEqual(220);
+      expect(`${item.label} ${item.desc ?? ""} ${item.tooltip}`, key).not.toMatch(forbidden);
+    }
   });
 });

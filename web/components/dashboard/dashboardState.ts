@@ -2,6 +2,7 @@ import { DEMO_KEY } from "@/lib/api/client";
 import type { Preset } from "@/lib/api/types";
 import { stageLabel } from "@/lib/constants";
 import { isAdvancedPanelInitiallyOpen } from "@/lib/advancedParams";
+import { PANEL_HELP } from "@/lib/glossary";
 
 export const pct=(x: number) => `${Math.round(x*100)}%`;
 
@@ -14,12 +15,12 @@ export const formatBytes=(bytes: number) => {
 export const formatDuration=(seconds: number) =>
   `${seconds<10? seconds.toFixed(1):Math.round(seconds)} s`;
 
-export const PRESET_LABELS: Record<Preset, { title: string; desc: string }>={
-  balanced: { title: "Cân bằng", desc: "Cân bằng các tiêu chí" },
-  rare_first: { title: "Hiếm trước", desc: "Ưu tiên Hiếm trong dữ liệu" },
-  hard_for_model: { title: "Khó với model", desc: "Ưu tiên Model chưa chắc chắn" },
-  safety_scenarios: { title: "Kịch bản an toàn", desc: "Ưu tiên Hiếm + Model chưa chắc" },
-};
+export const PRESET_LABELS: Record<Preset, { title: string; desc: string }> = Object.fromEntries(
+  (["balanced", "rare_first", "hard_for_model", "safety_scenarios"] as const).map((preset) => {
+    const help = PANEL_HELP[`preset.${preset}`];
+    return [preset, { title: help.label, desc: help.desc ?? "" }];
+  }),
+) as Record<Preset, { title: string; desc: string }>;
 
 export const PRESET_LOCK_TITLE="Chiến lược chỉ đổi được khi job có Tầng 1 (model seed); job này chưa có nên dùng mặc định Tầng 0.";
 
