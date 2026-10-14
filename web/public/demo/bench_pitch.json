@@ -1,72 +1,72 @@
 {
   "schema": "vcf-demo-bench-v1",
   "source": {
-    "run_id": "mini_bench",
-    "repo_sha": "dd5989d",
+    "run_id": "20261013-192329-49de1480",
+    "repo_sha": "78ed9047d23d2ba29798b06da61bf39c3474ab8f",
     "code_sha": "dd5989d",
     "prereg_sha256": "590a7a6a17fd55b63f778dbd79c4b01ed6f33add705d84225d7db7b890a0a75d",
-    "final_config_sha256": "",
-    "report_sha256": "696da93223803db108d4358a0b0a75fb8038516e655296cdb4a243e342ca4470"
+    "final_config_sha256": "e4cdde328dff3efa0cd5049d9761dd68b582914a42ede8d64164687fe427a783",
+    "report_sha256": "0df8bd669634704a885324fe0156ab2267a248647933c4a8043540eb0ea52007"
   },
-  "label": "mini · minh hoạ · in-sample",
-  "pool": 404,
-  "scenes": 10,
+  "label": "T pool",
+  "pool": 1389,
+  "scenes": 35,
   "capture_primary": "rare_form",
-  "budget_B": 21,
+  "budget_B": 70,
   "methods": {
     "M0": {
       "name": "Random",
-      "iy": 0.08666666666666666,
-      "ci_lo": 0.03177869040750474,
-      "ci_hi": 0.14525955568042587,
+      "iy": 0.0727142857142857,
+      "ci_lo": 0.01960362350927466,
+      "ci_hi": 0.15606309615925837,
       "status": "ok",
       "ny": 0.0
     },
     "M1": {
       "name": "Legacy",
-      "iy": 0.047619047619047616,
+      "iy": 0.11428571428571428,
       "ci_lo": 0.0,
-      "ci_hi": 0.1601666666666665,
+      "ci_hi": 0.29098930481283414,
       "status": "ok",
-      "ny": -0.0451045104510451
+      "ny": 0.07884042264968845
     },
     "M2": {
       "name": "lidar_only",
-      "iy": 0.09523809523809523,
+      "iy": 0.1,
       "ci_lo": 0.0,
-      "ci_hi": 0.25,
+      "ci_hi": 0.2571428571428571,
       "status": "ok",
-      "ny": 0.009900990099009908
+      "ny": 0.051747493904091064
     },
     "M3": {
       "name": "multisensor",
-      "iy": 0.09523809523809523,
+      "iy": 0.05714285714285714,
       "ci_lo": 0.0,
-      "ci_hi": 0.23088235294117637,
+      "ci_hi": 0.17142857142857143,
       "status": "ok",
-      "ny": 0.009900990099009908
+      "ny": -0.02953129233270115
     }
   },
   "primary": {
     "pair": "M2-M1",
-    "delta": 0.047619047619047616,
-    "ci_lo": -0.1176642156862745,
-    "ci_hi": 0.22738135026737957,
+    "delta": -0.014285714285714277,
+    "ci_lo": -0.16428571428571428,
+    "ci_hi": 0.08406773331236733,
     "conclusion": "not shown / underpowered"
   },
   "reachability": {
     "radius_m": 1.0,
-    "n_targets": 20,
+    "n_targets": 42,
     "methods": {
       "M2": {
-        "reach": 0.55,
-        "n_reachable": 11,
-        "n_targets": 20
+        "reach": 0.3333333333333333,
+        "n_reachable": 14,
+        "n_targets": 42
       },
       "M3": {
-        "reach": 0.55,
-        "n_reachable": 11,
-        "n_targets": 20
+        "reach": 0.3333333333333333,
+        "n_reachable": 14,
+        "n_targets": 42
       }
     }
   },
