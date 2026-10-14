@@ -26,6 +26,8 @@ Next.js 16 App Router, React 19, Tailwind 4 qua loader Turbopack. Font Be Vietna
 
 ## Media mẫu sau clone
 
+Hotfix 0.6.9: mô phỏng **trang chủ** dùng bộ media được commit tại `web/public/demo/showcase/` (46 ảnh/thumbnail/cloud, khoảng 3,3 MB), kèm manifest SHA256 và ghi nguồn nuScenes/Motional CC BY-NC-SA 4.0. `LiveShowcase` đổi URL fixture sang bộ này; clone mới không còn phụ thuộc `public/mock-media/` để xem mô phỏng. Điểm số/hộp từ fixture chỉ minh hoạ, không phải kết quả benchmark. Mọi job thật vẫn dùng media của worker như trước.
+
 Ảnh hero và dữ liệu benchmark/figure được commit. `web/public/mock-media/` được gitignore và **không commit** theo quy định repo; sáu fixture tham chiếu ảnh camera, thumbnail và LiDAR trong thư mục đó. Muốn mô phỏng mẫu đầy đủ, dựng media trước từ dữ liệu nuScenes trên máy:
 
 ```powershell
@@ -35,7 +37,7 @@ node scripts/fetch-mock-media.mjs --from H:/ --frames 6
 
 Thay `H:/` bằng thư mục có dữ liệu nuScenes. Script chỉ đọc nguồn và ghi vào `public/mock-media/`. Nếu không tìm thấy dữ liệu thật, script tạo ảnh xám/point cloud tổng hợp: chỉ dùng để kiểm giao diện, không dùng làm minh chứng dữ liệu thật. Dữ liệu nuScenes thuộc Motional, CC BY-NC-SA 4.0; giữ nguồn và giới hạn phi thương mại.
 
-`LiveShowcase` ưu tiên job đã hoàn tất từ worker, kiểm media bằng HEAD trước khi mở frame thật và giới hạn nạp 8 giây. Thiếu worker thì dùng fixture mẫu; vẫn cần dựng media fixture trên máy. Media thiếu ở job thật thì thử frame tiếp theo; không còn frame hợp lệ thì hiển thị trạng thái rỗng.
+`LiveShowcase` ưu tiên job đã hoàn tất từ worker, kiểm media bằng HEAD trước khi mở frame thật và giới hạn nạp 8 giây. Thiếu worker thì dùng fixture cùng media showcase đóng gói sẵn. Media thiếu ở job thật thì thử frame tiếp theo; không còn frame hợp lệ thì hiển thị trạng thái rỗng.
 
 ## Chạy và kiểm tra
 
@@ -51,7 +53,7 @@ node node_modules/vitest/vitest.mjs run
 node node_modules/next/dist/bin/next build
 ```
 
-Test `LiveShowcase.test.ts` kiểm các file media fixture tồn tại, nên clone sạch cần bước dựng media trước khi chạy toàn bộ Vitest. Không cần worker cho unit test; e2e job thật cần worker và dữ liệu local. Không chạy `demo-flow` A6 trong khi cần giữ worker: phép thử đó chủ động dừng worker 8001.
+Test `LiveShowcase.test.ts` kiểm các media **được Git theo dõi** và tồn tại dưới `demo/showcase`, ngăn lỗi chỉ pass trên máy tác giả. Không cần dựng mock-media để chạy test showcase. Không cần worker cho unit test; e2e job thật cần worker và dữ liệu local. Không chạy `demo-flow` A6 trong khi cần giữ worker: phép thử đó chủ động dừng worker 8001.
 
 Build mặc định dùng Turbopack. Không đổi sang `--webpack`: repo chưa có pipeline PostCSS tương đương, build có thể thành công nhưng thiếu utility CSS. Nếu build hiển thị route cũ, kiểm HTML/computed styles; dừng preview của mình, chuyển `.next/cache/turbopack` sang thư mục dự phòng rồi build lại. Không đụng dữ liệu hoặc tiến trình của phiên khác.
 

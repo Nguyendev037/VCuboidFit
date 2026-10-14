@@ -20,7 +20,7 @@ Web ở `http://localhost:3000`. Backend thật ở `http://127.0.0.1:8001`; ch�
 - `/review/**`: Deep Review/viewer 3D và camera của job đã chạy.
 - `/huong-dan`: hướng dẫn, thuật ngữ.
 
-Không có worker vẫn xem nội dung giới thiệu/phương pháp/benchmark. `NEXT_PUBLIC_MOCK=1` chỉ để khám phá UI; media fixture phải dựng local vì `public/mock-media/` không commit. Script `node scripts/fetch-mock-media.mjs --from H:/ --frames 6` đọc dữ liệu nuScenes của bạn; không có nguồn thật thì chỉ sinh ảnh xám/cloud tổng hợp để kiểm UI.
+Không có worker vẫn xem giới thiệu/phương pháp/benchmark và mô phỏng trang chủ. Trang chủ dùng media đóng gói trong `public/demo/showcase/`, chạy sau clone mà không cần dựng mock. `NEXT_PUBLIC_MOCK=1` dùng cho các màn UI khác; media mock rộng hơn không commit. Script `node scripts/fetch-mock-media.mjs --from H:/ --frames 6` dựng phần đó từ nuScenes; không có nguồn thật thì chỉ sinh ảnh xám/cloud tổng hợp để kiểm UI.
 
 ## Kiểm tra
 

@@ -1,6 +1,8 @@
 # Tiến độ VCuboidFIT và bằng chứng
 
-Cập nhật **14/10/2026** · phiên bản cấu hình **0.6.8** (đợt rà tài liệu) · tag gần nhất `v0.6.5`. Nguồn hiện trạng là code trong repo và JSON benchmark được commit; các hồ sơ kế hoạch/evidence quản trị nằm ngoài repo sản phẩm. Không coi việc push code là nghiệm thu toàn bộ nghiên cứu.
+Hotfix 0.6.9: sửa lỗi máy clone không tải được ảnh/LiDAR mô phỏng trang chủ. Sáu fixture dùng 46 file media minh hoạ được đóng gói trong Git thay vì thư mục mock-media ignored; có nguồn/giấy phép và manifest. Không đổi engine, dữ liệu job hoặc benchmark T.
+
+Cập nhật **14/10/2026** · phiên bản cấu hình **0.6.9** (docs 0.6.8 + hotfix showcase) · tag gần nhất `v0.6.5`. Nguồn hiện trạng là code trong repo và JSON benchmark được commit; các hồ sơ kế hoạch/evidence quản trị nằm ngoài repo sản phẩm. Không coi việc push code là nghiệm thu toàn bộ nghiên cứu.
 
 ## 1. Nội dung dùng để báo cáo tiến độ
 

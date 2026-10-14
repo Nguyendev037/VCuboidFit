@@ -2,7 +2,7 @@
 
 **Tuyển chọn keyframe LiDAR đáng gán nhãn cho bài toán phát hiện người đi bộ, xe đạp và xe máy (VRU) phục vụ phanh khẩn cấp AEB trên nuScenes.** Hệ thống chọn lô theo ngân sách, thường là 5%, rồi cho người gán nhãn kiểm tra lý do chọn, point cloud, hộp 3D và camera trước khi xuất kết quả.
 
-Phiên bản cấu hình **0.6.8** · cập nhật **14/10/2026** · [báo cáo tiến độ và bằng chứng](docs/project-status.md).
+Phiên bản cấu hình **0.6.9** · cập nhật **14/10/2026** · [báo cáo tiến độ và bằng chứng](docs/project-status.md).
 
 ## Hiện đã làm được gì?
 
@@ -66,12 +66,12 @@ npm run dev
 | Code, tài liệu, ảnh hero, JSON benchmark và 3 figure | Dataset nuScenes và ZIP upload — [dataset](dataset/README.md) |
 | Manifest tham khảo và CLI `vcf-pack` | Manifest/ZIP mới do bạn đóng gói; không dùng checksum của bộ ZIP khác |
 | 1 checkpoint PointPillars mini 80 epoch qua Git LFS (~70 MB) | Seed local có `index.parquet`, `t1/cfg/pp_seed.yaml`, `t1/ckpt/seed_latest.pth`; clone không tự có bố cục này |
-| Fixture JSON cho giao diện | `web/public/mock-media/` bị gitignore; dựng media theo [web.md](docs/web.md#media-mẫu-sau-clone) |
+| Fixture và media mô phỏng trang chủ tại `web/public/demo/showcase/` (~3,3 MB) | Media của các màn mock khác tại `web/public/mock-media/` bị gitignore; dựng khi cần theo [web.md](docs/web.md#media-mẫu-sau-clone) |
 | Notebook/cấu hình | Trọng số OpenCLIP/YOLO/DINOv2 khi luồng sử dụng cần — [getting-started](docs/getting-started.md) |
 
 `model/workspace/` không nằm trong Git. `full_mini`, `m2_mini`, `night_v24` là tên job trên máy phát triển, không đi kèm clone. Ba job này đã được người dùng xoá khỏi lịch sử ngày 14/10; dataset và trọng số vẫn giữ trên máy đó. Muốn mở Deep Review, tạo/chạy job mới trước.
 
-Không có dữ liệu vẫn xem phần giới thiệu, phương pháp và benchmark. `NEXT_PUBLIC_MOCK=1` giúp khám phá UI, không thay kết quả model thật; cần dựng file local để xem media đầy đủ. Script không tìm thấy nuScenes sẽ sinh ảnh xám/cloud tổng hợp, chỉ dùng kiểm giao diện.
+Không có dữ liệu vẫn xem phần giới thiệu, mô phỏng trang chủ, phương pháp và benchmark. Media trang chủ được đóng gói sẵn, không cần backend hay lệnh dựng mock. `NEXT_PUBLIC_MOCK=1` giúp khám phá các màn UI khác, không thay kết quả model thật; các màn đó có thể cần media mock local. Script không tìm thấy nuScenes sẽ sinh ảnh xám/cloud tổng hợp, chỉ dùng kiểm giao diện.
 
 ## Luồng hoạt động
 

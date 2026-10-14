@@ -1,0 +1,238 @@
+{
+  "purpose": "Curated landing showcase illustration, not benchmark measurements",
+  "source": "nuScenes / Motional; CC BY-NC-SA 4.0",
+  "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "notes": "Six UI fixtures, reduced camera images/thumbnails and normalized float16 point clouds. Scores and boxes are illustrative fixture metadata, not measured results.",
+  "files": [
+    {
+      "file": "thumbs/mock-f01.jpg",
+      "bytes": 10263,
+      "sha256": "1794713e3020bb81aa85099f2e6b980093b21771f03fb6d691d6740c8c037618"
+    },
+    {
+      "file": "images/mock-f01/CAM_FRONT_LEFT.jpg",
+      "bytes": 49227,
+      "sha256": "7dbbd96f00a6b276a40ec67db46324f4aa9fd8302e853ac5f0e0322e3b674aa3"
+    },
+    {
+      "file": "images/mock-f01/CAM_FRONT.jpg",
+      "bytes": 49628,
+      "sha256": "d3c83c37738a5d7d9bb63937dea38ba056f46a0d5cfa9325c7e614c91217ba85"
+    },
+    {
+      "file": "images/mock-f01/CAM_FRONT_RIGHT.jpg",
+      "bytes": 51886,
+      "sha256": "866c4ce8301839927f9543db08e60eaa1f017c644e4f508e2c0c64d12cc604d3"
+    },
+    {
+      "file": "images/mock-f01/CAM_BACK_LEFT.jpg",
+      "bytes": 50040,
+      "sha256": "a7a6071c1c81fcd1e05374c70215c23700fc04c45827be1fb96bec18d4594bd6"
+    },
+    {
+      "file": "images/mock-f01/CAM_BACK.jpg",
+      "bytes": 42828,
+      "sha256": "b837c870a971b2a28f606e576c72c17a4e9b58bdced3ceeb84c4aeb7ce804ccc"
+    },
+    {
+      "file": "images/mock-f01/CAM_BACK_RIGHT.jpg",
+      "bytes": 55396,
+      "sha256": "66ff30acfa659f3eef600763daf84c2b372bde567f1fb47691d6531f392f24d3"
+    },
+    {
+      "file": "lidar/mock-f01.f16",
+      "bytes": 277760,
+      "sha256": "b24c38d600c40a4d7346f68aa18052773f63d56301e22d7fd22d97c0066b150b"
+    },
+    {
+      "file": "thumbs/mock-f02.jpg",
+      "bytes": 10419,
+      "sha256": "a74c285bf8f5917ffe7c02880404d42ad3bcd95eb90bb2be6a13ddbd7fe09a71"
+    },
+    {
+      "file": "images/mock-f02/CAM_FRONT_LEFT.jpg",
+      "bytes": 52376,
+      "sha256": "a785384ec36bf9803398bf69d199cc5489bd50a4ab5e149277ae1e6b75241d0d"
+    },
+    {
+      "file": "images/mock-f02/CAM_FRONT.jpg",
+      "bytes": 51640,
+      "sha256": "e594f4e97284af3117c841b638c8d4cfdddcf963728cc69d534533993bbce58c"
+    },
+    {
+      "file": "images/mock-f02/CAM_FRONT_RIGHT.jpg",
+      "bytes": 54367,
+      "sha256": "6589c35d8ea3764dbde81cb87f6ca96404cb5958a2f78c4881f0a143c7080c4c"
+    },
+    {
+      "file": "images/mock-f02/CAM_BACK_LEFT.jpg",
+      "bytes": 55203,
+      "sha256": "9c795b8b25ac8ab96d9d4ca2d953da7b07c3bd9d9141f0f3dde767603348df56"
+    },
+    {
+      "file": "images/mock-f02/CAM_BACK.jpg",
+      "bytes": 48348,
+      "sha256": "90b226680686abc57cd8078427e454dba3ad1b0f986599efad609a9d3124d280"
+    },
+    {
+      "file": "images/mock-f02/CAM_BACK_RIGHT.jpg",
+      "bytes": 59401,
+      "sha256": "bc4828de6639fef58804d9c2a3365aa244594669d726a71fa8176393bcc9a50e"
+    },
+    {
+      "file": "lidar/mock-f02.f16",
+      "bytes": 277760,
+      "sha256": "3f1bfce08e8c6319eba8425163888fa9cb0248557632beaac2c02df6601292b2"
+    },
+    {
+      "file": "thumbs/mock-f03.jpg",
+      "bytes": 10275,
+      "sha256": "9794608fbb713ae28ccc6bd16171814a3e4c763ddcc822a9abbeb03aba5bf870"
+    },
+    {
+      "file": "images/mock-f03/CAM_FRONT_LEFT.jpg",
+      "bytes": 48363,
+      "sha256": "929e535b884bba2143cc26ca9d3a80ff5db0e749456526e9d1548d860766e14f"
+    },
+    {
+      "file": "images/mock-f03/CAM_FRONT.jpg",
+      "bytes": 50827,
+      "sha256": "a2b2d2fe252a4c2f7420a7be6550ec52dd1ad3e4abba3cfac3e4a4f51c03412d"
+    },
+    {
+      "file": "images/mock-f03/CAM_FRONT_RIGHT.jpg",
+      "bytes": 54604,
+      "sha256": "2cdeb8b91b7e871f95924279120e13339b7683d32a8b0d8a19f6116bb95fd2de"
+    },
+    {
+      "file": "images/mock-f03/CAM_BACK_LEFT.jpg",
+      "bytes": 53746,
+      "sha256": "cce7c13472fa6e05537ad6d9f8fc49859380ebd387057f067af0d078aa8fe622"
+    },
+    {
+      "file": "images/mock-f03/CAM_BACK_RIGHT.jpg",
+      "bytes": 56146,
+      "sha256": "af8c06d8d9f231215b11ff4c0dc7be326775413f2e910344171ac9c7a2a655b1"
+    },
+    {
+      "file": "lidar/mock-f03.f16",
+      "bytes": 277760,
+      "sha256": "ef1dee624f50d17a7d2e933d8bd26824d1f2c06f569f6b0a669c71e6f2c607ec"
+    },
+    {
+      "file": "thumbs/mock-f04.jpg",
+      "bytes": 10351,
+      "sha256": "bbc4c68c0c07af91e6b035c2300d74c352060ce168570f56dfb7a6900b528ed5"
+    },
+    {
+      "file": "images/mock-f04/CAM_FRONT_LEFT.jpg",
+      "bytes": 55607,
+      "sha256": "372522eb29a4ec1f20d61808cea01a93f07720d5305ab31b4ca793dda49b08aa"
+    },
+    {
+      "file": "images/mock-f04/CAM_FRONT.jpg",
+      "bytes": 50608,
+      "sha256": "52d6bebe28e9c11bcc76596494b47a980e7ab276ce20dfb7ddf531c1589d98e7"
+    },
+    {
+      "file": "images/mock-f04/CAM_FRONT_RIGHT.jpg",
+      "bytes": 54220,
+      "sha256": "7afa038b15ca67d29328f86d3630a618fa1e2b5f0eaf4b06b7a178697ef5a8a1"
+    },
+    {
+      "file": "images/mock-f04/CAM_BACK_LEFT.jpg",
+      "bytes": 52857,
+      "sha256": "5731b2bbc4c6bc8766c39063e35598c88385c3c40facac9a729c868eff04f51f"
+    },
+    {
+      "file": "images/mock-f04/CAM_BACK.jpg",
+      "bytes": 47811,
+      "sha256": "9e934a400418f0f1a9b7400b50281b2e33645e64f7658a224c5768f42752691b"
+    },
+    {
+      "file": "images/mock-f04/CAM_BACK_RIGHT.jpg",
+      "bytes": 56929,
+      "sha256": "4939077a7eb96aea8020458bea407f9f6755821b1ec6009d89a48fdd852cb065"
+    },
+    {
+      "file": "lidar/mock-f04.f16",
+      "bytes": 277760,
+      "sha256": "df459fd22f31604b133b44c971cd68b6e014f2b0b7b9c29efa1f184439f1d111"
+    },
+    {
+      "file": "thumbs/mock-f05.jpg",
+      "bytes": 10263,
+      "sha256": "1794713e3020bb81aa85099f2e6b980093b21771f03fb6d691d6740c8c037618"
+    },
+    {
+      "file": "images/mock-f05/CAM_FRONT_LEFT.jpg",
+      "bytes": 49227,
+      "sha256": "7dbbd96f00a6b276a40ec67db46324f4aa9fd8302e853ac5f0e0322e3b674aa3"
+    },
+    {
+      "file": "images/mock-f05/CAM_FRONT.jpg",
+      "bytes": 49628,
+      "sha256": "d3c83c37738a5d7d9bb63937dea38ba056f46a0d5cfa9325c7e614c91217ba85"
+    },
+    {
+      "file": "images/mock-f05/CAM_FRONT_RIGHT.jpg",
+      "bytes": 51886,
+      "sha256": "866c4ce8301839927f9543db08e60eaa1f017c644e4f508e2c0c64d12cc604d3"
+    },
+    {
+      "file": "images/mock-f05/CAM_BACK_LEFT.jpg",
+      "bytes": 50040,
+      "sha256": "a7a6071c1c81fcd1e05374c70215c23700fc04c45827be1fb96bec18d4594bd6"
+    },
+    {
+      "file": "images/mock-f05/CAM_BACK.jpg",
+      "bytes": 42828,
+      "sha256": "b837c870a971b2a28f606e576c72c17a4e9b58bdced3ceeb84c4aeb7ce804ccc"
+    },
+    {
+      "file": "images/mock-f05/CAM_BACK_RIGHT.jpg",
+      "bytes": 55396,
+      "sha256": "66ff30acfa659f3eef600763daf84c2b372bde567f1fb47691d6531f392f24d3"
+    },
+    {
+      "file": "thumbs/mock-f06.jpg",
+      "bytes": 11184,
+      "sha256": "90f4228c81b0f780d46b945171d673b1e02122f53e4543484b2fb7ca039e2d2a"
+    },
+    {
+      "file": "images/mock-f06/CAM_FRONT_LEFT.jpg",
+      "bytes": 52376,
+      "sha256": "a785384ec36bf9803398bf69d199cc5489bd50a4ab5e149277ae1e6b75241d0d"
+    },
+    {
+      "file": "images/mock-f06/CAM_FRONT.jpg",
+      "bytes": 51640,
+      "sha256": "e594f4e97284af3117c841b638c8d4cfdddcf963728cc69d534533993bbce58c"
+    },
+    {
+      "file": "images/mock-f06/CAM_FRONT_RIGHT.jpg",
+      "bytes": 54367,
+      "sha256": "6589c35d8ea3764dbde81cb87f6ca96404cb5958a2f78c4881f0a143c7080c4c"
+    },
+    {
+      "file": "images/mock-f06/CAM_BACK_LEFT.jpg",
+      "bytes": 55203,
+      "sha256": "9c795b8b25ac8ab96d9d4ca2d953da7b07c3bd9d9141f0f3dde767603348df56"
+    },
+    {
+      "file": "images/mock-f06/CAM_BACK.jpg",
+      "bytes": 48348,
+      "sha256": "90b226680686abc57cd8078427e454dba3ad1b0f986599efad609a9d3124d280"
+    },
+    {
+      "file": "images/mock-f06/CAM_BACK_RIGHT.jpg",
+      "bytes": 55293,
+      "sha256": "7117703623bf0e1b9419ec493025262f253f53cf1b7d328e8c6d8fd67596d484"
+    },
+    {
+      "file": "lidar/mock-f06.f16",
+      "bytes": 277760,
+      "sha256": "3f1bfce08e8c6319eba8425163888fa9cb0248557632beaac2c02df6601292b2"
+    }
+  ]
+}

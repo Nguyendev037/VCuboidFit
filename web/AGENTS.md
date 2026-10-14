@@ -10,4 +10,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Frontend handoff
 
-Read `../docs/web.md` before changing the landing page or `/vi-sao`. It documents routes, typography, benchmark provenance, sample media setup, verification, and build cache pitfalls. Keep benchmark values source-driven and preserve the current unproven conclusion. `ReviewPerspective` contains evaluation criteria, not customer testimonials. Sample media under `public/mock-media/` stays ignored; generate it locally before the full Vitest suite.
+Read `../docs/web.md` before changing the landing page or `/vi-sao`. It documents routes, typography, benchmark provenance, sample media setup, verification, and build cache pitfalls. Keep benchmark values source-driven and preserve the current unproven conclusion. `ReviewPerspective` contains evaluation criteria, not customer testimonials. Generated media under `public/mock-media/` stays ignored. The landing showcase uses curated, tracked assets under `public/demo/showcase/`; keep its manifest and attribution and verify every referenced asset exists in a clean checkout.

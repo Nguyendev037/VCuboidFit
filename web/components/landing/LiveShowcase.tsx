@@ -14,7 +14,15 @@ import sample4 from "@/mocks/frame-detail-mock-f04.json";
 import sample5 from "@/mocks/frame-detail-mock-f05.json";
 import sample6 from "@/mocks/frame-detail-mock-f06.json";
 import { chooseShowcaseFrame, loadShowcaseDetail } from "./showcaseFrames";
-export const SAMPLES = [sample1, sample2, sample3, sample4, sample5, sample6] as FrameDetail[];
+// The landing demo must work on a clean clone without generated mock-media.
+const showcaseUrl = (url: string) => url.replace(/^\/mock-media\//, "/demo/showcase/");
+export const SAMPLES = ([sample1, sample2, sample3, sample4, sample5, sample6] as FrameDetail[]).map(frame => ({
+  ...frame,
+  thumbUrl: showcaseUrl(frame.thumbUrl),
+  bevUrl: frame.bevUrl ? showcaseUrl(frame.bevUrl) : frame.bevUrl,
+  cams: frame.cams.map(cam => ({ ...cam, imageUrl: showcaseUrl(cam.imageUrl) })),
+  lidar: frame.lidar ? { ...frame.lidar, url: showcaseUrl(frame.lidar.url) } : frame.lidar,
+}));
 const SAMPLE_RUN = { jobId: "nuScenes-mau", sid: "minh-hoa", frames: SAMPLES, sample: true };
 
 // three.js chỉ nạp phía client, và chỉ khi trang giới thiệu thật sự cần

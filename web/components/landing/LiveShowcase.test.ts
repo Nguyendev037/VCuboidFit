@@ -1,5 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { afterEach, expect, it, vi } from "vitest";
 import { SAMPLES, loadLatest } from "./LiveShowcase";
 import { chooseShowcaseFrame, loadShowcaseDetail } from "./showcaseFrames";
@@ -59,8 +61,13 @@ it("bounds a hung frame request to eight seconds", async () => {
   await result;
 });
 
-it("every sample thumbnail, camera and available LiDAR has a local media file", () => {
-  const missing = SAMPLES.flatMap(frame => [frame.thumbUrl, ...frame.cams.map(cam => cam.imageUrl), ...(frame.lidar ? [frame.lidar.url] : [])])
-    .filter(url => !existsSync(path.join(process.cwd(), "public", url)));
-  expect(missing).toEqual([]);
+it("every landing sample asset is present and publishable on a clean clone", () => {
+  const webRoot = fileURLToPath(new URL("../../", import.meta.url));
+  const tracked = new Set(execFileSync("git", ["ls-files", "public/demo/showcase"], { cwd: webRoot, encoding: "utf8" }).trim().split(/\r?\n/));
+  const urls = SAMPLES.flatMap(frame => [frame.thumbUrl, ...frame.cams.map(cam => cam.imageUrl), ...(frame.lidar ? [frame.lidar.url] : [])]);
+  for (const url of urls) {
+    expect(url).toMatch(/^\/demo\/showcase\//);
+    expect(existsSync(path.join(webRoot, "public", url))).toBe(true);
+    expect(tracked.has(`public${url}`)).toBe(true);
+  }
 });
