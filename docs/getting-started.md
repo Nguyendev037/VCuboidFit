@@ -97,12 +97,13 @@ SHA-256 của zip gốc của chủ dự án. Bạn tự tạo bộ part từ nu
 
 1. Tải **v1.0-mini** (~4 GB) tại <https://www.nuscenes.org/nuscenes#download>, giải nén (`tar -xzf v1.0-mini.tgz -C D:\nuscenes`)
    thành `D:\nuscenes\v1.0-mini\`, `samples\`, `sweeps\`, `maps\`.
-2. Đóng gói part (<= 50 MB mỗi part + `vcf_manifest.json`) bằng `tools/vcf-pack`:
+2. Đóng gói dữ liệu (mặc định một file + `vcf_manifest.json`) bằng `tools/vcf-pack`:
 ```powershell
 model\worker\.venv\Scripts\pip install -e tools\vcf-pack
 model\worker\.venv\Scripts\python -m vcf_pack D:\nuscenes --out dataset\mini --scenes 3 --include-sweeps
 ```
    Lệnh in số part/scene/frame. **KHÔNG** đặt `--out dataset\01_small_3scenes` (sẽ ghi đè manifest đang được git theo dõi).
+   Muốn chia thành nhiều part, truyền `--part-size`; web vẫn truyền các file theo chunk 50 MB nội bộ.
    Bỏ `--scenes 3` để đóng cả 10 scene. Cờ khác: `--part-size`, `--version`, `--include-maps` (xem `python -m vcf_pack --help`).
 3. Upload ở Bước 1: chọn TẤT CẢ file trong thư mục `dataset\mini`. Chi tiết: [dataset/README.md](../dataset/README.md).
 

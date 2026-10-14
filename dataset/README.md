@@ -12,7 +12,10 @@ chúng); zip bạn tự đóng gói có SHA-256 khác và đi kèm manifest riê
 | `01_small_3scenes/` | 3 scene (2 ban ngày, 1 đêm), 121 keyframe, ảnh camera keyframe + sweeps LIDAR_TOP | ~912 MiB | 20 |
 | `02_full_mini_10scenes/` | nuScenes-mini đủ 10 scene, 404 frame, kèm sweeps | ~5 GiB | 116 |
 
-Mỗi part <= 50 MB, kèm `vcf_manifest.json` (tên part, kích thước, SHA-256), tạo bằng [`tools/vcf-pack`](../tools/vcf-pack/).
+Mặc định `vcf-pack` tạo một file nén và `vcf_manifest.json` (tên part, kích
+thước, SHA-256). Dùng `--part-size` khi cần tạo nhiều part; các chunk 50 MB
+chỉ là chi tiết truyền nội bộ của web. Tất cả được tạo bằng
+[`tools/vcf-pack`](../tools/vcf-pack/).
 
 ## Lấy dữ liệu
 
@@ -31,7 +34,7 @@ model\worker\.venv\Scripts\python -m vcf_pack D:\nuscenes --out dataset\mini --s
 model\worker\.venv\Scripts\python -m vcf_pack D:\nuscenes --out dataset\full --include-sweeps
 ```
 
-   Cờ của `vcf_pack` (khớp `--help`): `nuscenes_root`, `--out`, `--part-size`, `--version`, `--scenes N`, `--include-sweeps`,
+   Cờ của `vcf_pack` (khớp `--help`): `nuscenes_root`, `--out`, `--part-size` (mặc định `0`, một file), `--version`, `--scenes N`, `--include-sweeps`,
    `--include-maps`. Thiếu `--include-sweeps` thì part chỉ có keyframe (nhỏ hơn bảng trên). Con số 20 part / 121 frame
    của bộ nhỏ là của bộ zip gốc; bộ bạn tự đóng gói nên gần như vậy, dòng tổng kết `vcf_pack` in ra là số thật.
 3. Upload thư mục vừa tạo lên web (mục dưới), hoặc dùng thẳng `--data-root D:\nuscenes` cho các lệnh CLI

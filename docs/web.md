@@ -41,6 +41,21 @@ Thay `H:/` bằng thư mục có dữ liệu nuScenes. Script chỉ đọc ngu�
 
 ## Chạy và kiểm tra
 
+## Panel Tinh chỉnh và tải dữ liệu
+
+Panel **Tinh chỉnh** chỉ hỏi ba lựa chọn chính: **Lấy bao nhiêu**, **Ưu tiên tìm
+gì** và **Trải đều nhiều cảnh**. Các tham số kỹ thuật như engine, profile, tầng,
+`k`, `lambda`, số frame tối đa mỗi cảnh và trọng số nằm trong **Chế độ chuyên
+gia**, đóng mặc định. Thanh Công thức chỉ hiển thị trọng số do `params-schema`
+trả về; các tooltip và nhãn lấy từ `web/lib/glossary.ts`.
+
+Ở Bước 1, người dùng có thể chọn một file nén lớn hoặc nhiều file part. Web
+gọi `GET /api/uploads/limits` để hiển thị trần tổng theo cấu hình máy chủ và
+dung lượng trống (nếu máy chủ cung cấp được). Vượt trần tổng bị chặn trước khi
+gửi; cảnh báo dung lượng giải nén chỉ là cảnh báo. Việc chia nhỏ thành các
+chunk 50 MB vẫn là cơ chế truyền nội bộ để hỗ trợ resume và proxy, không phải
+yêu cầu người dùng phải chia file.
+
 Xoá lịch sử v0.6.7: backend chấp nhận cả ID tự sinh và tên job hợp lệ như `night_v24`, `m2_mini`, `full_mini` (1–128 ký tự ASCII chữ/số/`_`/`-`, bắt đầu bằng chữ/số). Bản cũ chỉ chấp nhận hex 12 ký tự khi xoá, nên ba job có tên còn lại sau “Xoá tất cả”. Kiểm đường dẫn được resolve nằm trực tiếp dưới `jobs/`, không nhận symlink/đường dẫn thoát. Job queued/running vẫn được bảo vệ; chỉ xoá thư mục kết quả của job, giữ dataset và trọng số. Sau xoá, frontend refetch danh sách; demo/review cần tạo lại job nếu lịch sử demo đã bị người dùng xoá. Đã kiểm 15 test backend xoá lịch sử và thao tác browser thật: 3 job xoá, 0 còn lại.
 
 ```powershell
