@@ -107,6 +107,19 @@ class _Progress:
             pass
 
 
+def _drop_upload_files(up: Path) -> None:
+    """Dataset đã ok ⇒ xoá file nén/manifest đã giải nén (mỗi upload nhân đôi dung lượng dataset).
+
+    Giữ `progress.json` cho GET /datasets/progress; lỗi xoá không làm hỏng dataset đã tạo.
+    """
+    for f in up.iterdir():
+        if f.is_file() and f.name != "progress.json":
+            try:
+                f.unlink()
+            except OSError:
+                pass
+
+
 def create_dataset(settings: Settings, upload_id: str) -> DatasetReport:
     up = settings.uploads / upload_id
     if not up.is_dir():
@@ -149,6 +162,8 @@ def create_dataset(settings: Settings, upload_id: str) -> DatasetReport:
         prog.write("validate", 0, 1, "steps")
         rep = validate_dataset(data, ds_id)
     _save(settings, rep)
+    if rep.ok:
+        _drop_upload_files(up)  # lỗi ⇒ giữ file để xét lại / gỡ lỗi
     prog.write("done" if rep.ok else "error", 1, 1, "steps")
     return rep
 

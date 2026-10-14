@@ -9,7 +9,10 @@ trước; file này là tham chiếu chi tiết từng lệnh. Dữ liệu nuSce
 ## 0. Hai thư mục phải khớp: WORKSPACE
 
 Web và worker trao đổi qua một thư mục `WORKSPACE` (`uploads/`, `datasets/`, `jobs/`). Mặc định của hai bên
-**khác nhau** trong cấu trúc này, nên luôn đặt biến tường minh:
+**khác nhau** trong cấu trúc này, nên luôn đặt biến tường minh.
+Xét tệp thành công thì worker xoá file nén trong `uploads/<id>/` (chỉ giữ `progress.json`); xét lỗi thì giữ để xét lại.
+
+
 
 | Bên | Biến | Mặc định trong code | Nên đặt |
 |---|---|---|---|
