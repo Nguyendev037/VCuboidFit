@@ -37,6 +37,8 @@ Thay `H:/` bằng thư mục có dữ liệu nuScenes. Script chỉ đọc ngu�
 
 ## Chạy và kiểm tra
 
+Xoá lịch sử v0.6.7: backend chấp nhận cả ID tự sinh và tên job hợp lệ như `night_v24`, `m2_mini`, `full_mini` (1–128 ký tự ASCII chữ/số/`_`/`-`, bắt đầu bằng chữ/số). Bản cũ chỉ chấp nhận hex 12 ký tự khi xoá, nên ba job có tên còn lại sau “Xoá tất cả”. Kiểm đường dẫn được resolve nằm trực tiếp dưới `jobs/`, không nhận symlink/đường dẫn thoát. Job queued/running vẫn được bảo vệ; chỉ xoá thư mục kết quả của job, giữ dataset và trọng số. Sau xoá, frontend refetch danh sách; demo/review cần tạo lại job nếu lịch sử demo đã bị người dùng xoá. Đã kiểm 15 test backend xoá lịch sử và thao tác browser thật: 3 job xoá, 0 còn lại.
+
 ```powershell
 cd web
 node node_modules/next/dist/bin/next dev

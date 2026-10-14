@@ -4,7 +4,7 @@ Chọn **5 % keyframe LiDAR đáng gán nhãn 3D nhất** từ một bộ dữ l
 ego pose và timestamp (không camera, không nhãn). Có engine Python (CPU, thêm tầng PointPillars
 tuỳ chọn trên GPU) và website Next.js để nạp dữ liệu, chỉnh tham số, xem kết quả, soi từng frame.
 
-> **Repo này là ROOT duy nhất của dự án** (phiên bản v0.6.6). Mọi thay đổi
+> **Repo này là ROOT duy nhất của dự án** (phiên bản v0.6.7). Mọi thay đổi
 > code, tài liệu, Docker, notebook đều làm, commit và push thẳng tại đây — không sinh lại từ nơi khác.
 
 ## Bắt đầu nhanh sau khi clone

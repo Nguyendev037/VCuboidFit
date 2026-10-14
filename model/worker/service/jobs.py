@@ -19,7 +19,8 @@ from service.models import DatasetReport, JobList, JobStatus, JobSummary, Tier0I
 from service.settings import Settings
 
 ACTIVE = ("queued", "running")
-_JOB_ID = re.compile(r"[0-9a-f]{12}")
+# Imported/demo runs use readable IDs; allow only a single safe path segment.
+_JOB_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
 
 
 def _now() -> str:
@@ -186,6 +187,9 @@ class JobQueue:
 
     def _delete_locked(self, job_id: str) -> None:
         """Gọi khi đang giữ `self._cv`: kiểm active rồi xoá thư mục job (chỉ `jobs/<id>`)."""
+        job_dir = self._dir(job_id)
+        if job_dir.is_symlink() or job_dir.resolve().parent != self.settings.jobs.resolve():
+            raise ApiError(404, "not_found", "Không tìm thấy job.")
         meta = self._meta(job_id)
         if meta is None:
             raise ApiError(404, "not_found", "Không tìm thấy job.")
@@ -193,7 +197,7 @@ class JobQueue:
             raise ApiError(409, "job_active", "Lần chạy đang chạy, hãy huỷ trước khi xoá.")
         if job_id in self._queue:
             self._queue.remove(job_id)
-        shutil.rmtree(self._dir(job_id))
+        shutil.rmtree(job_dir)
 
     def delete(self, job_id: str, on_deleted=None) -> None:
         """Xoá job không active. 404 nếu id sai/không có; 409 `job_active` nếu đang chạy."""
