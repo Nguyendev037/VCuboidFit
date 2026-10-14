@@ -166,8 +166,8 @@ VCuboidFit được thiết kế để tương thích với đa dạng hạ tầ
 | `random_seeds` | 0–9 | 10 lần chọn ngẫu nhiên để so sánh |
 
 ## 10. Engine rare_v24
-Chấm ứng viên VRU, gom frame rồi chọn bằng MMR. Profile/schema/mã thoát/số đo:
-[rare.md](../../../docs/rare.md); bối cảnh: [context.md](../../../docs/context.md).
+Chấm ứng viên VRU, gom frame rồi chọn bằng MMR. Tham số và mã thoát: `python -m c4.cli.rare --help`,
+`python -m c4.cli.context --help`; số đo benchmark: [project-status.md](project-status.md).
 Cwd `model/worker`; J là job, D chứa `v1.0-*/`. Chuỗi PowerShell:
 
 ```powershell
