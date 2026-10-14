@@ -1,8 +1,10 @@
 # Tiến độ VCuboidFIT và bằng chứng
 
+**0.9.0 (15/10/2026) — panel Tinh chỉnh gọn + tải lên không giới hạn mỗi file.** Panel chỉ còn ba câu: *Lấy bao nhiêu frame · Ưu tiên tìm gì · Trải đều nhiều cảnh*; Engine, Profile, tầng, k, λ, tối đa/cảnh và trọng số chuyển vào **Chế độ chuyên gia** (đóng mặc định). Thanh **Công thức** chỉ xem, trọng số lấy từ trường mới `presets` của `params-schema` (một nguồn là `configs/lidar.yaml`). Mọi điều khiển có tooltip lời thường (`web/lib/glossary.ts`). Bỏ chữ "phải chia 50 MB": web gọi `GET /api/uploads/limits`, chặn khi tổng vượt `MAX_UPLOAD_GB`, cảnh báo khi ổ thiếu chỗ; chunk 50 MB vẫn là cơ chế truyền nội bộ. `vcf-pack` 0.2 mặc định ra một file (`--part-size` để chia). Mặc định gửi request y hệt bản cũ (không đổi kết quả chọn); mở lại lần chạy cũ giữ nguyên `diversity` đã lưu. "Ưu tiên VRU" chưa đưa ra vì engine `rare_v24` chưa cài. Đo: tsc 0 · vitest 265/265 · pytest lidar 118 · pytest vcf-pack 15 · e2e panel 2/2 · lint 0 lỗi. Số 0.7.0/0.8.0 đã giữ cho hồ sơ 11/12.
+
 Hotfix 0.6.9: sửa lỗi máy clone không tải được ảnh/LiDAR mô phỏng trang chủ. Sáu fixture dùng 46 file media minh hoạ được đóng gói trong Git thay vì thư mục mock-media ignored; có nguồn/giấy phép và manifest. Không đổi engine, dữ liệu job hoặc benchmark T.
 
-Cập nhật **14/10/2026** · phiên bản cấu hình **0.6.9** (docs 0.6.8 + hotfix showcase) · tag gần nhất `v0.6.5`. Nguồn hiện trạng là code trong repo và JSON benchmark được commit; các hồ sơ kế hoạch/evidence quản trị nằm ngoài repo sản phẩm. Không coi việc push code là nghiệm thu toàn bộ nghiên cứu.
+Cập nhật **15/10/2026** · phiên bản cấu hình **0.9.0** (trước đó 0.6.9 docs + hotfix showcase) · tag gần nhất `v0.6.5`. Nguồn hiện trạng là code trong repo và JSON benchmark được commit; các hồ sơ kế hoạch/evidence quản trị nằm ngoài repo sản phẩm. Không coi việc push code là nghiệm thu toàn bộ nghiên cứu.
 
 ## 1. Nội dung dùng để báo cáo tiến độ
 
