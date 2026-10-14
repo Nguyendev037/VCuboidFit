@@ -15,7 +15,7 @@ from c4.lidar.extract import load_filter
 from c4.lidar.uncertainty import load_signals
 from c4.rare.calib import calib_sha256, lidar_to_ego
 from c4.rare.candidates import build_candidates, load_class_map
-from c4.rare.config import load_rare_def
+from c4.rare.config import load_candidate_cfg, load_rare_def
 from c4.rare.eval import budget
 from c4.rare.frame_score import frame_scores
 from c4.rare.gate import gate_all
@@ -62,6 +62,7 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
         raise FileNotFoundError(', '.join(miss))
     cfg = load_lidar_config()
     rare_cfg, rare_sha = load_rare_def()
+    cand_cfg, cand_sha = load_candidate_cfg()
     class_map = load_class_map()
     index = read_table(job / "lidar" / "index.parquet", "lidar_index")
     keep = load_filter(job / "lidar", index)
@@ -71,7 +72,8 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
 
     calib = lidar_to_ego(root, index["sample_token"], job / "cache" / "lidar_calib.parquet")
     pre_warn = [] if len(calib) == len(index) else ["LIDAR_CALIB_MISSING"]  # thiếu => giữ hành vi cũ (hệ cảm biến)
-    cand = build_candidates(job, root, cfg, rare_cfg, class_map, sc, lidar_calib=calib)
+    cand = build_candidates(job, root, cfg, rare_cfg, class_map, sc, lidar_calib=calib,
+                            cand_cfg=cand_cfg)
     gate_df = gate_all(cand, index, z0, keep, {"gate_ood_sigma": sc["gate_ood_sigma"], "min_pts": rare_cfg.min_pts})
 
     split = index["split"].to_numpy()
@@ -111,7 +113,9 @@ def run_rare_v24(job_dir, data_root, *, profile: str = "lidar_only", budget_frac
         "engineVersion": "rare_v24", "profile": profile, "modelMode": mode, "checkpoint_sha256": None,
         "split_manifest_sha256": hashlib.sha256("\n".join(
             f"{t},{s}" for t, s in zip(index["sample_token"], index["split"])).encode()).hexdigest(),
-        "rare_def_hash": rare_sha, "pred_ref_hash": ref.sha256, "freeze_manifest_sha256": None, "seed": 0,
+        "rare_def_hash": rare_sha,
+        "candidates_cfg_version": cand_cfg.version, "candidates_cfg_sha256": cand_sha,
+        "pred_ref_hash": ref.sha256, "freeze_manifest_sha256": None, "seed": 0,
         "budget_frac": budget_frac, "B_resolved": B, "eligible_n": n_elig, "git_sha": _git_sha(),
         "vlm_model_id": None, "pool_split": pool_split, "ref_split": ref_split,
         "scoring_weights": {k: sc[k] for k in ("w_shape", "w_slice", "w_vru", "w_unc", "w_sem")},

@@ -15,7 +15,7 @@ from c4.lidar.descriptor import ground_plane
 from c4.lidar.extract import load_filter
 from c4.lidar.pcd import load_pcd, preprocess
 from c4.lidar.uncertainty import load_preds
-from c4.rare.config import RareDefV24
+from c4.rare.config import CandidateCfg, RareDefV24, load_candidate_cfg
 
 MAX_DBSCAN_PTS = 100_000
 _COLS = list(SPEC["rare_objects"][0])
@@ -136,20 +136,30 @@ def cluster_candidates(pcd_path, cfg: dict, ego_pose: dict, heuristic: dict | No
     return out
 
 
-def pp_candidates(preds: dict, class_map: dict) -> list[dict]:
+def pp_candidates(preds: dict, class_map: dict, lidar_calib: dict | None = None,
+                  pp_min_score: float = 0.3) -> list[dict]:
     """Một phần tử preds_orig.pkl {sample_token, boxes (n,7), labels, scores} -> ứng viên (SPEC-P05 §3.2).
-    boxes = (cx, cy, cz, l, w, h, yaw) hệ ego. `pts`=0 (điền khi merge với cụm).
-    NHÁNH CHƯA CHẠY THẬT (không có checkpoint): chỉ kiểm bằng test tổng hợp."""
+    boxes = (cx, cy, cz, l, w, h, yaw) hệ cảm biến LIDAR_TOP.
+    Tâm/yaw chuyển sang EGO bằng hiệu chuẩn.
+    Bỏ score < pp_min_score trước chuyển hệ; giữ box bằng ngưỡng (P06a).
+    Thiếu hiệu chuẩn => giữ hệ cảm biến; pipeline cảnh báo LIDAR_CALIB_MISSING.
+    `pts`=0 (điền khi merge với cụm)."""
     names = class_map.get("pp_class_names")
     if not names:
         raise ClassMapError("class_map_pred_v24.yaml: thiếu 'pp_class_names' (cần cho nhánh PointPillars)")
     base = int(class_map.get("pp_label_base", 1))
     boxes, labels, scores = (np.asarray(preds[k]) for k in ("boxes", "labels", "scores"))
+    R, t, dyaw = _lidar2ego(lidar_calib)
     out = []
     for i in range(len(scores)):
+        if float(scores[i]) < pp_min_score:
+            continue
         li = int(labels[i]) - base
         name = names[li] if 0 <= li < len(names) else "unknown"
         cx, cy, cz, l, w, h, yaw = (float(x) for x in boxes[i, :7])
+        if lidar_calib is not None:
+            cx, cy, cz = (R @ np.array([cx, cy, cz]) + t).tolist()
+            yaw = math.atan2(math.sin(yaw + dyaw), math.cos(yaw + dyaw))
         out.append(dict(object_id=f"p{i:03d}", source="pointpillars",
                         cls_pred=class_map["pp_to_group"].get(name, "other"), cx=cx, cy=cy, cz=cz, l=l, w=w, h=h,
                         yaw=yaw, pts=0, dist_m=math.hypot(cx, cy), pp_score=float(scores[i]), track_id="",
@@ -239,7 +249,8 @@ def _cluster_job(path, cfg, pose, heuristic, calib=None):
 
 
 def build_candidates(job_dir, data_root, cfg: dict, rare_cfg: RareDefV24, class_map: dict,
-                     scoring: dict | None = None, lidar_calib: dict[str, dict] | None = None) -> pd.DataFrame:
+                     scoring: dict | None = None, lidar_calib: dict[str, dict] | None = None,
+                     cand_cfg: CandidateCfg | None = None) -> pd.DataFrame:
     """-> rare_objects (chưa chấm: score_* = 0, s_obj = 0) cho MỌI frame keep=True của index (SPEC-P05 §3.6).
 
     Tầng 1 chỉ dùng khi có `<job>/t1/preds_orig.pkl`; thiếu => cluster_only (không lỗi). Ego pose/timestamp lấy từ
@@ -266,8 +277,17 @@ def build_candidates(job_dir, data_root, cfg: dict, rare_cfg: RareDefV24, class_
         t0s = [_cluster_job(root / index["lidar_path"].iloc[i], cfg, poses[toks[i]], heur, cal.get(toks[i]))
                for i in todo]
     objs_by_frame = {}
+    cand_cfg = cand_cfg or load_candidate_cfg()[0]
+    x_min, x_max, y_min, y_max = cand_cfg.ego_exclusion
+
+    def outside_ego(o):
+        return not (x_min <= o["cx"] <= x_max and y_min <= o["cy"] <= y_max)
+
     for i, t0 in zip(todo, t0s):
-        t1 = pp_candidates(preds[i], class_map) if preds is not None else []
+        t1 = (pp_candidates(preds[i], class_map, cal.get(toks[i]), cand_cfg.pp_min_score)
+              if preds is not None else [])
+        t0 = [o for o in t0 if outside_ego(o)]
+        t1 = [o for o in t1 if outside_ego(o)]
         objs_by_frame[toks[i]] = merge_candidates(t0, t1, sc.get("iou_thr", 0.3), tier1_available=preds is not None)
     track(objs_by_frame, {t: (p["ego_x"], p["ego_y"], p["ego_yaw"]) for t, p in poses.items()},
           dict(zip(toks, index["timestamp"].astype(np.int64))), sc.get("d_max", 1.5), sc.get("v_max", 3.0),

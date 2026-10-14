@@ -1,0 +1,5 @@
+# Tham số SINH ỨNG VIÊN cho engine rare_v24 (planning/13 SPEC-P01, SPEC-P06). Tách khỏi rare_def_v24.yaml
+# vì file đó là định nghĩa "hiếm" đã freeze cùng benchmark T (không được sửa). sha file này ghi vào config_used.json.
+version: cand-v1
+ego_exclusion: {x_min: -1.5, x_max: 3.5, y_min: -1.2, y_max: 1.2}   # hộp BEV, mét, hệ EGO: bỏ ứng viên trên thân xe
+pp_min_score: 0.3         # bỏ box PointPillars có score thấp hơn, trước chuyển hệ/merge
