@@ -1,26 +1,29 @@
 # Tình trạng dự án và kế hoạch còn lại
 
-Cập nhật 2026-10-09 · phiên bản hiện hành **v0.6.2** (tag `v0.6.2` = `d0d7eb3`, đã push; trước đó tag `v0.6.1` = `ccf2b84`).
-**v0.6.3**: notebook Colab chạy Tầng 1 cho worker máy bạn (điền URL + token, Run all) và notebook Colab 4 ô đọc ZIP trong Drive/datatest; bỏ Kaggle. Notebook test 9/9; chưa đo Colab thật. Xem [hướng dẫn](colab-dev-setup.md).
+Cập nhật 2026-10-14 · phiên bản hiện hành **v0.6.5** (tag `v0.6.5` = `8bcc9c0`, HEAD `f88fd87`; chuẩn bị đóng hồ sơ 11 ở mốc 0.7.0 và hồ sơ 12 ở mốc 0.8.0 sau demo 15/10).
+**v0.6.3–v0.6.5**: notebook Colab chạy Tầng 1, cầu nối Colab ổn định, tái dùng trọng số seed pretrained. Từ đó đã mở rộng thêm: hồ sơ 10 (chuẩn hoá định nghĩa "hiếm" RHCIO v2.4 theo instance), hồ sơ 11 (engine mới `rare_v24`, tầng bối cảnh OpenCLIP không VLM, benchmark prereg `pitch-v2` chạy tập T trên Colab A100), hồ sơ 12 (UI demo ngày 15/10/2026 15:00, số T lên trang chủ, trang `/vi-sao`, xuất ảnh hiếm ZIP).
 
 Repo này là **ROOT duy nhất** của sản phẩm (xem [README](../README.md)): code, tài liệu, Docker, notebook đều sửa và push tại đây.
 
-Nguồn các khẳng định: hồ sơ kế hoạch nội bộ 01–05 (ghi dạng "hồ sơ NN, mục X"; thư mục kế hoạch nằm ngoài repo này),
-báo cáo R01–R09 của hồ sơ 05, `git log` của repo. Số đo chỉ lấy từ evidence/report đã có, không ước lượng thêm.
+Nguồn các khẳng định: hồ sơ kế hoạch nội bộ 01–05, 10–12 (ghi dạng "hồ sơ NN, mục X"; thư mục kế hoạch nằm ngoài repo này),
+báo cáo và evidence của các hồ sơ (R01–R09 hồ sơ 05, R01–R26 hồ sơ 11, R01–R12 hồ sơ 12), `git log` của repo. Số đo chỉ lấy từ evidence/report đã có, không ước lượng thêm.
 
 ## 1. Tổng quan
 
 **Mục tiêu**: từ một bộ nuScenes, chọn **5 % keyframe LiDAR đáng gán nhãn 3D nhất** (cảnh hiếm), chỉ dùng point cloud,
-ego pose và timestamp (không camera, không nhãn lúc chọn). Có website Next.js (Chọn 5 %, Deep Review, Frame Viewer)
-và engine Python `c4` (Tầng 0 hình học trên CPU, Tầng 1 PointPillars tuỳ chọn trên GPU).
+ego pose và timestamp (không camera, không nhãn lúc chọn). Có website Next.js (Chọn 5 %, Deep Review, Frame Viewer,
+trang Vì sao, xuất ảnh hiếm) và engine Python `c4` (gồm `c4_legacy` Tầng 0 CPU/Tầng 1 PointPillars và engine mới `rare_v24` theo chuẩn RHCIO).
 
 | Thành phần | Trạng thái |
 |---|---|
-| Tầng 0 (CPU) | Chạy được toàn bộ, ~15 s trên nuScenes-mini; mặc định của sản phẩm |
+| Tầng 0 (CPU) | Chạy được toàn bộ, ~15 s trên nuScenes-mini; mặc định của `c4_legacy` |
 | Tầng 1 local (Docker GPU) | Chạy thật trên RTX 4060 8 GB với mini (hồ sơ 04, P02) |
-| Tầng 1 từ xa qua Colab | Code + test xong, **chưa chạy Colab thật** (G3/G3b, mục 4) |
-| Website | Hoàn chỉnh trên mini, có khôi phục run, xoá lịch sử, hướng dẫn trong app |
-| Dữ liệu trainval | **Chưa có** trên máy dev ⇒ mọi kết luận về chất lượng chọn chưa chốt |
+| Tầng 1 từ xa qua Colab | Code + test xong (hồ sơ 05/05b); Colab A100 đã dùng thật cho benchmark T (hồ sơ 11), còn cầu nối Tầng 1 từ xa **chưa đo trên Colab thật** (G3/G3b hồ sơ 05) |
+| Engine `rare_v24` | Đã dựng xong (hồ sơ 11); pipeline gồm ứng viên cụm ego-frame, tracker, gate, điểm vật/frame, ngân sách MMR; 2 profile `lidar_only` và `multisensor` (crop OpenCLIP) |
+| Bối cảnh camera | Tầng bối cảnh OpenCV + OpenCLIP (không VLM) phân tích 4 trục (chiếu sáng, chói, che khuất/ống kính, thời tiết), sinh cờ chất lượng và hàng đợi người duyệt |
+| Benchmark T | Đã chạy prereg `pitch-v2` trên Colab A100 (tập T 1 389 frame / 35 scene, B = 70, 42 instance đích); kết quả M2/M3 chưa chứng minh khác biệt so với baseline M1 (xem mục 3.4) |
+| Website | Đầy đủ giao diện v2: tokens, trang chủ nạp số T thật, dashboard tách module, viewer chú giải + phím tắt, trang `/vi-sao`, xuất ZIP ảnh hiếm 6 camera + BEV |
+| Dữ liệu trainval | Pool 170 scene (6 753 keyframe) đã có trên máy dev và Drive; benchmark T chạy trên Colab |
 
 Tài liệu liên quan: [run-local](run-local.md) · [model-workflow](model-workflow.md) · [glossary](glossary.md) ·
 [gpu-rental](gpu-rental.md) · [colab-dev-setup](colab-dev-setup.md).
@@ -38,6 +41,9 @@ Trạng thái gate theo môi trường: ✅ đã đạt · ⬜ chưa đạt. "Lo
 | 05 · Image PointPillars + cầu nối Colab + UX | Image `vcuboidfit_pointpillars` (GPU) và `vcuboidfit_worker` (CPU, 7-Zip); hàng đợi Tầng 1 từ xa (`/remote/*`, `VCF_REMOTE_TOKEN`); `VCF_PORT` + `model/scripts/check_ports.py`; tham số không cần model; xoá lịch sử; rút gọn upload + ETA; notebook dev | Gate tổng local ✅ (xem mục 3); WP1–WP7 đều ✅ (R01–R07) | `eb4b68b` (v0.6.0), `ccf2b84` (v0.6.1, tag) | G1, G2, G4–G7 ✅ local · **G3, G3b ⬜ Colab thật** |
 | 05b · Bản vá v0.6.1 | Thẩm định bảo mật cầu nối (R08), vá giới hạn upload (leaseId, chặn trước khi parse) | 14 probe pass, đột biến "bỏ per-file guard" làm detector đỏ (R08); WP9 phát hành (R09) | `ccf2b84` | local ✅ · máy thật ⬜ |
 | v0.6.2 | Thông báo trạng thái tải "Lần chạy gần đây" (`role="status"`); rà a11y 5 điểm khác — đã có sẵn | ✅ tsc/lint/build 0, vitest 183/183, e2e 3/3 | v0.6.2 | `d0d7eb3` |
+| 10 · Định nghĩa "hiếm" v2.4 + Taxonomy RHCIO | Chuẩn hoá định nghĩa "hiếm" RHCIO theo instance (surprisal Q90 trên V, primary R2 rare_combo), metric IY/NY/Oracle, bộ SPEC 8 file; chuyển phần thi công sang hồ sơ 11 (bỏ VLM) | Bộ SPEC hoàn chỉnh (00, 01, P01–P04, OPERATIONS, TESTING); thẩm định độc lập R01 (Codex astra) thống nhất primary R2, cấm OR nhãn R; đo base rate mini (404 frame) instance-level | `5e2d671` (nền cho 0.7.0) | local ✅ (SPEC, base rate R01) · server ⬜ (thi công ở hồ sơ 11) |
+| 11 · Dựng lại engine `rare_v24` không VLM + bối cảnh OpenCLIP + benchmark Colab A100 | Engine `rare_v24` (`c4/rare/`: GT RHCIO, ứng viên cụm ego-frame, tracker, gate, điểm vật/frame, MMR budget, eval IY/NY/oracle), tầng bối cảnh (`c4/context/`: sun, quality_cv, clip_axes, thresholds, fuse), API EngineRouter, CLI bench_pitch, notebook Colab A100 | pytest 378 pass / 5 skip; benchmark T (1 389 frame, 35 scene, B=70, 42 instance đích) chạy trên Colab A100; đo reachability 14/42 (33 %); bối cảnh camera review 1,7 %; xuất gói kết quả `T_demo_bundle.zip` | `f4d91e4`, `c4e41b9`, `010611f`, `c409106`, `fa32836`, `dd5989d` (0.7.0) | local ✅ (C0–C3, M1–M3, M5, M6, M8a) · **Colab thật ✅** (chạy thành công T trên A100; gate chất lượng `not shown / underpowered`) |
+| 12 · Demo toàn hệ thống + nâng cấp UI/UX | Web Next.js (design tokens, trang chủ số thật từ T, tách dashboard, trạng thái rỗng/lỗi, viewer chú giải + phím tắt, trang `/vi-sao`, xuất ảnh hiếm ZIP), job demo local (`m2_mini`, `night_v24`) | vitest 221 pass (23 file), Playwright e2e 9/9 pass (luồng demo hoàn chỉnh), tsc/eslint 0 lỗi; nạp số đo T vào demo web tĩnh qua `bench_pitch.json` | `f88fd87`, `690f3a6`, `203636d`, `7eaa221`, `59d62b9`, `922cd86` (0.8.0) | local ✅ (G1, G2, G3: test, build, e2e) · demo thật ⬜ (chờ 15:00 thứ Năm 15/10) |
 
 Các quyết định cần nhớ khi đọc code (hồ sơ 04, mục 6 và nhật ký quyết định):
 
@@ -49,6 +55,11 @@ Các quyết định cần nhớ khi đọc code (hồ sơ 04, mục 6 và nhậ
 | Đ18 / Q3 | Seed S nằm **ngoài** ngân sách 5 % |
 | Đ19 | Tầng 1 chạy trên GPU thuê/Colab ở bước cuối, sau khi trainval + freeze |
 | Bất biến | Chỉ `c4/lidar/gt.py` đọc nhãn; chỉ `eval` đọc `gt_rare_lidar`; mining/extract không đọc `gt/`; một model GPU một process; `select` chạy CPU ≤ 3 s |
+| Đ1 (hồ sơ 11) | Bỏ hoàn toàn VLM ở mọi khâu (chọn, giải thích, chấm); dùng OpenCLIP pretrained + OpenCV cho bối cảnh camera và multisensor |
+| Đ9 (hồ sơ 10) | Định nghĩa "hiếm" RHCIO đếm theo instance: surprisal Q90 trên V, primary R2 rare_combo; cấm OR nhãn R |
+| Đ28 (hồ sơ 11) | Capture B là luật chính (instance chỉ tính thu được khi lô chọn có frame nó ở đúng dạng hiếm), capture A (bất kỳ frame nào có điểm LiDAR) báo cáo phụ |
+| Đ44 (hồ sơ 11) | Box cụm chuyển từ hệ cảm biến LIDAR_TOP sang ego frame trước khi chiếu sang 6 camera và tính điểm |
+| Đ46 (hồ sơ 11) | Mở tập T một lần với prereg `pitch-v2`, báo cáo trung thực nếu CI95 chứa 0; bước tiếp theo chuyển sang Tầng 1 PointPillars |
 
 ## 3. Số đo hiện có
 
@@ -66,6 +77,7 @@ Tất cả đo trên máy dev, nuScenes-mini (404 sample, 120 frame trong pool �
 | Bất biến cổng | `python ../scripts/check_ports.py` | 0 | — |
 
 v0.6.2 chỉ đổi web: đã chạy lại tsc/lint/build (exit 0), vitest 183/183, e2e 3/3; pytest giữ số của v0.6.1.
+Đến hồ sơ 12 (ngày 2026-10-14): pytest worker 382 pass / 0 fail / 5 skip (gate G1); vitest web 221 / 221 pass (23 file), Playwright e2e 9 / 9 pass với worker thật, tsc và eslint exit 0 (gate G3b, sau khi thêm trang `/vi-sao`).
 
 ### 3.2 Hiệu năng
 
@@ -94,26 +106,46 @@ Khác biệt giữa các phương pháp dưới đây **nằm trong nhiễu**, c
 Kết luận duy nhất rút ra được: pipeline Tầng 0 + Tầng 1 chạy đầu-cuối và không rò nhãn. Độ hơn kém giữa Tầng 0 và hybrid
 phải đo lại trên trainval (mục 4, phase C và D).
 
+### 3.4 Kết quả benchmark T (2026-10-14)
+
+Chạy trên Colab A100 theo kế hoạch preregistered `pitch-v2` (hồ sơ 11, commit `dd5989d`, seed 20261013, 1000 bootstrap). Tập pool T gồm 1 389 frame (35 scene), ngân sách B = 70 (5 %), 42 instance đích (theo quy tắc capture B: `rare_form`). Lần chạy retry-1 hoàn tất sau 1 236 s (lần 1 exit 2 sau 3,6 s do đường dẫn data-root, xảy ra trước khi đọc bất kỳ nhãn nào, Đ54 hồ sơ 11).
+
+Nguồn: `report_pitch.json` (sha256 `0df8bd669634704a885324fe0156ab2267a248647933c4a8043540eb0ea52007`), gói `T_demo_bundle.zip` (sha256 `0ca79700a131d8410ce08e652fc8de3b61e37a40515d3e8fb800542072ddd457`), trích tại `evidence/K2/T_result.md` (hồ sơ 11).
+
+| Phương pháp | IY | CI95 | instance | NY | reach (r=1 m) | IY capture A |
+|---|---|---|---|---|---|---|
+| M0 Random (TB 100) | 0,073 | [0,020; 0,156] | 5,09 | 0 | — | 0,262 |
+| M1 Legacy Tầng 0 | 0,114 | [0; 0,291] | 8 | 0,079 | — | 0,257 |
+| M2 rare_v24 lidar_only | 0,100 | [0; 0,257] | 7 | 0,052 | 14/42 = 0,333 | 0,343 |
+| M3 rare_v24 multisensor | 0,057 | [0; 0,171] | 4 | −0,030 | 14/42 = 0,333 | 0,286 |
+| Oracle (tham chiếu NY) | 0,600 | — | 42 | — | — | — |
+
+- **Kết luận chính (prereg):** M2 − M1 Δ = −0,014, CI95 [−0,164; 0,084] ⇒ **`not shown / underpowered`** (nguyên văn report).
+- **So sánh phụ (Holm):** M2 − M0 +0,027 [−0,033; 0,107] p_holm 0,49 · M3 − M2 −0,043 [−0,086; 0] p_holm 0,18 — khác biệt không có ý nghĩa thống kê.
+- **Reach:** 14/42 (33,3 %) instance đích có ứng viên cụm trong bán kính 1 m.
+- **Bối cảnh:** `glare_sun` cov 0 ở mọi phương pháp (pool T ban ngày, không frame nào gắn chói nắng). Đêm/mưa: 0 (pool không có).
+- **Thời gian:** M2 140 s · M3 1 035 s (crop OpenCLIP) · tổng bench 1 236 s.
+
+**Diễn giải trung thực:**
+Engine `rare_v24` chưa chứng minh khác biệt so với baseline trên T: mọi CI chứa 0; capture B nhỏ (42 instance) ⇒ underpowered. Trần reachability 33 % (14/42 instance đích có ứng viên cụm trong 1 m) cho thấy nút thắt là bắt ứng viên (cụm DBSCAN bỏ lỡ VRU < 8 điểm — chẩn đoán V R14 hồ sơ 11), không phải xếp hạng. Capture A (frame có VRU bất kỳ): M2 0,343 so với M0 0,262.
+
+**Bước tiếp theo Tầng 1:**
+Chuyển sang Tầng 1 PointPillars (hồ sơ 11 Đ46 c) nhằm dùng mạng nơ-ron phát hiện 3D học từ điểm thưa để thay thế cho bộ gom cụm DBSCAN hình học thô, giải quyết trần reachability trước khi đánh giá lại.
+
 ## 4. Kế hoạch còn lại theo phase
 
 Cột "ai làm": **Người** = cần tay người (dữ liệu, tài khoản, quyết định); **Agent** = agent làm được khi có điều kiện.
 
 | Phase | Việc | Ai làm | Phụ thuộc | Gate đóng |
 |---|---|---|---|---|
-| A. Colab thật | Chạy `vcf_dev_setup_colab.ipynb` trên Colab: ô 1–4 xanh (`SETUP OK` + pytest xanh) | Người | Tài khoản Colab; [colab-dev-setup](colab-dev-setup.md) | **G3b** hồ sơ 05 |
-| A. Colab thật | Một vòng thật: máy không GPU tạo task, Colab chạy mini 20 epoch, web mở khoá Tầng 1; ghi thời gian train/infer thực | Người chạy, Agent ghi evidence | Tunnel tới worker, `VCF_REMOTE_TOKEN`; [run-local](run-local.md) mục 5c | **G3** hồ sơ 05 |
-| B. Dữ liệu | Tải nuScenes trainval LiDAR, đóng gói bằng `tools/vcf-pack` rồi nạp qua web | Người | Dung lượng đĩa, giấy phép nuScenes | Điều kiện cho C, D, E |
-| C. Đóng băng | Chạy `python -m c4.cli.lidar_g1` trên trainval; chốt τ, cell, định nghĩa nhóm C (Q1/Q2) | Người quyết, Agent chạy | B | **G1** hồ sơ 04 |
-| C. Đóng băng | Tune α/β/γ, λ, m trên split val bằng lưới; ghi `configs/final.yaml`; tag `freeze-v1` | Agent chạy, Người duyệt | G1 | **G4** hồ sơ 04 |
-| D. Chấm điểm | Chấm split V và P (P chấm **một lần** sau freeze); báo cáo recall, uplift, coverage, redundancy | Agent | G4 | G-T0 mức server |
-| E. Tầng 1 GPU thật | Train seed trên trainval bằng GPU thuê/Colab ([gpu-rental](gpu-rental.md), [colab-dev-setup](colab-dev-setup.md)); infer; hybrid | Người thuê GPU, Agent chạy | B, G4 | G-T1 mức server |
-| E. Tầng 1 GPU thật | Downstream PointPillars: S∪A so với S∪A_rand (script đã có, mini chỉ kiểm script với |A| = 7) | Agent | E trước | PDF §5.4 (stretch) |
-| F. So sánh | Đo hybrid so với Tầng 0 thuần trên trainval, có khoảng tin cậy (bootstrap) | Agent | D, E | Kết luận chất lượng; mở khoá v0.5.0 của hồ sơ 04 |
-| G. Đóng hồ sơ | Ký "✅ ĐÃ HOÀN THÀNH" kèm thời gian cho hồ sơ 04 và 05; đồng bộ não, changelog, roadmap | Agent | C–F và A | Đóng hồ sơ |
-| H. Deploy | Hồ sơ 04 SPEC-P04 mới có **gói** GPU thuê (compose, bootstrap, pack); chưa có hồ sơ deploy production/hosting cho website | Người quyết | Chưa lập kế hoạch | Chưa có gate; cần hồ sơ mới nếu làm |
+| UI Demo (hồ sơ 12) | Nâng cấp toàn diện UI/UX: tokens, nạp số T thật lên trang chủ, tách dashboard, trạng thái rỗng/lỗi, viewer chú giải + phím tắt, trang `/vi-sao`, xuất ZIP ảnh hiếm | Agent | G0 số T, hồ sơ 11 | G1–G3 ✅ local |
+| FREEZE code demo | Đóng băng mã nguồn lúc 13:00 ngày 2026-10-15; không thêm tính năng mới trước demo | Người + Agent | G3b gate xanh | FREEZE 13:00 15/10 |
+| Demo sản phẩm | Tập dượt và trình diễn trực tiếp hệ thống vào 15:00 thứ Năm 2026-10-15 theo kịch bản (SPEC-P03 hồ sơ 12) | Người dẫn, Agent hỗ trợ | FREEZE 13:00 | Demo 15:00 15/10 |
+| Đóng hồ sơ 11 & 12 | Sau demo: ký nghiệm thu, đồng bộ não bộ 6 điểm, phát hành phiên bản 0.7.0 (hồ sơ 11) và 0.8.0 (hồ sơ 12) | Agent chạy, Người duyệt | Demo hoàn tất | Sign-off 0.7.0 / 0.8.0 |
+| Tầng 1 PointPillars | Tích hợp detector 3D PointPillars trên GPU để bắt ứng viên thưa điểm (< 8 điểm), nâng trần reachability vượt mốc 33 % của DBSCAN | Agent nghiên cứu/thi công | Sau demo 15/10 | Kế hoạch kế tiếp |
+| Bổ sung dữ liệu đêm/mưa | Tải thêm blob trainval chứa scene đêm/mưa (blob 10, 06, 09) để đánh giá đầy đủ 4 trục bối cảnh camera trên dữ liệu thật | Người tải, Agent chạy | Dung lượng ổ đĩa | Mở rộng sau demo |
 
-Ghi chú về phiên bản: hồ sơ 04 đóng ở v0.5.0 và hồ sơ 05 ở v0.6.0 theo kế hoạch ban đầu; thực tế mã đã vượt (v0.6.2)
-vì hồ sơ 05 phát hành trước khi hồ sơ 04 đóng. Khi đóng cần thống nhất tên mốc trong changelog, không đánh số lùi.
+Ghi chú về phiên bản: Hồ sơ 11 (engine `rare_v24` và tầng bối cảnh) sẽ đóng ở mốc **v0.7.0**. Hồ sơ 12 (toàn bộ UI demo và trang `/vi-sao`) sẽ đóng ở mốc **v0.8.0** ngay sau buổi demo ngày 15/10/2026. Lịch sử thay đổi và tài liệu não bộ sẽ được đồng bộ theo đúng Ma Trận 6 Điểm.
 
 ### Idea Vault đáng làm (chưa lên lịch)
 
