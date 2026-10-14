@@ -269,3 +269,16 @@ def test_progress_done_after_create_and_unknown_404(client, settings, tmp_path):
     assert r.json()["phase"] == "done" and r.json()["uploadId"] == "u1"
     bad = client.get("/datasets/progress/khong-co")
     assert bad.status_code == 404 and bad.json()["error"]["code"] == "not_found"
+
+
+def test_upload_archives_dropped_only_after_ok(client, settings, tmp_path):
+    data = make_nuscenes(tmp_path / "src")
+    up = make_upload(settings)
+    zip_dir(data, up / "all.zip")
+    assert client.post("/datasets", json={"uploadId": "u1"}).json()["ok"]
+    assert sorted(p.name for p in up.iterdir()) == ["progress.json"]
+    bad = make_upload(settings, "u2")
+    with zipfile.ZipFile(bad / "x.zip", "w") as z:
+        z.writestr("readme.txt", "hi")
+    assert not client.post("/datasets", json={"uploadId": "u2"}).json()["ok"]
+    assert (bad / "x.zip").is_file()
