@@ -24,6 +24,7 @@ export default async function Home() {
       <h1 className="mt-5 max-w-4xl text-4xl font-bold leading-tight sm:text-6xl">Tìm tình huống VRU hiếm để gán nhãn cho phanh khẩn cấp</h1>
       <p className="mt-6 max-w-2xl text-lg text-vcf-muted">Từ point cloud đến lô frame đáng xem: ứng viên LiDAR, bối cảnh camera và quyết định cuối của người gán nhãn.</p>
       <Link href="/dashboard" className="mt-8 inline-block rounded-vcf-control bg-vcf-accent px-6 py-3 font-semibold text-vcf-on-accent hover:bg-vcf-accent-ink">Vào dashboard</Link>
+      <Link href="/vi-sao" className="mt-4 block font-semibold text-vcf-accent-ink underline">Vì sao chọn chúng tôi</Link>
     </section>
     <section aria-labelledby="pipeline-title" className="mx-auto max-w-6xl px-6 pb-16">
       <h2 id="pipeline-title" className="mb-6 text-2xl font-bold">Chuỗi xử lý</h2>

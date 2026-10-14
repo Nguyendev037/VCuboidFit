@@ -326,7 +326,7 @@ export function FilterBar(state: Pick<
           <p className="text-[11px] text-slate-500 text-center">Phân tích hoàn tất.</p>
         ):(
           <p className="text-[11px] text-slate-400 text-center italic">
-            Tinh chỉnh dùng được sau khi phân tích xong.
+            Chỉnh tham số bất kỳ lúc nào; kết quả hiện ở đây sau khi phân tích.
           </p>
         )}
       </div>
