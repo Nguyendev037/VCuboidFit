@@ -33,28 +33,28 @@ beforeEach(() => {
   vi.mocked(access).mockResolvedValue(undefined);
 });
 
-it("formats every IY, CI and delta to three decimals without changing the source", async () => {
+it("formats every IY and CI to three decimals without changing the source", async () => {
   const data = structuredClone(fixture);
   data.methods.M0.iy = 0.08666666666666666;
   data.primary.delta = -0.0004;
   const source = JSON.stringify(data);
   vi.mocked(readFile).mockResolvedValue(source);
   const html = renderToStaticMarkup(await Home());
-  for (const value of ["0.087", "0.050", "0.150", "0.120", "0.400", "-0.010", "-0.000"]) expect(html).toContain(value);
+  for (const value of ["0.087", "0.050", "0.150", "0.120", "0.400"]) expect(html).toContain(value);
   expect(html).not.toContain("0.08666666666666666");
   expect(JSON.stringify(data)).toBe(source);
-  expect(html).toContain(data.primary.conclusion);
 });
 
-it("renders T benchmark: all M0–M3, IY with CI95, source and verbatim conclusion", async () => {
+it("renders T benchmark: all M0–M3, IY with CI95 and source, without a primary-comparison verdict", async () => {
   vi.mocked(readFile).mockResolvedValue(JSON.stringify(fixture));
   const html = renderToStaticMarkup(await Home());
   for (const method of ["M0", "M1", "M2", "M3", "Random"]) expect(html).toContain(method);
-  for (const number of ["0.05", "0.15", "0.12", "0.4", "-0.01"]) expect(html).toContain(number);
+  for (const number of ["0.05", "0.15", "0.12", "0.4"]) expect(html).toContain(number);
   expect(html).toContain("CI95");
   expect(html).toContain("T pool");
   expect(html).toContain("fixture-T");
-  expect(html).toContain(fixture.primary.conclusion);
+  expect(html).not.toContain(fixture.primary.conclusion);
+  expect(html).not.toContain("ΔIY");
   expect(html).toContain('/demo/fig_iy_budget.png');
   expect(html).not.toContain("minh hoạ");
 });
@@ -63,7 +63,6 @@ it("labels mini benchmark as minh hoạ alongside its original source label", as
   vi.mocked(readFile).mockResolvedValue(JSON.stringify({ ...fixture, label: "mini", pool: 404 }));
   const html = renderToStaticMarkup(await Home());
   expect(html).toContain("mini · minh hoạ");
-  expect(html).toContain(fixture.primary.conclusion);
   expect(html).not.toContain("T pool");
   vi.mocked(readFile).mockResolvedValue(JSON.stringify({ ...fixture, label: "mini · minh hoạ · in-sample", pool: 404 }));
   const exportedHtml = renderToStaticMarkup(await Home());

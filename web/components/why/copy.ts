@@ -31,7 +31,7 @@ export const whyCopy = {
       { id: "M2", title: "rare_v24 · LiDAR", text: "Tìm ứng viên trong point cloud, chấm độ hiếm RHCIO và chọn lô theo ngân sách, có xét đa dạng." },
       { id: "M3", title: "rare_v24 · đa cảm biến", text: "Bổ sung bối cảnh camera bằng OpenCLIP + OpenCV để đối chiếu với thông tin LiDAR." },
     ],
-    practicalReason: "Lý do chọn đi cùng frame; người gán nhãn có thể đối chiếu 3D và camera, rồi xuất lô đã kiểm tra. Đây là giá trị vận hành, chưa phải kết luận hơn baseline.",
+    practicalReason: "Lý do chọn đi cùng frame; người gán nhãn có thể đối chiếu 3D và camera, rồi xuất lô đã kiểm tra.",
     proof: [
       { title: "Giữ phép thử công bằng", text: "Cùng dữ liệu, cùng ngân sách; đăng ký trước phép so sánh và chỉ mở tập T một lần." },
       { title: "Đếm mục tiêu thực sự thu được", text: "IY đo số instance hiếm thu được trên mỗi frame đã chọn. Capture B chỉ tính khi instance xuất hiện đúng dạng hiếm." },

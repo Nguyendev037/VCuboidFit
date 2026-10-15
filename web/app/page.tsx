@@ -32,7 +32,7 @@ const STATS = [
 ];
 const FEATURES = [
   { icon: ScanLine, title: "Engine rare_v24", text: "Từ ứng viên LiDAR đến độ hiếm RHCIO và lô frame cần xem. Thẻ dự đoán là gợi ý, cần người gán nhãn xác nhận.", tag: "RHCIO · LiDAR", badge: "ỨNG VIÊN" },
-  { icon: Waypoints, title: "Tầng 1: PointPillars đã train", text: "Detector 3D train trên nuScenes trainval, epoch 12/20: mAP 0,220 · NDS 0,343 trên 602 frame VAL. Chưa gắn vào benchmark T, nên benchmark T hiện tại vẫn chưa chứng minh vượt baseline.", tag: "PointPillars · e12", badge: "ĐÃ ĐO" },
+  { icon: Waypoints, title: "Tầng 1: PointPillars đã train", text: "Detector 3D train trên nuScenes trainval, epoch 12/20: mAP 0,220 · NDS 0,343 trên 602 frame VAL. Chưa gắn vào benchmark T.", tag: "PointPillars · e12", badge: "ĐÃ ĐO" },
   { icon: Layers, title: "Chọn lô theo ngân sách", text: "Chọn frame đủ điều kiện theo ngân sách và mức đa dạng; giữ lý do chọn để người gán nhãn kiểm tra trước khi xuất.", tag: "Ngân sách · đa dạng", badge: "NGƯỜI DUYỆT" },
   { icon: Camera, title: "Deep Review 3D & bối cảnh", text: "Xem point cloud, hộp 3D và sáu camera. OpenCLIP + OpenCV bổ sung bối cảnh chiếu sáng, chói, ống kính và thời tiết; ca chưa chắc cần người duyệt.", tag: "6 camera · LiDAR · OpenCLIP", badge: "KIỂM TRA TAY" },
 ];

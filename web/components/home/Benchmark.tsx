@@ -20,8 +20,6 @@ export function Benchmark({ bench, figureUrl }: { bench: DemoBench | null; figur
         })}</tbody>
       </table>
     </div>
-    <p className="mt-5 text-sm tabular-nums">{bench.primary.pair}: ΔIY = {bench.primary.delta.toFixed(3)} · CI95 [{bench.primary.ci_lo.toFixed(3)}, {bench.primary.ci_hi.toFixed(3)}]</p>
-    <p className="mt-2 break-words font-semibold">{bench.primary.conclusion}</p>
     {figureUrl && <figure className="mt-6">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={figureUrl} alt={`IY theo ngân sách — ${sourceLabel}`} className="h-auto w-full rounded-vcf-control" />
