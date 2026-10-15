@@ -152,9 +152,12 @@ def test_invalid_session_header_is_treated_as_missing(app):
 
 def test_health_reports_remote_agent_and_session_task_cleanup(app):
     settings = app.state.settings
+    settings.remote_token = "remote-test-token"
     with TestClient(app) as client:
         response = client.get("/health", headers={"X-VCF-Session": SID_A})
         assert response.json()["remoteAgent"]["lastSeen"] is None
+        assert client.get("/remote/t1/next", headers={"Authorization": "Bearer remote-test-token"}).status_code == 204
+        assert client.get("/health").json()["remoteAgent"]["lastSeen"] is not None
         _write(settings.remote / "t1_a.json", {"taskId": "t1_a", "sessionId": SID_A})
         assert client.delete("/sessions/current", headers={"X-VCF-Session": SID_A}).status_code == 200
     assert not (settings.remote / "t1_a.json").exists()
