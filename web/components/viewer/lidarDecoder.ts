@@ -496,3 +496,160 @@ export function filterLidarPointCloud(
     maxZ,
   };
 }
+
+/* ------------------------------------------------------------------------------------------------
+ * Hiển thị (viewer 3D): các hàm MỚI, không thay hành vi các hàm cũ đã có test ở trên.
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Thông số vẽ point cloud bằng shader điểm tròn (độ mờ/cỡ theo khoảng cách). */
+export const LIDAR_RENDER_STYLE = {
+  /** Đường kính điểm quy ra mét ở khoảng cách gần (nhân với thanh trượt "Cỡ điểm"). */
+  worldSize: 0.045,
+  /** Cỡ tối thiểu/tối đa (px CSS) để điểm xa không biến mất, điểm gần không thành đốm lớn. */
+  minPx: 1.35,
+  maxPx: 7,
+  opacity: 0.92,
+  miniOpacity: 0.85,
+  /** Mờ dần theo bán kính ngang (m) — tạo chiều sâu. */
+  fadeNear: 35,
+  fadeFar: 95,
+  /** Dải màu dùng trong turbo (bỏ hai đầu quá tối/quá gắt). */
+  turboFrom: 0.08,
+  turboTo: 0.93,
+  lowPercentile: 0.02,
+  highPercentile: 0.98,
+} as const;
+
+/** Turbo colormap (xấp xỉ đa thức của Google), t∈[0,1] → sRGB [0..1]. */
+export function turboRgb(t: number): [number, number, number] {
+  const x = Math.max(0, Math.min(1, t));
+  const r = 0.13572138 + x * (4.6153926 + x * (-42.66032258 + x * (132.13108234 + x * (-152.94239396 + x * 59.28637943))));
+  const g = 0.09140261 + x * (2.19418839 + x * (4.84296658 + x * (-14.18503333 + x * (4.27729857 + x * 2.82956604))));
+  const b = 0.1066733 + x * (12.64194608 + x * (-60.58204836 + x * (110.36276771 + x * (-89.90310912 + x * 27.34824973))));
+  const clamp = (v: number) => Math.max(0, Math.min(1, v));
+  return [clamp(r), clamp(g), clamp(b)];
+}
+
+/** Ánh xạ t∈[0,1] sang đúng dải turbo mà viewer dùng (cũng dùng cho thanh màu chú giải). */
+export function lidarDisplayRgb(t: number): [number, number, number] {
+  const { turboFrom, turboTo } = LIDAR_RENDER_STYLE;
+  return turboRgb(turboFrom + Math.max(0, Math.min(1, t)) * (turboTo - turboFrom));
+}
+
+/** Phân vị p∈[0,1] của các phần tử `values[offset + k·stride]` hữu hạn (sao chép rồi sort, không đổi input). */
+export function lidarPercentile(values: Float32Array, p: number, stride = 1, offset = 0): number {
+  const count = Math.floor((values.length - offset + stride - 1) / stride);
+  if (count <= 0) return Number.NaN;
+  const copy = new Float32Array(count);
+  let n = 0;
+  for (let i = offset; i < values.length; i += stride) {
+    const v = values[i];
+    if (Number.isFinite(v)) copy[n++] = v;
+  }
+  if (n === 0) return Number.NaN;
+  const sorted = copy.subarray(0, n).sort();
+  const rank = Math.max(0, Math.min(1, p)) * (n - 1);
+  const lo = Math.floor(rank);
+  const hi = Math.min(n - 1, lo + 1);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (rank - lo);
+}
+
+export interface LidarDisplayColors {
+  colors: Float32Array;
+  /** Giá trị ứng với đầu thấp/cao của thang màu (m cho độ cao, đơn vị gốc cho intensity). */
+  lo: number;
+  hi: number;
+  mode: LidarColorMode;
+}
+
+/**
+ * Màu hiển thị: chuẩn hoá theo phân vị (mặc định 2–98%) thay vì min/max để outlier không dồn màu,
+ * tô bằng turbo. Intensity lệch phải mạnh ⇒ thêm căn bậc hai để giãn vùng thấp.
+ */
+export function getLidarDisplayColors(pointCloud: LidarPointCloud, mode: LidarColorMode): LidarDisplayColors {
+  const { lowPercentile, highPercentile } = LIDAR_RENDER_STYLE;
+  const source = mode === "height" ? pointCloud.rawPositions : pointCloud.intensities;
+  const stride = mode === "height" ? 3 : 1;
+  const offset = mode === "height" ? 2 : 0;
+  let lo = lidarPercentile(source, lowPercentile, stride, offset);
+  let hi = lidarPercentile(source, highPercentile, stride, offset);
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) { lo = 0; hi = 1; }
+  if (hi - lo < 1e-3) hi = lo + (mode === "height" ? 1 : 1e-3);
+  const span = hi - lo;
+  const colors = new Float32Array(pointCloud.count * 3);
+  for (let i = 0; i < pointCloud.count; i++) {
+    const raw = source[i * stride + offset];
+    let t = Number.isFinite(raw) ? (raw - lo) / span : 0;
+    t = Math.max(0, Math.min(1, t));
+    if (mode === "intensity") t = Math.sqrt(t);
+    const [r, g, b] = lidarDisplayRgb(t);
+    colors[i * 3] = r;
+    colors[i * 3 + 1] = g;
+    colors[i * 3 + 2] = b;
+  }
+  return { colors, lo, hi, mode };
+}
+
+/**
+ * Ước lượng cao độ mặt đất (z hệ EGO, m): phân vị 10% của z các điểm có bán kính ngang 3–40 m.
+ * Dữ liệu ego chuẩn cho ~0; dữ liệu ở hệ cảm biến cho ~-1.8. Kẹp [-3, 1]; không đủ điểm ⇒ 0.
+ */
+export function estimateGroundLevel(pointCloud: LidarPointCloud): number {
+  const zs = new Float32Array(pointCloud.count);
+  let n = 0;
+  for (let i = 0; i < pointCloud.count; i++) {
+    const x = pointCloud.rawPositions[i * 3];
+    const y = pointCloud.rawPositions[i * 3 + 1];
+    const r = Math.hypot(x, y);
+    if (r >= 3 && r <= 40) zs[n++] = pointCloud.rawPositions[i * 3 + 2];
+  }
+  if (n < 50) return 0;
+  const ground = lidarPercentile(zs.subarray(0, n), 0.1);
+  return Number.isFinite(ground) ? Math.max(-3, Math.min(1, ground)) : 0;
+}
+
+/**
+ * Box định hướng (hệ Three.js) từ 8 góc hệ EGO, KHÔNG phụ thuộc thứ tự góc:
+ * - chiều đứng lấy theo z (4 góc thấp/4 góc cao);
+ * - `size` = [dài (trục local X = hướng đầu), cao (Y), rộng (Z)];
+ * - hướng đầu: thứ tự nuScenes (góc 0–3 là mặt trước) ⇒ từ tâm tới tâm mặt 0–3; nếu 0–3 là đáy
+ *   (quy ước cũ/mock) ⇒ trục dài, chiều từ cạnh (2,3) sang cạnh (0,1).
+ * `yaw` quay quanh trục Y của Three sao cho local +X trùng hướng đầu.
+ */
+export function cornersToOrientedBox(corners: number[]): CuboidTransform | null {
+  if (corners.length < 24 || corners.slice(0, 24).some((value) => !Number.isFinite(value))) return null;
+  const pts = Array.from({ length: 8 }, (_, i) => [corners[i * 3], corners[i * 3 + 1], corners[i * 3 + 2]] as const);
+  const center = pts.reduce((s, p) => [s[0] + p[0] / 8, s[1] + p[1] / 8, s[2] + p[2] / 8], [0, 0, 0]);
+  const byZ = pts.map((p, i) => ({ p, i })).sort((a, b) => a.p[2] - b.p[2]);
+  const bottom = byZ.slice(0, 4).map((e) => e.p);
+  const top = byZ.slice(4).map((e) => e.p);
+  const height = top.reduce((s, p) => s + p[2], 0) / 4 - bottom.reduce((s, p) => s + p[2], 0) / 4;
+  // Hai cạnh kề của đáy: bỏ đường chéo (xa nhất) tính từ bottom[0].
+  const edges = bottom.slice(1)
+    .map((p) => [p[0] - bottom[0][0], p[1] - bottom[0][1]] as const)
+    .sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]))
+    .slice(0, 2);
+  const [eShort, eLong] = edges;
+  const length = Math.hypot(eLong[0], eLong[1]);
+  const width = Math.hypot(eShort[0], eShort[1]);
+  if (!(length > 1e-6) || !(width > 1e-6) || !(height > 1e-6)) return null;
+  let hx = eLong[0] / length;
+  let hy = eLong[1] / length;
+  const mean = (idx: number[]) => idx.reduce((s, k) => [s[0] + pts[k][0] / idx.length, s[1] + pts[k][1] / idx.length], [0, 0]);
+  const face = mean([0, 1, 2, 3]);
+  const fx = face[0] - center[0];
+  const fy = face[1] - center[1];
+  let ref: [number, number];
+  if (Math.hypot(fx, fy) > length * 0.25) ref = [fx, fy];
+  else {
+    const a = mean([0, 1]);
+    const b = mean([2, 3]);
+    ref = [a[0] - b[0], a[1] - b[1]];
+  }
+  if (hx * ref[0] + hy * ref[1] < 0) { hx = -hx; hy = -hy; }
+  return {
+    center: [center[0], center[2], -center[1] || 0],
+    size: [length, height, width],
+    yaw: Math.atan2(hy, hx),
+  };
+}
