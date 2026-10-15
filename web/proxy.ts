@@ -32,8 +32,11 @@ export function proxy(request: NextRequest): NextResponse {
   if (process.env.NEXT_PUBLIC_VCF_SESSIONS !== "1") return NextResponse.next();
   const existing = request.cookies.get("vcf_sid")?.value;
   if (existing && SID_RE.test(existing)) return NextResponse.next();
-  const response = NextResponse.next();
-  response.cookies.set("vcf_sid", randomBytes(16).toString("hex"), {
+  const sid = randomBytes(16).toString("hex");
+  const headers = new Headers(request.headers);
+  headers.set("x-vcf-session", sid);
+  const response = NextResponse.next({ request: { headers } });
+  response.cookies.set("vcf_sid", sid, {
     httpOnly: true, secure: true, sameSite: "lax", path: "/",
   });
   return response;
