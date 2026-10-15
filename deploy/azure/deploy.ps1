@@ -107,6 +107,7 @@ try {
   foreach ($s in $stage) {
     $rcArgs = @((Join-Path $repo $s.src), (Join-Path $ctx $s.src), "/E", "/NFL", "/NDL", "/NJH", "/NJS", "/NP")
     if ($s.xd.Count) { $rcArgs += "/XD"; $rcArgs += $s.xd }
+    $rcArgs += "/XF"; $rcArgs += @(".env.local", ".env.*.local")  # local config never ships
     & robocopy @rcArgs | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy $($s.src) failed with exit code $LASTEXITCODE" }
   }
