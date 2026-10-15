@@ -53,11 +53,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ jobId: string; 
   const { jobId, path: segs } = await ctx.params;
   if (!ID_RE.test(jobId)) return badPath();
   if (segs.length < 2 || segs.some(unsafeSegment)) return badPath();
-  const sid = req.headers.get("cookie")?.match(/(?:^|;\s*)vcf_sid=([0-9a-f]{32})(?:;|$)/)?.[1];
-  const ownership = await workerFetch(`/jobs/${encodeURIComponent(jobId)}`, {
-    headers: sid ? { "x-vcf-session": sid } : undefined,
-  });
-  if (!ownership.ok) return notFound();
+  if (process.env.NEXT_PUBLIC_VCF_SESSIONS === "1") {
+    const sid = req.headers.get("cookie")?.match(/(?:^|;\s*)vcf_sid=([0-9a-f]{32})(?:;|$)/)?.[1];
+    const ownership = await workerFetch(`/jobs/${encodeURIComponent(jobId)}`, {
+      headers: sid ? { "x-vcf-session": sid } : undefined,
+    });
+    if (!ownership.ok) return notFound();
+  }
   const allowedExt = KINDS[segs[0]];
   const ext = path.extname(segs[segs.length - 1]).toLowerCase();
   if (!allowedExt || !allowedExt.includes(ext)) return badPath();

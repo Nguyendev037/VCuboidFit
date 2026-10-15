@@ -20,13 +20,21 @@ async function handle(req: Request, ctx: Ctx): Promise<Response> {
   if (path.some(unsafeSegment)) {
     return errorResponse(400, "bad_path", "Đường dẫn yêu cầu không hợp lệ.");
   }
-  if (!ALLOWED_PREFIXES.has(path[0]) || (path[0] === "params-schema" && (path.length > 1 || req.method !== "GET"))) {
+  const sessionsEnabled = process.env.NEXT_PUBLIC_VCF_SESSIONS === "1";
+  const prefixEnabled = ALLOWED_PREFIXES.has(path[0]) &&
+    (sessionsEnabled || !["sessions", "health"].includes(path[0]));
+  if (!prefixEnabled || (path[0] === "params-schema" && (path.length > 1 || req.method !== "GET"))) {
     return errorResponse(404, "not_found", "Không tìm thấy tài nguyên được yêu cầu.");
   }
 
   const target = `/${path.map(encodeURIComponent).join("/")}${new URL(req.url).search}`;
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
-  const body = hasBody ? req.body : undefined;
+  const contentType = req.headers.get("content-type") ?? "";
+  const body = hasBody
+    ? contentType.includes("application/json")
+      ? await req.text()
+      : req.body
+    : undefined;
   const headers: Record<string, string> = {};
   const sid = req.headers.get("cookie")?.match(/(?:^|;\s*)vcf_sid=([0-9a-f]{32})(?:;|$)/)?.[1];
   if (sid) headers["x-vcf-session"] = sid;
