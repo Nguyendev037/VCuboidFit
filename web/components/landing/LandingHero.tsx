@@ -57,7 +57,7 @@ export function LandingHero() {
         <h1
           id="hero-title"
           style={{ "--d": "0.2s", "--duration": "0.6s" } as CSSProperties}
-          className={`landing-enter ${SANS} bg-gradient-to-b from-slate-900 via-slate-900 to-sky-700 bg-clip-text text-6xl font-semibold leading-[0.9] tracking-tighter text-transparent sm:text-8xl lg:text-[136px]`}
+          className={`landing-enter ${SANS} bg-gradient-to-b from-slate-900 from-40% to-sky-700 bg-clip-text pb-[0.12em] text-5xl font-semibold leading-[1.05] tracking-tight text-transparent [text-wrap:balance] sm:text-7xl lg:text-[104px]`}
         >
           Frame đáng giá
           <span className="sr-only"> — {TOPIC_TITLE}</span>
