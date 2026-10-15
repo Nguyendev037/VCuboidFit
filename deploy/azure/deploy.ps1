@@ -4,6 +4,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# az preview warnings go to stderr; under PS 5.1 + Stop a redirected stderr line is fatal.
+$env:AZURE_CORE_ONLY_SHOW_ERRORS = "true"
 if (-not $Tag) { $Tag = (git rev-parse --short HEAD).Trim() }
 
 $rg = "rg-vcuboidfit-demo"
@@ -13,6 +15,7 @@ $tags = "project=vcuboidfit owner=nguyendev037 expires=2026-11-01"
 
 function Invoke-Az {
   param([Parameter(Mandatory = $true)][string[]]$Arguments)
+  $ErrorActionPreference = "Continue"  # judge az by exit code, not by stderr text
   & az @Arguments
   if ($LASTEXITCODE -ne 0) {
     throw "az $($Arguments -join ' ') failed with exit code $LASTEXITCODE"
@@ -21,6 +24,7 @@ function Invoke-Az {
 
 function Test-AzResource {
   param([Parameter(Mandatory = $true)][string[]]$Arguments)
+  $ErrorActionPreference = "Continue"
   & az @Arguments *> $null
   return $LASTEXITCODE -eq 0
 }
