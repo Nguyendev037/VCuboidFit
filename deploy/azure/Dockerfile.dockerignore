@@ -1,0 +1,14 @@
+**/node_modules
+**/.venv
+**/__pycache__
+**/.next
+workspace/
+model/workspace/
+model/weights/
+dataset/
+developer/
+web/public/mock-media/
+web/test-results/
+**/*.zip
+**/*.pth
+.git

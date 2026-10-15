@@ -30,4 +30,8 @@ model/dist/
 .vcf-package
 web/test-results/
 # tài liệu deploy nội bộ (chỉ local)
-deploy/
+deploy/*
+!deploy/README.md
+!deploy/azure-media-storage.md
+!deploy/azure/
+!deploy/azure/**
