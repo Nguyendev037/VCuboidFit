@@ -146,6 +146,83 @@ Loss trung bình theo epoch: 1,38 → 0,987 → 0,861 → 0,767 → 0,705 → **
 
 Giới hạn — đọc trước khi dùng:
 - LR one-cycle còn ở gần đỉnh khi dừng ⇒ model **chưa hội tụ**; kém hơn bản chạy đủ 20 epoch.
-- **Chưa đánh giá** trên 602 frame VAL (không có mAP/NDS hay recall). `post_train_eval` ghi `init-ckpt (bỏ qua train)` là cách đóng gói checkpoint, không có nghĩa là không train.
+- Đã chấm trên 602 frame VAL (2026-10-15): **mAP 0,209 · NDS 0,282**. Xe con/xe tải/xe máy tốt, người đi bộ/xe đạp/cọc/rào còn yếu (xem §10). `post_train_eval` ghi `init-ckpt (bỏ qua train)` là cách đóng gói checkpoint, không có nghĩa là không train.
 - Không thay seed mặc định của Colab/`dev_up.ps1` (vẫn là mini-e80); muốn dùng cho Tầng 1 phải dựng bố cục `index.parquet` + `t1/cfg/pp_seed.yaml` + `t1/ckpt/seed_latest.pth` cho dataset của mình.
 - Muốn train tiếp đủ 20 epoch: chạy lại TrainModel với cùng `RUN_ID` khi checkpoint epoch 5–6 còn trên Drive (`run_identity.json` trên Drive đã thêm `epochs_trained`, phải xoá khoá này hoặc đổi `RUN_ID` mới).
+
+## 10. Chấm trọng số trên 602 frame VAL bằng Docker (hướng dẫn từng bước)
+
+Mục đích: đo một bộ trọng số PointPillars nhận diện đúng bao nhiêu trên **602 keyframe VAL giữ lại** (split `T` trong `index.parquet`: 15 scene official VAL, không scene nào dùng để train). Toàn bộ chạy trong Docker, không cần cài Python/OpenPCDet lên máy.
+
+### 10.1. Cần chuẩn bị (một lần)
+
+| Thứ cần có | Kiểm thế nào |
+|---|---|
+| Docker Desktop đang chạy, có GPU NVIDIA | `docker info` không báo lỗi; `nvidia-smi` thấy GPU |
+| Image `vcuboidfit_pointpillars:0.1` (~18,9 GB) | `docker images` có dòng này; chưa có thì build: `docker compose -f model/docker/tier1/docker-compose.yml build` (~15 phút) |
+| Dữ liệu nuScenes **v1.0-trainval** gồm `v1.0-trainval/` (bảng JSON), `samples/LIDAR_TOP`, `sweeps/LIDAR_TOP` của 15 scene VAL | ví dụ `E:\nuscenes_trainval`; thiếu `maps/` không sao (script tự dựng mask giả) |
+| Trọng số: thư mục có `seed_latest.pth` + `pp_seed.yaml` (dạng `model/weights/...`) hoặc `t1/ckpt/seed_latest.pth` + `t1/cfg/pp_seed.yaml` (dạng thí nghiệm) | `git lfs pull` nếu `seed_latest.pth` chỉ vài trăm byte |
+
+GPU 8 GB là đủ: lượt chấm dùng ~1,1 GB VRAM.
+
+### 10.2. Chạy một lệnh (PowerShell, tại gốc repo)
+
+```powershell
+# Trọng số trainval epoch 6 (mặc định)
+.\model\scripts\eval_val.ps1 -Nusc E:\nuscenes_trainval
+
+# Bộ trọng số khác, ví dụ seed mini-e80, chấm trên CÙNG 602 frame để so sánh
+.\model\scripts\eval_val.ps1 -Nusc E:\nuscenes_trainval -Weights .\model\workspace\experiments\mini-e80
+```
+
+Tham số: `-Weights` (thư mục trọng số), `-Index` (index khác; mặc định index của e6, split `T`), `-Out` (thư mục kết quả; mặc định `model/workspace/experiments/eval-val602/<tên thư mục trọng số>`), `-Batch` (mặc định 2).
+
+Thời gian đo trên RTX 4060 Laptop: dựng info ~45 giây (chỉ lần đầu cho mỗi thư mục `-Out`), suy luận ~170 giây (~285 ms/frame, gồm cả đọc 10 sweeps từ ổ đĩa), chấm devkit ~1 phút. Tổng khoảng **4–5 phút**.
+
+Lệnh tương đương không qua script (bash hoặc Linux):
+
+```bash
+docker run --rm --gpus all --shm-size 8g \
+  -v /path/nuscenes_trainval:/nusc:ro -v $PWD/model/weights/pointpillars-trainval-e6:/w:ro \
+  -v $PWD/model/workspace/experiments/eval-val602/e6:/out -v $PWD/model/worker:/work/worker \
+  -w /work/worker -e PYTHONPATH=/work/worker:/opt/OpenPCDet vcuboidfit_pointpillars:0.1 \
+  python -m c4.lidar.tier1.eval_ckpt --ckpt /w/seed_latest.pth --cfg /w/pp_seed.yaml \
+  --index /w/index.parquet --nusc /nusc --out /out
+```
+
+(Git Bash trên Windows: thêm `MSYS_NO_PATHCONV=1` trước `docker`.)
+
+### 10.3. Kết quả nằm ở đâu, đọc thế nào
+
+| File trong `-Out` | Nội dung |
+|---|---|
+| `eval.txt` | Bảng của nuscenes-devkit: từng lớp có AP ở 4 ngưỡng khoảng cách 0,5/1/2/4 m và 5 loại sai số; cuối bảng là **mAP** và **NDS** |
+| `eval_summary.json` | Số frame, thời gian, GPU, VRAM, toàn bộ metric dạng máy đọc |
+| `results_nusc.json`, `metrics_details.json`, `plots/` | Dự đoán gốc và đường PR của devkit |
+| `eval.log` | Log đầy đủ, mở khi thoát khác 0 |
+
+- **mAP** (0–1, càng cao càng tốt): trung bình AP của **10 lớp**. **NDS** gộp mAP với 5 sai số vị trí, kích thước, hướng, vận tốc và thuộc tính.
+- Lớp **không có đối tượng nào** trong 602 frame vẫn bị tính AP = 0. Ở split T, `bus`, `trailer` và `construction_vehicle` không có GT nên mAP tối đa chỉ đạt 0,7 dù model hoàn hảo.
+- Đây là **subset eval**: GT được lọc về đúng 602 frame. Không so trực tiếp với số full-val 6.019 frame của bài báo; dùng để **so các bộ trọng số với nhau trên cùng tập**.
+
+Mã thoát: `0` ok · `2` split rỗng hoặc thiếu info cho một số frame (thiếu file LiDAR) · `3` container không thấy GPU (thiếu `--gpus all` hoặc Docker chưa bật GPU) · `4` thiếu file trọng số/index/image.
+
+### 10.4. Kết quả đo 2026-10-15 (602 frame, RTX 4060)
+
+| Lớp | Số GT* | e6 (trainval 8.182 frame, 6 epoch) | mini-e80 (seed mặc định) |
+|---|---:|---:|---:|
+| car | 2.446 | **0,785** | 0,159 |
+| truck | 145 | **0,607** | 0,008 |
+| motorcycle | 258 | **0,540** | 0 |
+| pedestrian | 85 | 0,162 | 0 |
+| barrier | 101 | 0 | 0 |
+| bicycle | 42 | 0 | 0 |
+| traffic_cone | 46 | 0 | 0 |
+| bus / trailer / construction_vehicle | 0 | (0, không có GT) | (0) |
+| **mAP / NDS** | | **0,209 / 0,282** | 0,017 / 0,065 |
+
+\* GT có ≥1 điểm LiDAR, trong tầm chấm của devkit (50/40/30 m theo lớp).
+
+Nhận xét: e6 tốt hơn mini-e80 khoảng 12 lần về mAP. Trên 7 lớp có GT, mAP là 0,299. Xe con, xe tải và xe máy đã ngang mức tham chiếu PointPillars full-train. Lớp nhỏ (người đi bộ, xe đạp, cọc, rào) còn yếu vì 3 lý do: (1) dừng ở epoch 6/20 khi LR one-cycle còn ở gần đỉnh, chưa qua pha giảm LR vốn cho nhiều điểm nhất; (2) tắt `gt_sampling` để tránh rò nhãn ngoài S, mà đây là augmentation chủ lực cho lớp hiếm; (3) chỉ có ~29% lượng frame train của nuScenes. Tập 15 scene khá nhỏ (42 xe đạp, 85 người), nên AP của lớp nhỏ dao động mạnh.
+
+Bằng chứng: `BuildLab/planning/16_2026-10-14_a100-full-train/evidence/EVAL_VAL602/`.
