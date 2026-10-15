@@ -12,7 +12,7 @@ it("builds encoded ZIP export URL with camera and LiDAR options",()=>{
 });
 it("renders the source hero, three workflow steps, honest sample label and benchmark entry",async()=>{
  const html=renderToStaticMarkup(React.createElement(Providers,null,await Home()));
- expect(html).toContain("Frame hiếm");
+ expect(html).toContain("Frame đáng giá");expect(html).not.toContain("Frame hiếm");
  for (const step of ["Nạp dữ liệu nuScenes", "Phân tích và chọn lô", "Kiểm tra và xuất ZIP"]) expect(html).toContain(step);
  expect(html).toContain("OpenCLIP + OpenCV");expect(html).toContain('href="/dashboard"');expect(html).toContain("Mở Dashboard");
  expect(html).toContain("Góc nhìn người sử dụng");expect(html).toContain("chưa phải lời chứng thực");expect(html).not.toContain("Số đo trên tập T");

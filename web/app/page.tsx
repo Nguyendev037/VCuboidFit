@@ -56,7 +56,7 @@ export default async function IntroPage() {
           <section id="mo-phong" aria-labelledby="sim-title" className="reveal flex scroll-mt-24 flex-col gap-4" style={{ "--d": "300ms" } as CSSProperties}>
             <div>
               <p className="font-data text-xs font-medium uppercase tracking-[0.14em] text-emerald-600">Mô phỏng 3D</p>
-              <h2 id="sim-title" className="font-display mt-2 text-3xl font-semibold text-slate-900">Frame hiếm được chọn, nhìn trong không gian 3D</h2>
+              <h2 id="sim-title" className="font-display mt-2 text-3xl font-semibold text-slate-900">Frame đáng giá được chọn, nhìn trong không gian 3D</h2>
             </div>
             <LiveShowcase />
           </section>
