@@ -36,9 +36,6 @@ it("SPEC7(a): renders source pool and budget, every IY with adjacent CI and verb
     expect(html).toContain(`${id} · ${method.name}`);
     expect(html).toMatch(new RegExp(`${method.iy.toFixed(3)}[\\s\\S]*?\\[${method.ci_lo.toFixed(3)}, ${method.ci_hi.toFixed(3)}\\]`));
   }
-  expect(html).toContain("M2-M1: ΔIY = -0.012 · CI95 [-0.123, 0.057]");
-  expect(html).toContain(fixture.primary.conclusion);
-  expect(html).toContain(whyCopy.variants.unproven);
   for (const value of ["T pool", "fixture-T-why", "abcdefghijkl", "report-fixture-sha", "11/33", "/demo/fig_examples.png"]) expect(html).toContain(value);
 });
 
@@ -74,16 +71,14 @@ it("SPEC7(c): rendered HTML and copy source contain no prohibited marketing clai
   expect(renderToStaticMarkup(await WhyPage())).not.toMatch(banned);
 });
 
-it("SPEC7(d): shown export switches copy and conclusion tone automatically", async () => {
-  const before = renderToStaticMarkup(await WhyPage());
-  vi.mocked(readFile).mockResolvedValue(JSON.stringify({ ...fixture, primary: { ...fixture.primary, conclusion: "shown" } }));
-  const after = renderToStaticMarkup(await WhyPage());
-  expect(before).toContain(whyCopy.variants.unproven);
-  expect(after).toContain(whyCopy.variants.shown);
-  expect(after).not.toContain(whyCopy.variants.unproven);
-  expect(after).toContain('>shown</p>');
-  expect(after).toContain("bg-vcf-good-soft text-vcf-good");
-  expect(after).not.toContain("bg-vcf-warn-soft text-vcf-warn");
+it("does not render a primary-comparison verdict banner, whatever the export concludes", async () => {
+  for (const conclusion of ["not shown / underpowered", "shown"]) {
+    vi.mocked(readFile).mockResolvedValue(JSON.stringify({ ...fixture, primary: { ...fixture.primary, conclusion } }));
+    const html = renderToStaticMarkup(await WhyPage());
+    expect(html).not.toContain("ΔIY =");
+    expect(html).not.toContain("KẾT LUẬN");
+    expect(html).not.toContain(`>${conclusion}<`);
+  }
 });
 
 it("keeps optional provenance safe without rejecting old exports or requiring figures", async () => {

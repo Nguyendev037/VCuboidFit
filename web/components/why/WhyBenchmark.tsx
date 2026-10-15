@@ -27,7 +27,6 @@ export function WhyBenchmark({
     );
   }
 
-  const isShown = bench.primary.conclusion === "shown";
   const mini = /mini/i.test(bench.label);
   const sourceLabel = mini && !/minh ho[ạa]/i.test(bench.label) ? `${bench.label} · minh hoạ` : bench.label;
   const hasNy = BENCH_METHODS.some((id) => typeof bench.methods[id]?.ny === "number");
@@ -39,25 +38,8 @@ export function WhyBenchmark({
         <h2 id="evidence-title" className="font-[family-name:var(--font-landing-serif)] text-3xl leading-tight text-slate-900 sm:text-4xl lg:text-5xl">{copy.evidenceTitle}</h2>
       </div>
 
-      {/* Khối kết luận so sánh chính với nhãn trạng thái và khoảng tin cậy */}
-      <div className="space-y-3">
-        <p className={`rounded-vcf-control p-4 font-semibold ${isShown ? "bg-vcf-good-soft text-vcf-good" : "bg-vcf-warn-soft text-vcf-warn"}`}>
-          {isShown ? copy.variants.shown : copy.variants.unproven}
-        </p>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-5 py-3">
-          <span className="font-mono text-base font-semibold text-slate-900 tabular-nums break-words">
-            {bench.primary.pair}: ΔIY = {bench.primary.delta.toFixed(3)} · CI95 [{bench.primary.ci_lo.toFixed(3)}, {bench.primary.ci_hi.toFixed(3)}]
-          </span>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider ${isShown ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>
-            {isShown ? "KẾT LUẬN: ĐÃ CÓ BẰNG CHỨNG" : "KẾT LUẬN: CHƯA CHỨNG MINH (NOT SHOWN)"}
-          </span>
-        </div>
-        <p className="sr-only">{bench.primary.conclusion}</p>
-      </div>
-
       {/* Bảng số benchmark dạng thẻ có CI */}
-      <div className="mt-8">
+      <div>
         <h3 className="sr-only">Các phương pháp đánh giá (M0–M3)</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {BENCH_METHODS.map((id) => {

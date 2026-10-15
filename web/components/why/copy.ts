@@ -57,10 +57,6 @@ export const whyCopy = {
     ],
   },
   pitchRunNote: "Ghi chú cho lần đo này: tập T toàn ban ngày, không có cảnh đêm hay mưa, nên chưa đo được phần camera được thiết kế để giúp. Ngoài ra 28/42 vật hiếm không có ứng viên LiDAR nào ở gần, nên không cách xếp hạng nào chọn được chúng.",
-  variants: {
-    shown: "Đã có bằng chứng cho chênh lệch ở phép so sánh chính trong lần đánh giá này. Hãy đọc cùng khoảng tin cậy và phạm vi dữ liệu.",
-    unproven: "Chưa chứng minh được lợi ích so với baseline ở phép so sánh chính. Chúng tôi công khai kết luận và khoảng tin cậy để bạn quyết định dựa trên số đo.",
-  },
   trustTitle: "Vì sao tin được số này",
   trust: "Đánh giá đăng ký trước theo pitch-v2; tập T mở một lần. Chỉ gt.py đọc nhãn; test_no_leakage_lidar kiểm tra ranh giới không rò nhãn. Không VLM: bối cảnh dùng OpenCLIP pretrained.",
   trustPreregTitle: "Đăng ký trước (Prereg)",
