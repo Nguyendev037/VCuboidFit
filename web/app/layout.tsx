@@ -17,7 +17,7 @@ const landingSerif = Newsreader({ variable: "--font-landing-serif", subsets: ["l
 
 export const metadata: Metadata = {
   title: "VCuboidFIT — Demo UI",
-  description: "Hệ thống lọc 5% frame hiếm từ dataset nuScenes",
+  description: "Hệ thống lọc 5% frame đáng giá từ dataset nuScenes",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

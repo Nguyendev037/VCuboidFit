@@ -123,7 +123,7 @@ export const RARITY_CONCEPTS: Record<string, GlossaryItem> = {
   "rare (cell)": {
     label: "Hiếm thật (theo nhãn)",
     tooltip: "Frame có ít nhất một vật thể thuộc nhóm rất ít gặp trong bộ dữ liệu (theo nhãn 3D có sẵn). Chỉ dùng để CHẤM xem model chọn đúng không.",
-    detail: "Một \"ô\" = loại vật thể × khoảng cách (0–20, 20–40, >40 m) × số điểm LiDAR trên vật (≤5, 6–20, >20). Ô hiếm khi xuất hiện ở dưới ngưỡng τ = 2% số frame. Frame hiếm thật nếu chứa ≥ 1 ô hiếm. Ngưỡng chốt ở cổng G1.",
+    detail: "Một \"ô\" = loại vật thể × khoảng cách (0–20, 20–40, >40 m) × số điểm LiDAR trên vật (≤5, 6–20, >20). Ô hiếm khi xuất hiện ở dưới ngưỡng τ = 2% số frame. Frame đáng giá (theo nhãn) nếu chứa ≥ 1 ô hiếm. Ngưỡng chốt ở cổng G1.",
   },
 };
 
@@ -189,18 +189,18 @@ export const FRAME_SCORES: Record<string, Omit<GlossaryItem, "detail">> = {
 
 export const METRICS: Record<string, Omit<GlossaryItem, "detail">> = {
   recall: {
-    label: "Tỉ lệ bắt được frame hiếm",
-    tooltip: "Trong tất cả frame hiếm thật của bộ dữ liệu, tập 5% đã chọn chứa được bao nhiêu phần trăm.",
+    label: "Tỉ lệ bắt được frame đáng giá",
+    tooltip: "Trong tất cả frame đáng giá theo nhãn của bộ dữ liệu, tập 5% đã chọn chứa được bao nhiêu phần trăm.",
     howToRead: "Chọn ngẫu nhiên 5% kỳ vọng ≈ 5%. Cao hơn nhiều là tốt.",
   },
   nRecall: {
     label: "Tỉ lệ bắt được (so với mức tối đa có thể)",
-    tooltip: "Như trên nhưng so với số frame tối đa có thể chọn, vì ngân sách 5% có khi nhỏ hơn số frame hiếm.",
-    howToRead: "100% = mọi chỗ trong ngân sách đều là frame hiếm.",
+    tooltip: "Như trên nhưng so với số frame tối đa có thể chọn, vì ngân sách 5% có khi nhỏ hơn số frame đáng giá.",
+    howToRead: "100% = mọi chỗ trong ngân sách đều là frame đáng giá.",
   },
   uplift: {
     label: "Gấp mấy lần chọn ngẫu nhiên",
-    tooltip: "Tập đã chọn bắt frame hiếm tốt gấp bao nhiêu lần chọn ngẫu nhiên.",
+    tooltip: "Tập đã chọn bắt frame đáng giá tốt gấp bao nhiêu lần chọn ngẫu nhiên.",
     howToRead: "1× = không hơn ngẫu nhiên.",
   },
   precision: {

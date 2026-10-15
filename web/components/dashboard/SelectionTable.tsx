@@ -179,7 +179,7 @@ export function SelectionTable(state: Pick<
           {selection.isPending&&<LoadingState />}
           {selection.isError&&<DataError error={selection.error} onRetry={() => void selection.refetch()} />}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-800">
-            <span className="inline-flex items-center gap-1">Tỉ lệ bắt frame hiếm theo cách chọn <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} /></span>
+            <span className="inline-flex items-center gap-1">Tỉ lệ bắt frame đáng giá theo cách chọn <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} /></span>
             <span className="text-slate-400 font-normal">Random trung bình 5 % ± 2</span>
           </div>
           <div className="space-y-2 text-xs">

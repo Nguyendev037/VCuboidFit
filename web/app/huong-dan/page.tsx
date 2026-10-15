@@ -159,7 +159,7 @@ export default function GuidePage() {
             </div>
             <div className="mt-4 p-4 bg-vcf-accent-soft border border-vcf-accent-soft rounded-vcf-control text-sm text-vcf-accent-ink">
               <strong>Ví dụ thực tế:</strong> Nếu bộ dữ liệu có 10,000 frame, budget 5% nghĩa là chọn 500 frame. 
-              Nếu trong 10,000 frame đó có tổng cộng 1,000 frame hiếm thật, và trong 500 frame bạn chọn được 200 frame hiếm:
+              Nếu trong 10,000 frame đó có tổng cộng 1,000 frame đáng giá theo nhãn, và trong 500 frame bạn chọn được 200 frame đáng giá:
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li><strong>Recall</strong> = 200 / 1,000 = 20%</li>
                 <li><strong>Ngẫu nhiên kỳ vọng</strong> = 5% (hoặc ~50 frame)</li>
@@ -185,8 +185,8 @@ export default function GuidePage() {
             <h2 className="text-xl font-bold text-vcf-text border-b border-vcf-border pb-2 mb-4">6. Câu hỏi thường gặp (FAQ)</h2>
             <div className="space-y-4">
               <div className="bg-vcf-surface p-5 rounded-vcf-card border border-vcf-border shadow-xs">
-                <h3 className="font-bold text-vcf-text mb-2">Vì sao Recall lại bằng 0% dù có frame hiếm?</h3>
-                <p className="text-sm text-vcf-muted">Nếu Recall = 0%, có nghĩa là tập 5% frame bạn trích xuất được hoàn toàn không &quot;trúng&quot; frame nào chứa vật thể hiếm theo nhãn. Điều này có thể xảy ra khi ưu tiên đa dạng quá cao, các frame hiếm giống nhau bị coi là trùng và loại bớt. Lời khuyên: Hãy thử kéo <strong className="font-medium text-vcf-text">Ưu tiên khi chọn</strong> về phía &quot;Hiếm nhất&quot;, hoặc tăng ngân sách. Lưu ý: với bộ dữ liệu nhỏ (chỉ có vài chục frame hiếm), Recall dao động rất mạnh nên chưa thể kết luận chắc chắn.</p>
+                <h3 className="font-bold text-vcf-text mb-2">Vì sao Recall lại bằng 0% dù có frame đáng giá?</h3>
+                <p className="text-sm text-vcf-muted">Nếu Recall = 0%, có nghĩa là tập 5% frame bạn trích xuất được hoàn toàn không &quot;trúng&quot; frame nào chứa vật thể hiếm theo nhãn. Điều này có thể xảy ra khi ưu tiên đa dạng quá cao, các frame đáng giá giống nhau bị coi là trùng và loại bớt. Lời khuyên: Hãy thử kéo <strong className="font-medium text-vcf-text">Ưu tiên khi chọn</strong> về phía &quot;Hiếm nhất&quot;, hoặc tăng ngân sách. Lưu ý: với bộ dữ liệu nhỏ (chỉ có vài chục frame đáng giá), Recall dao động rất mạnh nên chưa thể kết luận chắc chắn.</p>
               </div>
               <div className="bg-vcf-surface p-5 rounded-vcf-card border border-vcf-border shadow-xs">
                 <h3 className="font-bold text-vcf-text mb-2">Vì sao Nhóm C (Khó nhìn bằng cảm biến) lại rất rộng?</h3>

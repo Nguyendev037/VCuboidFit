@@ -9,7 +9,7 @@ Tài liệu tham chiếu thuật ngữ; nhãn/tooltip thực tế lấy từ sou
 | Khái niệm | Tên hiển thị | Tooltip | Chi tiết |
 |---|---|---|---|
 | Hiếm do model ước lượng (`rRar`, `S`) | **Độ hiếm (ước lượng)** | Model tự đoán frame này lạ đến mức nào chỉ từ hình dạng point cloud, không nhìn nhãn. 100% = lạ nhất trong bộ dữ liệu. | Khoảng cách trung bình từ frame tới k frame giống nó nhất ở *các cảnh khác*, đổi sang hạng phần trăm. Không đọc nhãn — đây là thứ dùng để CHỌN. |
-| Hiếm theo nhãn (`is_rare`, tag `rare (cell)`) | **Hiếm thật (theo nhãn)** | Frame có ít nhất một vật thể thuộc nhóm rất ít gặp trong bộ dữ liệu (theo nhãn 3D có sẵn). Chỉ dùng để CHẤM xem model chọn đúng không. | Một "ô" = loại vật thể × khoảng cách (0–20, 20–40, >40 m) × số điểm LiDAR trên vật (≤5, 6–20, >20). Ô hiếm khi xuất hiện ở dưới τ = 2% số frame. Frame hiếm thật nếu chứa ≥ 1 ô hiếm. Ngưỡng τ chốt ở cổng G1. |
+| Hiếm theo nhãn (`is_rare`, tag `rare (cell)`) | **Hiếm thật (theo nhãn)** | Frame có ít nhất một vật thể thuộc nhóm rất ít gặp trong bộ dữ liệu (theo nhãn 3D có sẵn). Chỉ dùng để CHẤM xem model chọn đúng không. | Một "ô" = loại vật thể × khoảng cách (0–20, 20–40, >40 m) × số điểm LiDAR trên vật (≤5, 6–20, >20). Ô hiếm khi xuất hiện ở dưới τ = 2% số frame. Frame đáng giá (theo nhãn) nếu chứa ≥ 1 ô hiếm. Ngưỡng τ chốt ở cổng G1. |
 
 Thông điệp cho người dùng: **model chọn bằng "độ hiếm ước lượng"; chúng tôi kiểm tra bằng "hiếm thật theo nhãn".**
 Dataset không có nhãn ⇒ chỉ có độ hiếm ước lượng, các chỉ số Recall bị ẩn.
@@ -40,9 +40,9 @@ Dataset không có nhãn ⇒ chỉ có độ hiếm ước lượng, các chỉ 
 
 | Khoá | Tên hiển thị | Tooltip | Cách đọc |
 |---|---|---|---|
-| `recall` | **Tỉ lệ bắt được frame hiếm** | Trong tất cả frame hiếm thật của bộ dữ liệu, tập 5% đã chọn chứa được bao nhiêu phần trăm. | Chọn ngẫu nhiên 5% kỳ vọng ≈ 5%. Cao hơn nhiều là tốt. |
-| `nRecall` | **Tỉ lệ bắt được (so với mức tối đa có thể)** | Như trên nhưng so với số frame tối đa có thể chọn, vì ngân sách 5% có khi nhỏ hơn số frame hiếm. | 100% = mọi chỗ trong ngân sách đều là frame hiếm. |
-| `uplift` | **Gấp mấy lần chọn ngẫu nhiên** | Tập đã chọn bắt frame hiếm tốt gấp bao nhiêu lần chọn ngẫu nhiên. | 1× = không hơn ngẫu nhiên. |
+| `recall` | **Tỉ lệ bắt được frame đáng giá** | Trong tất cả frame đáng giá theo nhãn của bộ dữ liệu, tập 5% đã chọn chứa được bao nhiêu phần trăm. | Chọn ngẫu nhiên 5% kỳ vọng ≈ 5%. Cao hơn nhiều là tốt. |
+| `nRecall` | **Tỉ lệ bắt được (so với mức tối đa có thể)** | Như trên nhưng so với số frame tối đa có thể chọn, vì ngân sách 5% có khi nhỏ hơn số frame đáng giá. | 100% = mọi chỗ trong ngân sách đều là frame đáng giá. |
+| `uplift` | **Gấp mấy lần chọn ngẫu nhiên** | Tập đã chọn bắt frame đáng giá tốt gấp bao nhiêu lần chọn ngẫu nhiên. | 1× = không hơn ngẫu nhiên. |
 | `precision` | **Tỉ lệ frame đã chọn là hiếm thật** | Trong các frame đã chọn, bao nhiêu phần trăm là hiếm thật. | |
 | `sceneRecall` | **Số cảnh mưa/đêm được chạm tới** | Tỉ lệ cảnh mưa hoặc ban đêm có ít nhất một frame được chọn. | |
 | `coverage` | **Độ phủ các kiểu hiếm** | Bao nhiêu kiểu vật thể hiếm khác nhau có mặt trong tập đã chọn. | |
