@@ -1,6 +1,9 @@
 param(
   [Parameter(Mandatory = $true)][string]$Location,
-  [string]$Tag = ""
+  [string]$Tag = "",
+  # ACR Tasks (`az acr build`) is not offered in every region (e.g. malaysiawest has no
+  # registries/runs); the registry may live elsewhere, the app pulls cross-region.
+  [string]$AcrLocation = "japaneast"
 )
 
 $ErrorActionPreference = "Stop"
@@ -62,7 +65,7 @@ if (-not (Test-AzResource @("consumption", "budget", "show", "--budget-name", $b
 }
 
 if (-not (Test-AzResource @("acr", "show", "-n", $acr, "-g", $rg, "-o", "none"))) {
-  Invoke-Az @("acr", "create", "-n", $acr, "-g", $rg, "-l", $Location, "--sku", "Basic",
+  Invoke-Az @("acr", "create", "-n", $acr, "-g", $rg, "-l", $AcrLocation, "--sku", "Basic",
     "--admin-enabled", "false", "--tags", $tags, "-o", "none")
 }
 $acrId = (& az acr show -n $acr -g $rg --query id -o tsv).Trim()
