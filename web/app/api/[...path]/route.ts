@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /** Chỉ các tiền tố này được chuyển cho worker; mọi thứ khác 404 (upload/media/login có route riêng).
  *  `params-schema` = lược đồ theo máy khi chưa có job (plan 09 D1), chỉ GET. */
-const ALLOWED_PREFIXES = new Set(["datasets", "jobs", "params-schema"]);
+const ALLOWED_PREFIXES = new Set(["datasets", "jobs", "params-schema", "sessions", "health"]);
 /** Header của worker được trả về trình duyệt (không rò hop-by-hop, cookie…). */
 const FORWARD_HEADERS = ["content-type", "content-disposition", "cache-control", "etag", "last-modified"];
 
@@ -26,11 +26,16 @@ async function handle(req: Request, ctx: Ctx): Promise<Response> {
 
   const target = `/${path.map(encodeURIComponent).join("/")}${new URL(req.url).search}`;
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
-  const body = hasBody ? await req.text() : "";
+  const body = hasBody ? req.body : undefined;
   const headers: Record<string, string> = {};
-  if (body) headers["content-type"] = req.headers.get("content-type") ?? "application/json";
+  const sid = req.headers.get("cookie")?.match(/(?:^|;\s*)vcf_sid=([0-9a-f]{32})(?:;|$)/)?.[1];
+  if (sid) headers["x-vcf-session"] = sid;
+  for (const name of ["content-type", "authorization", "x-lease-id"]) {
+    const value = req.headers.get(name);
+    if (value) headers[name] = value;
+  }
 
-  const res = await workerFetch(target, { method: req.method, headers, body: body || undefined });
+  const res = await workerFetch(target, { method: req.method, headers, body });
 
   const out = new Headers();
   for (const h of FORWARD_HEADERS) {

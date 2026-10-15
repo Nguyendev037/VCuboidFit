@@ -1,3 +1,4 @@
+ "use client";
 import Link from "next/link";
 import { RotateCcw } from "lucide-react";
 import type { DashboardState } from './useDashboard';
@@ -23,6 +24,11 @@ export function DashboardHeader(state: Pick<
     jobId,
     t1Background,
   }=state;
+  async function endSession() {
+    if (!window.confirm("Xoá toàn bộ dữ liệu đã tải và kết quả của phiên này?")) return;
+    const res = await fetch("/api/sessions/current", { method: "DELETE" });
+    if (res.ok) window.location.assign("/dashboard");
+  }
   return (
     <header className="w-full bg-white border-b border-[#E2E8F0] px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs sticky top-0 z-40">
       <div className="flex items-center gap-6">
@@ -48,6 +54,11 @@ export function DashboardHeader(state: Pick<
 
       <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
         <Link href="/huong-dan" className="text-xs font-medium text-slate-600 hover:text-blue-700">Hướng dẫn</Link>
+        {process.env.NEXT_PUBLIC_VCF_SESSIONS === "1" && (
+          <button type="button" onClick={() => void endSession()} className="text-xs font-semibold text-rose-700 hover:text-rose-900">
+            Kết thúc phiên
+          </button>
+        )}
         {(jobId||dataset||items.length>0)&&(
           <button type="button" onClick={handleStartNew} className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />

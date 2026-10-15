@@ -30,6 +30,11 @@ export default function Home() {
 
       {/* 2. Nội dung 2 cột: Cột trái (Quy trình 3 bước / Kết quả) & Cột phải (Panel Tinh chỉnh) */}
       <main className="max-w-[1440px] mx-auto p-4 sm:p-6 md:p-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+        {process.env.NEXT_PUBLIC_VCF_SESSIONS === "1" && (
+          <p className="lg:col-span-12 text-xs text-slate-600">
+            Dữ liệu chỉ lưu trong phiên này và tự xoá khi kết thúc.
+          </p>
+        )}
         {/* ================= CỘT TRÁI (8 CỘT) ================= */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           <JobPicker {...state} />

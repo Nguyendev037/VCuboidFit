@@ -69,7 +69,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string; nam
       if ((await declaredTotal(id, name)) + total > maxUploadBytes()) {
         return errorResponse(413, "upload_too_large", "Tổng dung lượng upload vượt giới hạn cho phép.");
       }
-      await writeMeta(file, total);
+      const sid = req.headers.get("cookie")?.match(/(?:^|;\s*)vcf_sid=([0-9a-f]{32})(?:;|$)/)?.[1];
+      await writeMeta(file, total, sid);
     }
 
     const part = `${file}.part`;

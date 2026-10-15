@@ -47,8 +47,8 @@ export async function readMeta(file: string): Promise<{ size: number } | null> {
   }
 }
 
-export const writeMeta = (file: string, size: number) =>
-  fs.writeFile(file + META_SUFFIX, JSON.stringify({ size }), "utf8");
+export const writeMeta = (file: string, size: number, sessionId?: string) =>
+  fs.writeFile(file + META_SUFFIX, JSON.stringify({ size, ...(sessionId ? { sessionId } : {}) }), "utf8");
 
 export async function fileSize(file: string): Promise<number> {
   try {

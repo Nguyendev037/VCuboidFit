@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: process.env.VCF_STANDALONE === "1" ? "standalone" : undefined,
   // Next 16 chặn HMR/chunk dev khi mở bằng 127.0.0.1 (khác "localhost") -> trang không hydrate.
   allowedDevOrigins: ["127.0.0.1"],
   // KHÔNG bật cacheComponents / partialPrefetching (mặc định của create-next-app):
