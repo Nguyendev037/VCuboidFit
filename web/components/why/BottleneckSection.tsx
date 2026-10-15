@@ -39,27 +39,72 @@ export function BottleneckSection({
               />
             </div>
           </div>
-
-          <div className="flex items-start gap-4 rounded-xl border border-sky-200 bg-sky-50/60 p-6">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-600 text-white">
-              <Compass className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded">
-                  {copy.bottleneckBadge}
-                </span>
-                <h3 className="font-semibold text-xl leading-snug text-slate-900">Lộ trình Tầng 1: PointPillars</h3>
-              </div>
-              <p className="mt-2 text-base text-slate-700 leading-7 max-w-3xl">
-                {copy.bottleneck}
-              </p>
-            </div>
-          </div>
         </div>
       ) : (
         <EmptyState message={benchExists ? copy.unavailable : copy.missing} />
       )}
+
+      <Tier1Card />
     </section>
+  );
+}
+
+function Tier1Card() {
+  const latest = copy.tier1Runs[copy.tier1Runs.length - 1];
+  return (
+    <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50/60 p-6">
+      <div className="flex items-start gap-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-600 text-white">
+          <Compass className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded">{copy.bottleneckBadge}</span>
+            <h3 className="font-semibold text-xl leading-snug text-slate-900">{copy.tier1Title}</h3>
+          </div>
+          <p className="mt-2 text-base text-slate-700 leading-7 max-w-3xl">{copy.bottleneck}</p>
+          <p className="mt-1 font-data text-xs text-slate-500">{copy.tier1Scope}</p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        {copy.tier1Runs.map(run => (
+          <div
+            key={run.id}
+            className={`rounded-lg border p-4 ${run.id === latest.id ? "border-sky-400 bg-white" : "border-slate-200 bg-white/70"}`}
+          >
+            <p className="font-mono text-xs font-bold text-slate-500">{run.id}</p>
+            <p className="mt-1 text-sm text-slate-700">{run.label}</p>
+            <div className="mt-3 flex gap-6 tabular-nums">
+              <div><span className="block text-xs text-slate-500">mAP</span><span className="text-2xl font-semibold text-slate-900">{run.map}</span></div>
+              <div><span className="block text-xs text-slate-500">NDS</span><span className="text-2xl font-semibold text-slate-900">{run.nds}</span></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h4 className="text-sm font-semibold text-slate-900">{copy.tier1ClassTitle}</h4>
+          <span className="font-data text-xs text-slate-500">{copy.tier1Speed}</span>
+        </div>
+        <ul className="mt-3 space-y-2">
+          {copy.tier1Classes.map(item => {
+            const ap = Number(item.ap.replace(",", "."));
+            return (
+              <li key={item.name} className="grid grid-cols-[7.5rem_1fr_3.5rem] items-center gap-3 text-sm">
+                <span className="text-slate-700">{item.name}</span>
+                <span className="h-2 rounded-full bg-slate-200 overflow-hidden" aria-hidden="true">
+                  <span className="block h-full rounded-full bg-sky-600" style={{ width: `${Math.max(1, ap * 100)}%` }} />
+                </span>
+                <span className="text-right tabular-nums text-slate-900">{item.ap}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <p className="mt-6 text-sm text-slate-600 leading-6 max-w-3xl">{copy.tier1Note}</p>
+    </div>
   );
 }

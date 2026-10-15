@@ -3,7 +3,7 @@ import path from "node:path";
 
 export const BENCH_METHODS = ["M0", "M1", "M2", "M3"] as const;
 export type BenchMethodId = typeof BENCH_METHODS[number];
-export type BenchMethod = { name: string; iy: number; ci_lo: number; ci_hi: number; status: "ok" | "chưa đo" };
+export type BenchMethod = { name: string; iy: number; ci_lo: number; ci_hi: number; status: "ok" | "chưa đo"; ny?: number };
 export type DemoBench = {
   schema: "vcf-demo-bench-v1";
   source: { run_id: string; prereg_sha256?: string; report_sha256?: string };

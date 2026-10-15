@@ -3,6 +3,9 @@ import { BENCH_METHODS, type DemoBench } from "@/lib/server/demoBench";
 import { EmptyState } from "@/components/ui/DataState";
 import { whyCopy as copy } from "./copy";
 
+/** Run công bố trong pitch; ghi chú phạm vi chỉ đúng cho run này. */
+const PITCH_RUN_ID = "20261013-192329-49de1480";
+
 export function WhyBenchmark({
   bench,
   figureUrl,
@@ -27,6 +30,7 @@ export function WhyBenchmark({
   const isShown = bench.primary.conclusion === "shown";
   const mini = /mini/i.test(bench.label);
   const sourceLabel = mini && !/minh ho[ạa]/i.test(bench.label) ? `${bench.label} · minh hoạ` : bench.label;
+  const hasNy = BENCH_METHODS.some((id) => typeof bench.methods[id]?.ny === "number");
 
   return (
     <section id="bang-chung" aria-labelledby="evidence-title" className="hud-card p-6 sm:p-10">
@@ -73,9 +77,8 @@ export function WhyBenchmark({
                       {measured ? "Đã đo" : "Chưa đo"}
                     </span>
                   </div>
-                  <h4 className="font-semibold text-xl leading-snug text-slate-900 leading-snug">
-                    {id}{method ? ` · ${method.name}` : ""}
-                  </h4>
+                  <h4 className="font-semibold text-xl leading-snug text-slate-900">{copy.methodLabels[id]}</h4>
+                  <p className="mt-1 font-mono text-xs text-slate-500">{id}{method ? ` · ${method.name}` : ""}</p>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-100">
@@ -86,6 +89,9 @@ export function WhyBenchmark({
                   <div className="mt-1 font-mono text-xs text-slate-600 tabular-nums">
                     CI95: {measured ? `[${method.ci_lo.toFixed(3)}, ${method.ci_hi.toFixed(3)}]` : "—"}
                   </div>
+                  {measured && typeof method.ny === "number" && (
+                    <div className="mt-1 font-mono text-xs text-slate-600 tabular-nums">NY: {method.ny.toFixed(3)}</div>
+                  )}
                 </div>
               </div>
             );
@@ -102,6 +108,7 @@ export function WhyBenchmark({
               <th scope="col" className="p-3">Phương pháp</th>
               <th scope="col" className="p-3">IY</th>
               <th scope="col" className="p-3">CI95</th>
+              {hasNy && <th scope="col" className="p-3">NY</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -111,7 +118,8 @@ export function WhyBenchmark({
               return (
                 <tr key={id} className="hover:bg-slate-50/50">
                   <th scope="row" className="p-3 font-semibold text-slate-800">
-                    {id}{method ? ` · ${method.name}` : ""}
+                    {copy.methodLabels[id]}
+                    <span className="block font-mono text-xs font-normal text-slate-500">{id}{method ? ` · ${method.name}` : ""}</span>
                   </th>
                   <td className="p-3 text-slate-900">
                     {measured ? method.iy.toFixed(3) : "Chưa đo"}
@@ -119,6 +127,11 @@ export function WhyBenchmark({
                   <td className="p-3 text-slate-600 font-mono">
                     {measured ? `[${method.ci_lo.toFixed(3)}, ${method.ci_hi.toFixed(3)}]` : "—"}
                   </td>
+                  {hasNy && (
+                    <td className="p-3 text-slate-900">
+                      {measured && typeof method.ny === "number" ? method.ny.toFixed(3) : "—"}
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -130,6 +143,21 @@ export function WhyBenchmark({
       <p className="mt-4 text-sm leading-6 text-slate-600 break-words">
         Nguồn: {sourceLabel} · Run: {bench.source.run_id} · Pool: {bench.pool} frame · {bench.scenes} scene · B = {bench.budget_B} · Capture: {bench.capture_primary}.
       </p>
+      {bench.source.run_id === PITCH_RUN_ID && (
+        <p className="mt-2 text-sm leading-6 text-slate-600">{copy.pitchRunNote}</p>
+      )}
+
+      <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50/60 p-5">
+        <h3 className="text-base font-semibold text-slate-900">{copy.howToRead.title}</h3>
+        <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+          {copy.howToRead.items.map((item) => (
+            <div key={item.term}>
+              <dt className="font-mono text-sm font-bold text-sky-800">{item.term}</dt>
+              <dd className="mt-0.5 text-sm leading-6 text-slate-700">{item.text}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
       {/* Hình minh hoạ thực nghiệm nếu có */}
       {figureUrl && (
