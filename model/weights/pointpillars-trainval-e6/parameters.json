@@ -1,0 +1,20 @@
+{
+  "run_id": "trainmodel-full-20261014",
+  "model_type": "PointPillars",
+  "dataset_format": "vcf-trainval-full-v1",
+  "dataset_manifest_sha256": "193a5465792a61a5c7d6d652928cc126248129c3cc5e1e7849dee4faea1717c8",
+  "source_hash": "25a8e7242c4fa75095559c981c2d7ae36fc17dffbb3b6c8ca4c9efe46b069ba8",
+  "code_sha256": "b9bd131a44fef6b5d72df0b843fd0aad610033c7655b83e0d86d455973f266f0",
+  "index_sha256": "b12804dc645277fa6e354b6b0f32c59baa5a6199983024bf275dca9ecf13884f",
+  "ckpt_sha256": "b581e13a67bd8aff7d9dc88d36fdfb08963300798cb41b39bf3e8a9a6f4a63b0",
+  "epochs": 6,
+  "batch": 8,
+  "workers": 8,
+  "sweeps": 10,
+  "gpu": "NVIDIA A100-SXM4-80GB, 81920 MiB, 580.82.07",
+  "n_seed_frames": 8182,
+  "post_train_eval": "init-ckpt (b\u1ecf qua train)",
+  "eval_note": "post_train_eval ghi nh\u1eadn trung th\u1ef1c theo nuScenes devkit subset (SPEC-P01 \u00a73); kh\u00f4ng tuy\u00ean b\u1ed1 full-val mAP/NDS",
+  "created_utc": "2026-10-15T01:14:22.245582+00:00",
+  "files_hashed": 23
+}

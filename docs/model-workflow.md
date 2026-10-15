@@ -88,8 +88,64 @@ Mặc định rare run dùng pool T, reference V; mini in-sample minh hoạ có 
 
 Kiểm tham số bằng `--help`; không copy flags của CLI khác. Rare CLI exit 0 = hoàn tất; 2 = thiếu đầu vào/contract/crops lỗi thời; 3 = cấu hình sai; 1 = lỗi khác. Caller đọc log và dừng, không tự sửa freeze/prereg để chạy tiếp.
 
-## 7. Kết quả và tái lập
+## 7. CLI đóng gói và lập chỉ mục gói lớn (`trainval_full.py`)
+
+Kịch bản `model/scripts/trainval_full.py` phục vụ đóng gói và kiểm tra toàn vẹn tập dữ liệu train/eval lớn (chuẩn bị huấn luyện A100 qua notebook `TrainModel.ipynb`):
+- Tập hợp dữ liệu: 8.182 frames TRAIN (thuộc 205 scenes chính thức của nuScenes có sẵn trên máy dev, không phải toàn bộ 700 scenes) và 602 frames VAL giữ lại (từ 15 scenes official VAL).
+- Sweeps: 10 sweeps LiDAR (`MAX_SWEEPS=10`), yêu cầu đóng kín toàn bộ chuỗi predecessor sweeps thực tế.
+- Dung lượng: ~61,896 GB dữ liệu và metadata (59,288 GB LiDAR nhị phân và các bảng metadata).
+- Ranh giới kiểm định: Các tập benchmark cũ V và P không được dùng làm holdout tập này; tập T cũ của benchmark `pitch-v2` hoàn toàn bị loại trừ (`excluded_T_scenes`), cấm chạm. Việc chạy gói lớn này chỉ phục vụ chuẩn bị dữ liệu, **không tự động coi là chất lượng model đã được cải thiện**.
+
+### Các lệnh CLI chính xác:
+```powershell
+# Đóng gói dữ liệu thành các phần ZIP độc lập (mặc định <= 2GB/phần)
+python model/scripts/trainval_full.py pack --data-root <D> --pool-index <I> --out <O> [--part-bytes 2000000000] [--dry-run]
+
+# Lập chỉ mục Parquet (EXP/index.parquet với cột S/T, source official_train/heldout_val)
+python model/scripts/trainval_full.py index --data-root <D> --manifest <M> --exp <E>
+
+# Xác minh tính toàn vẹn và độ bao phủ của gói dữ liệu đã giải nén
+python model/scripts/trainval_full.py verify --data-root <D> --manifest <M>
+```
+
+### Bảng mã thoát (Exit codes contract):
+- `0`: Thành công hợp lệ (valid).
+- `2`: Tham số hoặc tệp đầu vào bị thiếu/không hợp lệ (missing/invalid argument or file).
+- `3`: Vi phạm ranh giới phân vùng, rò rỉ dữ liệu (VAL vào train, T cũ vào eval), sai lệch checksum, hoặc thiếu dependency sweeps (split/leakage/checksum/coverage gate).
+- `1`: Lỗi bất thường ngoài dự kiến (unexpected fault).
+
+Caller bắt buộc phải dừng ngay lập tức khi gặp mã thoát khác 0 và giữ nguyên logs; không có cờ `--force` để bỏ qua kiểm tra toàn vẹn.
+
+## 8. Kết quả và tái lập
 
 Engine rare lưu `engines/rare_v24/<selectionId>/{rare_objects.parquet,rare_frames.parquet,config_used.json}` cùng kết quả theo lựa chọn; adapter service đưa vào API/frame/review. Legacy lưu CSV/JSON/Parquet theo job và selection. Mọi bảng đi qua `c4.contracts.read_table/write_table` để kiểm schema/manifest.
 
 Để tái lập cần dữ liệu nguồn, code SHA, cấu hình/SHA, seed/trọng số, split và prereg nếu là benchmark. Clone code không tự khôi phục `model/workspace/` của máy tác giả. Xem [web](web.md), [run-local](run-local.md), [Colab](colab-dev-setup.md) và [GPU thuê](gpu-rental.md).
+
+
+## 9. Trọng số PointPillars trainval epoch 6 (TrainModel 2026-10-15)
+
+Thư mục [`model/weights/pointpillars-trainval-e6/`](../model/weights/pointpillars-trainval-e6/) (checkpoint qua Git LFS; `SHA256SUMS.txt` phủ mọi file):
+
+| File | Nội dung |
+|---|---|
+| `seed_latest.pth` | Checkpoint OpenPCDet epoch 6 (73,2 MB), SHA256 `b581e13a67bd8aff7d9dc88d36fdfb08963300798cb41b39bf3e8a9a6f4a63b0` |
+| `pp_seed.yaml` | Config đầy đủ (`cbgs_pp_multihead`, 10 sweeps, không `gt_sampling`); `DATA_PATH` trỏ tới `/content/...` của Colab — đổi khi dùng máy khác |
+| `train_config.yaml` | version `v1.0-trainval`, 8.182 frame, CBGS bật, OpenPCDet `233f8498`, determinism seed 0 |
+| `run_identity.json` / `parameters.json` | Danh tính lượt chạy: manifest gói `193a5465…`, `source_hash` `25a8e724…`, index `b12804dc…`, `epochs_trained=6` |
+| `seed_tokens.txt` / `index.parquet` | 8.182 token train, chỉ mục S/T (T = 602 frame VAL giữ ngoài) |
+| `train.log` | Log huấn luyện đầy đủ |
+
+Đã train thế nào:
+1. **Dữ liệu:** 205 scene complete official TRAIN (8.182 keyframe, 10 sweeps, ~62 GB LiDAR) đóng gói bằng `trainval_full.py pack` thành 32 part ZIP ≤ 2 GB, upload `MyDrive/datatest/trainval_pp_v2/`. Holdout: 15 scene official VAL ngoài pool cũ (602 frame); benchmark T lịch sử không dùng.
+2. **Máy:** Colab A100-SXM4-80GB + High-RAM, notebook [`TrainModel.ipynb`](../model/notebooks/TrainModel.ipynb), torch 2.11 + cu130, spconv 2.3.8, numpy 1.26.4.
+3. **Huấn luyện từ đầu** (khởi tạo ngẫu nhiên): batch 8, 8 workers, lịch one-cycle dự kiến 20 epoch (LR đỉnh 1e-3). Bắt đầu 2026-10-14 19:17Z.
+4. **Dừng sớm** ở 01:12Z 2026-10-15 sau 6 epoch (~5,9 giờ train) để kịp hạn 08:00 giờ VN (người dùng chọn giảm epoch). Checkpoint epoch 6 được xuất bản bằng ô 8b.
+
+Loss trung bình theo epoch: 1,38 → 0,987 → 0,861 → 0,767 → 0,705 → **0,659** (epoch 6, LR 8,7e-4).
+
+Giới hạn — đọc trước khi dùng:
+- LR one-cycle còn ở gần đỉnh khi dừng ⇒ model **chưa hội tụ**; kém hơn bản chạy đủ 20 epoch.
+- **Chưa đánh giá** trên 602 frame VAL (không có mAP/NDS hay recall). `post_train_eval` ghi `init-ckpt (bỏ qua train)` là cách đóng gói checkpoint, không có nghĩa là không train.
+- Không thay seed mặc định của Colab/`dev_up.ps1` (vẫn là mini-e80); muốn dùng cho Tầng 1 phải dựng bố cục `index.parquet` + `t1/cfg/pp_seed.yaml` + `t1/ckpt/seed_latest.pth` cho dataset của mình.
+- Muốn train tiếp đủ 20 epoch: chạy lại TrainModel với cùng `RUN_ID` khi checkpoint epoch 5–6 còn trên Drive (`run_identity.json` trên Drive đã thêm `epochs_trained`, phải xoá khoá này hoặc đổi `RUN_ID` mới).

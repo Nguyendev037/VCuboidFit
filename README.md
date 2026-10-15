@@ -65,6 +65,7 @@ npm run dev
 |---|---|
 | Code, tài liệu, ảnh hero, JSON benchmark và 3 figure | Dataset nuScenes và ZIP upload — [dataset](dataset/README.md) |
 | Manifest tham khảo và CLI `vcf-pack` | Manifest/ZIP mới do bạn đóng gói; không dùng checksum của bộ ZIP khác |
+| 1 checkpoint PointPillars trainval 10 sweeps, epoch 6/20 (dừng sớm, chưa đánh giá VAL) qua Git LFS (~73 MB) — [model-workflow §9](docs/model-workflow.md#9-trọng-số-pointpillars-trainval-epoch-6-trainmodel-2026-10-15) | Đổi `DATA_PATH` trong `pp_seed.yaml` theo dataset của bạn |
 | 1 checkpoint PointPillars mini 80 epoch qua Git LFS (~70 MB) | Seed local có `index.parquet`, `t1/cfg/pp_seed.yaml`, `t1/ckpt/seed_latest.pth`; clone không tự có bố cục này |
 | Fixture và media mô phỏng trang chủ tại `web/public/demo/showcase/` (~3,3 MB) | Media của các màn mock khác tại `web/public/mock-media/` bị gitignore; dựng khi cần theo [web.md](docs/web.md#media-mẫu-sau-clone) |
 | Notebook/cấu hình | Trọng số OpenCLIP/YOLO/DINOv2 khi luồng sử dụng cần — [getting-started](docs/getting-started.md) |

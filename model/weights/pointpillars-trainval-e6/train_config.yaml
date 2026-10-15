@@ -1,0 +1,30 @@
+balanced_resampling: true
+base_cfg: cfgs/nuscenes_models/cbgs_pp_multihead.yaml
+batch: 8
+ckpt: /content/vcf_trainmodel/exp/t1/ckpt/seed_latest.pth
+class_counts:
+  barrier: 27822
+  bicycle: 2755
+  bus: 4092
+  car: 78633
+  construction_vehicle: 2566
+  motorcycle: 2984
+  pedestrian: 67955
+  traffic_cone: 18510
+  trailer: 2955
+  truck: 14519
+determinism:
+  CUBLAS_WORKSPACE_CONFIG: :4096:8
+  PYTHONHASHSEED: '0'
+  cudnn_benchmark: false
+  cudnn_deterministic: true
+  seed: 0
+epochs: 20
+gt_sampling: false
+missing_classes: []
+n_seed: 8182
+pcdet_commit: 233f849829b6ac19afb8af8837a0246890908755
+post_train_eval: "init-ckpt (b\u1ECF qua train)"
+run_tag: seed_3a14a033
+sweeps: 10
+version: v1.0-trainval

@@ -1,0 +1,9 @@
+{
+  "run_id": "trainmodel-full-20261014",
+  "dataset_manifest_sha256": "193a5465792a61a5c7d6d652928cc126248129c3cc5e1e7849dee4faea1717c8",
+  "source_hash": "25a8e7242c4fa75095559c981c2d7ae36fc17dffbb3b6c8ca4c9efe46b069ba8",
+  "sweeps": 10,
+  "epochs": 20,
+  "epochs_trained": 6,
+  "note": "dừng sớm theo phương án A (hạn 08:00 VN); LR one-cycle chưa giảm hết, chưa đánh giá VAL"
+}
