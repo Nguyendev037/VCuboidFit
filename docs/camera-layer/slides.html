@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VCuboidFIT – Tầng camera và điểm S</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+body{margin:0;background:#E9ECEF;font-family:'Be Vietnam Pro',Arial,sans-serif;padding:24px 16px}
+.wrap{max-width:1280px;margin:0 auto;aspect-ratio:16/9;position:relative;overflow:hidden;container-type:inline-size;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.frame{position:absolute;top:0;left:0;width:1920px;height:1080px;transform-origin:0 0;}
+.slide{position:relative;box-sizing:border-box;width:1920px;height:1080px;overflow:hidden}
+.slide *{margin:0;box-sizing:border-box}
+.slide table{border-collapse:collapse;width:100%}
+.slide th,.slide td{text-align:left;padding:10px 14px;border-bottom:1px solid #D6DCE4;vertical-align:top}
+.slide th{background:#14213D;color:#F4F6F8}
+.note{max-width:1280px;margin:12px auto 40px;font-size:15px;line-height:1.5;color:#33404F}
+@media print{body{background:#fff;padding:0}.wrap{box-shadow:none;page-break-after:always}}
+</style></head><body>
+<div class="wrap"><div class="frame"><section class="slide" id="cover" data-transition="fade" style="background:#14213D;color:#F4F6F8;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:40px">
+<p style="font-size:28px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:#7FB2E5">VCuboidFIT · engine rare_v24</p>
+<h1 style="font-size:120px;font-weight:700;line-height:1.05;color:#F4F6F8">Tầng camera<br>và điểm S</h1>
+<p style="font-size:40px;line-height:1.4;color:#BFD0E6;width:1300px">OpenCV và OpenCLIP đo gì trên ảnh, điểm S chấm frame thế nào, và vì sao mỗi con số trong công thức có giá trị như vậy.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1200px;font-size:24px;color:#8FA3BF">Dữ liệu nuScenes · LiDAR_TOP + 6 camera · Không dùng VLM/LLM · 15/10/2026</p>
+
+</section>
+</div></div>
+<p class="note"><b>1/14 · Ghi chú người nói:</b> Bộ slide gồm hai phần: phần 1 giải thích hai công cụ xử lý ảnh (OpenCV, OpenCLIP) và 13 đặc trưng; phần 2 đi qua thuật toán điểm S và lý do của từng con số. Mọi công thức lấy từ code đang chạy trong model/worker/c4/rare và c4/context.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="tools" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Phần 1 · Hai công cụ đọc ảnh</p>
+<h2 style="font-size:72px;font-weight:700;line-height:1.1">OpenCV đo pixel, OpenCLIP hiểu nội dung</h2>
+<div style="display:flex;gap:40px;flex:1">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFFFF;padding:48px;border:1px solid #D6DCE4;border-radius:20px">
+<p style="font-size:28px;font-weight:600;color:#0B5CAD">OpenCV · CPU</p>
+<h3 style="font-size:44px;font-weight:700;line-height:1.2">Ảnh sáng, chói, mờ đến đâu?</h3>
+<p style="font-size:32px;line-height:1.45;color:#4A5568">Phép tính trực tiếp trên giá trị pixel. Không học máy, nhanh, mỗi con số giải thích được bằng công thức.</p>
+<p style="font-size:28px;color:#14213D"><b>Ra:</b> 13 đặc trưng → 4 cờ chất lượng</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:20px;background:#FFFFFF;padding:48px;border:1px solid #D6DCE4;border-radius:20px">
+<p style="font-size:28px;font-weight:600;color:#C2611A">OpenCLIP · GPU một lần, rồi cache</p>
+<h3 style="font-size:44px;font-weight:700;line-height:1.2">Ảnh trông giống câu mô tả nào?</h3>
+<p style="font-size:32px;line-height:1.45;color:#4A5568">Mô hình ảnh–ngôn ngữ đã học sẵn. So ảnh với các câu mô tả để đoán bối cảnh và khái niệm, không cần huấn luyện lại.</p>
+<p style="font-size:28px;color:#14213D"><b>Ra:</b> 4 trục bối cảnh + 12 khái niệm VRU</p>
+</div>
+</div>
+
+</section>
+</div></div>
+<p class="note"><b>2/14 · Ghi chú người nói:</b> Hai công cụ bổ sung cho nhau: OpenCV trả lời câu hỏi vật lý về ảnh (độ sáng, bão hoà, nhiễu), OpenCLIP trả lời câu hỏi ngữ nghĩa (đêm hay ngày, mưa hay khô, có xe lăn không). Ở bước ghép, hai bên "bỏ phiếu": cùng đồng ý thì gắn thẻ, mâu thuẫn thì đưa người duyệt.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="opencv" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Định nghĩa · OpenCV</p>
+<h2 style="font-size:72px;font-weight:700;line-height:1.1">OpenCV là thư viện xử lý ảnh mã nguồn mở</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<h3 style="font-size:40px;font-weight:600">Là gì</h3>
+<p style="font-size:32px;line-height:1.45;color:#4A5568">Open Source Computer Vision Library: bộ hàm chuẩn để đọc ảnh, đổi không gian màu, lọc, tính histogram, tìm vùng liên thông. Mọi kết quả là phép toán xác định trên pixel.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<h3 style="font-size:40px;font-weight:600">Dùng trong VCuboidFIT</h3>
+<ul style="font-size:32px;line-height:1.45;color:#4A5568">
+<li>Đọc ảnh ở ½ độ phân giải, co về 448 × 252</li>
+<li>Tính 13 đặc trưng chất lượng mỗi ảnh</li>
+<li>Chạy CPU, đa luồng, không cần GPU</li>
+<li>Ảnh hỏng → cờ IMG_UNREADABLE, đưa vào review</li>
+</ul>
+</div>
+</div>
+<div style="background:#E6EEF8;border-left:6px solid #0B5CAD;padding:28px 36px;border-radius:12px">
+<p style="font-size:30px;line-height:1.4"><b>Điểm mạnh:</b> giải thích được từng con số. <b>Giới hạn:</b> không biết nội dung ảnh, ví dụ không phân biệt được đèn đường với mặt trời.</p>
+</div>
+
+</section>
+</div></div>
+<p class="note"><b>3/14 · Ghi chú người nói:</b> OpenCV là thư viện thị giác máy tính mã nguồn mở phổ biến nhất. Trong dự án, tầng C1 chỉ sinh đặc trưng, không chứa ngưỡng; ngưỡng được fit ở tầng C3 trên tập V.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="openclip" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#C2611A">Định nghĩa · OpenCLIP</p>
+<h2 style="font-size:72px;font-weight:700;line-height:1.1">OpenCLIP đặt ảnh và câu chữ vào cùng một không gian</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
+<div style="display:flex;flex-direction:column;gap:14px">
+<h3 style="font-size:40px;font-weight:600">Là gì</h3>
+<p style="font-size:30px;line-height:1.45;color:#4A5568">Bản mã nguồn mở của CLIP (Contrastive Language–Image Pre-training). Mô hình đã học trên hàng trăm triệu cặp ảnh–chú thích, biến ảnh và câu thành vector 512 chiều; ảnh và câu cùng nghĩa thì vector gần nhau.</p>
+<p style="font-size:30px;line-height:1.45;color:#4A5568">Dự án dùng <b>ViT-B/16 (openai)</b>, không huấn luyện lại. OpenCLIP <b>không sinh chữ</b>, nên không phải VLM.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:14px">
+<h3 style="font-size:40px;font-weight:600">Zero-shot hoạt động thế nào</h3>
+<ul style="font-size:30px;line-height:1.45;color:#4A5568">
+<li>Mỗi lớp có 3 câu mô tả, lấy trung bình</li>
+<li>Đo cosine giữa ảnh và từng lớp</li>
+<li>Softmax riêng từng trục ra xác suất</li>
+</ul>
+<p style="font-family:'JetBrains Mono', monospace;font-size:26px;background:#FBEFE4;padding:20px 24px;border-radius:12px">P(c) = softmax( 100 · cos(ảnh, câu_c) )</p>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.4"><b>4 trục:</b> illum (ngày/chạng vạng/đêm) · glare (không/đèn pha/mặt trời) · lens (sạch/giọt nước/mờ) · weather (khô/mưa/sương). <b>12 khái niệm</b> chấm trên ảnh cắt quanh vật: xe lăn, xe đẩy, trẻ em, người nằm…</p>
+
+</section>
+</div></div>
+<p class="note"><b>4/14 · Ghi chú người nói:</b> Ví dụ câu mô tả trục illum: "a road photo taken in bright daylight", "a twilight street scene from a car camera", "a dark night street scene lit by street lamps". Embedding ảnh tính một lần trên GPU rồi cache trong clip_img.npy; các bước sau chạy CPU.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="features" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:80px 128px;display:flex;flex-direction:column;gap:24px">
+<h2 style="font-size:56px;font-weight:700;line-height:1.1">13 đặc trưng OpenCV trên mỗi ảnh</h2>
+<table style="font-size:24px;color:#14213D">
+<tr><th style="width:5%">#</th><th style="width:20%">Tên trong code</th><th style="width:13%">Nhóm</th><th style="width:40%">Ý nghĩa thực tế</th><th style="width:22%">Cờ sử dụng</th></tr>
+<tr><td>1</td><td>luma_mean</td><td>Độ sáng</td><td>Độ sáng xám trung bình toàn ảnh</td><td>— (chỉ ghi nhận)</td></tr>
+<tr style="background:#EEF2F7"><td>2</td><td>v_mean</td><td>Độ sáng</td><td>Độ sáng trung bình kênh V</td><td>NIGHT_CV</td></tr>
+<tr><td>3</td><td>v_p5</td><td>Độ sáng</td><td>Độ sáng của 5 % pixel tối nhất</td><td>VEIL_CV (qua veil)</td></tr>
+<tr style="background:#EEF2F7"><td>4</td><td>v_p95</td><td>Độ sáng</td><td>Độ sáng của 5 % pixel sáng nhất</td><td>VEIL_CV (qua veil)</td></tr>
+<tr><td>5</td><td>sat_frac</td><td>Chói</td><td>Tỉ lệ diện tích cháy sáng (V ≥ 250)</td><td>GLARE_CV</td></tr>
+<tr style="background:#EEF2F7"><td>6</td><td>blob_max_frac</td><td>Chói</td><td>Diện tích mảng chói liền lớn nhất</td><td>GLARE_CV</td></tr>
+<tr><td>7</td><td>blob_count</td><td>Chói</td><td>Số mảng chói riêng lẻ (≥ 20 px)</td><td>— (chỉ ghi nhận)</td></tr>
+<tr style="background:#EEF2F7"><td>8</td><td>tile_range</td><td>Chói</td><td>Chênh sáng lớn nhất giữa 16 ô lưới 4 × 4</td><td>GLARE_CV</td></tr>
+<tr><td>9</td><td>veil</td><td>Màn mờ</td><td>v_p5 / v_p95: sương mù, màng nước, loá phủ</td><td>VEIL_CV</td></tr>
+<tr style="background:#EEF2F7"><td>10</td><td>noise_sigma</td><td>Độ nét</td><td>Mức nhiễu hạt cảm biến (Immerkær)</td><td>BLUR_CV (gián tiếp)</td></tr>
+<tr><td>11</td><td>lap_var_raw</td><td>Độ nét</td><td>Phương sai Laplacian thô (độ sắc cạnh)</td><td>— (chỉ ghi nhận)</td></tr>
+<tr style="background:#EEF2F7"><td>12</td><td>lap_var_dn</td><td>Độ nét</td><td>Phương sai Laplacian sau khử nhiễu</td><td>BLUR_CV (gián tiếp)</td></tr>
+<tr><td>13</td><td>sharp_ratio</td><td>Độ nét</td><td>Độ nét thật = lap_var_dn chia cho nhiễu</td><td>BLUR_CV</td></tr>
+</table>
+
+</section>
+</div></div>
+<p class="note"><b>5/14 · Ghi chú người nói:</b> Cột "Cờ sử dụng" đã đối chiếu với code c4/context/fuse.py. Ba chỗ khác bảng nháp: v_p95 không bật NIGHT_CV mà đi vào veil = v_p5/v_p95 (VEIL_CV); blob_count không dùng trong luật GLARE_CV (luật dùng sat_frac, blob_max_frac, tile_range); noise_sigma và lap_var_dn tác động gián tiếp qua sharp_ratio. sharp_ratio quan trọng vì ảnh đêm nhiều nhiễu có phương sai Laplacian cao dù thực tế mờ, nên phải chia cho nhiễu.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="flags" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Từ đặc trưng đến cờ</p>
+<h2 style="font-size:72px;font-weight:700;line-height:1.1">4 cờ, mọi ngưỡng là phân vị học trên tập V</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:36px;font-weight:700;color:#0B5CAD">NIGHT_CV</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">v_mean thấp hơn P95 của v_mean trên các frame V có mặt trời dưới −6°</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:36px;font-weight:700;color:#0B5CAD">GLARE_CV</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">sat_frac ≥ P97,5 và (blob_max_frac ≥ P97,5 hoặc tile_range ≥ P97,5)</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:36px;font-weight:700;color:#0B5CAD">BLUR_CV</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">sharp_ratio dưới P2,5: nét kém nhất 2,5 % của V</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:16px;padding:32px 36px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:36px;font-weight:700;color:#0B5CAD">VEIL_CV</h3>
+<p style="font-size:28px;line-height:1.4;color:#4A5568">veil ≥ P97,5: ảnh bị phủ mờ nhất 2,5 % của V</p>
+</div>
+</div>
+<p style="font-size:30px;line-height:1.4"><b>Vì sao dùng phân vị, không dùng ngưỡng cố định:</b> mỗi bộ camera có độ sáng, nhiễu khác nhau. Phân vị trên V nghĩa là “bất thường so với chính dữ liệu này”, tự thích ứng khi đổi dataset.</p>
+
+</section>
+</div></div>
+<p class="note"><b>6/14 · Ghi chú người nói:</b> P97,5 và P2,5 nghĩa là chỉ 2,5 % ảnh cực đoan nhất của V bật cờ. Ngưỡng lưu trong context_thresholds_v1.json kèm SHA, máy sinh, cấm sửa tay. Hàm fit chỉ nhận split V; frame ngoài V báo lỗi LEAK_T.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="s-overview" data-transition="fade" style="background:#14213D;color:#F4F6F8;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#7FB2E5">Phần 2 · Thuật toán điểm S</p>
+<h2 style="font-size:72px;font-weight:700;line-height:1.1;color:#F4F6F8">Chấm vật, gộp lên frame, xếp hạng, rồi chọn lô</h2>
+<div style="display:flex;gap:24px;align-items:stretch">
+<div style="flex:1;background:#1F3157;border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:28px;font-weight:700;color:#7FB2E5">1 · Vật</p>
+<p style="font-size:28px;line-height:1.4;color:#D5DFEE">Mỗi vật LiDAR nhận s_obj từ 0 đến 1</p>
+</div>
+<div style="flex:1;background:#1F3157;border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:28px;font-weight:700;color:#7FB2E5">2 · Frame</p>
+<p style="font-size:28px;line-height:1.4;color:#D5DFEE">Vật nổi nhất + số VRU + bối cảnh xấu</p>
+</div>
+<div style="flex:1;background:#1F3157;border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:28px;font-weight:700;color:#7FB2E5">3 · Điểm S</p>
+<p style="font-size:28px;line-height:1.4;color:#D5DFEE">Hạng phần trăm trong các frame hợp lệ</p>
+</div>
+<div style="flex:1;background:#1F3157;border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:12px">
+<p style="font-size:28px;font-weight:700;color:#F0A35E">4 · Chọn lô</p>
+<p style="font-size:28px;line-height:1.4;color:#D5DFEE">B frame: S cao, đa dạng, phủ đều scene</p>
+</div>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#BFD0E6">Không bước nào đọc nhãn. Nhãn chỉ dùng ở cuối để chấm xem lô đã chọn bắt được bao nhiêu vật hiếm thật.</p>
+
+</section>
+</div></div>
+<p class="note"><b>7/14 · Ghi chú người nói:</b> Trước bước 1 có cổng frame: frame bị bộ lọc LiDAR loại là outlier; frame không có ứng viên, mọi vật dưới min_pts, hoặc embedding lệch quá 6 sigma là suspect. Hai loại này không bao giờ được chọn. S = 0,90 nghĩa là frame cao hơn 90 % frame hợp lệ, không phải xác suất 90 % là hiếm.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="s-object" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Bước 1 · Điểm từng vật</p>
+<p style="font-family:'JetBrains Mono', monospace;font-size:40px;font-weight:600;background:#E6EEF8;padding:28px 36px;border-radius:14px">s_obj = 0,15·shape + 0,35·slice + 0,30·vru + 0,20·unc</p>
+<table style="font-size:26px;color:#14213D">
+<tr><th style="width:16%">Thành phần</th><th style="width:48%">Cách tính</th><th style="width:36%">Bắt được gì</th></tr>
+<tr><td>shape</td><td>1 − exp(−½·z²), z = độ lệch kích thước so với trung vị cùng lớp, tính theo σ</td><td>Hình dạng lạ: xe lăn, xe đẩy, người ngồi</td></tr>
+<tr style="background:#EEF2F7"><td>slice</td><td>Hạng phần trăm của −log(tần suất ô lớp × khoảng cách × số điểm) học trên V</td><td>VRU ở tổ hợp ít gặp: rất xa, rất ít điểm</td></tr>
+<tr><td>vru</td><td>1 nếu người đi bộ / xe đạp / xe máy; 0,5 nếu VRU chưa rõ loại; 0 nếu khác</td><td>Đúng đối tượng của bài toán phanh khẩn cấp</td></tr>
+<tr style="background:#EEF2F7"><td>unc</td><td>½ hạng(entropy) + ½ hạng(độ bất nhất khi TTA) của PointPillars</td><td>Model đang lưỡng lự, cần thêm dữ liệu</td></tr>
+</table>
+<p style="font-size:28px;line-height:1.4;color:#4A5568"><b style="color:#14213D">Có camera</b> (profile multisensor): s_obj_ms = 0,8·s_obj + 0,2·max(r_sem, 1 nếu khớp khái niệm hiếm)</p>
+
+</section>
+</div></div>
+<p class="note"><b>8/14 · Ghi chú người nói:</b> Bốn thành phần đều nằm trong khoảng 0 đến 1 và trọng số cộng lại bằng 1, nên s_obj cũng nằm trong 0 đến 1. Khi chưa có PointPillars (Tầng 0), unc = 0 nên s_obj tối đa chỉ 0,80. Mỗi vật kèm reasons = thành phần đóng góp lớn nhất, hiện ở Deep Review.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="s-weights" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Vì sao 0,35 · 0,30 · 0,20 · 0,15</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.1">Trọng số xếp theo mức sát với mục tiêu “VRU hiếm”</h2>
+<div style="display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;gap:28px;align-items:center;background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:22px 32px">
+<p style="font-family:'JetBrains Mono', monospace;font-size:44px;font-weight:600;color:#0B5CAD;width:220px">0,35</p>
+<p style="font-size:28px;line-height:1.4;flex:1"><b>slice</b> · đo đúng định nghĩa “hiếm” mà benchmark chấm (lớp × khoảng cách × số điểm), nên nặng nhất.</p>
+</div>
+<div style="display:flex;gap:28px;align-items:center;background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:22px 32px">
+<p style="font-family:'JetBrains Mono', monospace;font-size:44px;font-weight:600;color:#0B5CAD;width:220px">0,30</p>
+<p style="font-size:28px;line-height:1.4;flex:1"><b>vru</b> · bài toán chỉ quan tâm người đi bộ, xe đạp, xe máy. Vật không phải VRU mất 0,30 nên khó lên top.</p>
+</div>
+<div style="display:flex;gap:28px;align-items:center;background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:22px 32px">
+<p style="font-family:'JetBrains Mono', monospace;font-size:44px;font-weight:600;color:#0B5CAD;width:220px">0,20</p>
+<p style="font-size:28px;line-height:1.4;flex:1"><b>unc</b> · model lưỡng lự là nơi dữ liệu mới có ích, nhưng chỉ có khi chạy PointPillars nên không để quá nặng.</p>
+</div>
+<div style="display:flex;gap:28px;align-items:center;background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:22px 32px">
+<p style="font-family:'JetBrains Mono', monospace;font-size:44px;font-weight:600;color:#0B5CAD;width:220px">0,15</p>
+<p style="font-size:28px;line-height:1.4;flex:1"><b>shape</b> · kích thước lấy từ cụm điểm dễ nhiễu (cụm vỡ, cụm ghép), dễ báo “lạ” giả nên nhẹ nhất.</p>
+</div>
+</div>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Tổng = 1 để s_obj luôn trong [0, 1]. Đây là trọng số thiết kế, khoá trước khi mở tập T, chưa tinh chỉnh bằng dữ liệu.</p>
+
+</section>
+</div></div>
+<p class="note"><b>9/14 · Ghi chú người nói:</b> Các con số được chọn bằng lập luận về bài toán, không phải học từ dữ liệu. Chúng được ghi vào config_used.json của mỗi lần chạy và khoá trong prereg trước khi chấm T, để không ai chỉnh lại theo kết quả T. Câu hỏi mở Q2 trong SPEC-P05: có cần ablation trên V trước không. Cách kiểm chứng ở slide cuối.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="s-frame" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Bước 2–3 · Điểm frame và S</p>
+<p style="font-family:'JetBrains Mono', monospace;font-size:34px;font-weight:600;background:#E6EEF8;padding:26px 34px;border-radius:14px;line-height:1.5">raw = 0,70·max(s_obj) + 0,15·min(số VRU/5, 1) + 0,15·0,3·[đêm hoặc mưa/sương]<br>S = hạng phần trăm của raw trong các frame hợp lệ</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:26px 30px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700;color:#0B5CAD">0,70 · lấy max</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Mục tiêu là bắt vật hiếm, nên vật nổi nhất quyết định chính. Một người đi bộ hiếm giữa cảnh đông xe đủ kéo cả frame lên.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:26px 30px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700;color:#0B5CAD">0,15 · đông VRU, chặn ở 5</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Nhiều VRU là nhiều cơ hội học. Chặn ở 5 để cảnh 30 người không thắng chỉ nhờ đông.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:26px 30px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700;color:#0B5CAD">0,15 × 0,3 = tối đa 0,045</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Bối cảnh xấu chỉ đủ phân thắng giữa hai frame gần điểm nhau, không đẩy frame tầm thường lên top. Thẻ camera chưa đủ chắc (mưa F1 0,48).</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:26px 30px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:700;color:#0B5CAD">S là hạng, không phải xác suất</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">S = 0,90 nghĩa là cao hơn 90 % frame hợp lệ trong job. Hạng giúp so sánh trong một pool, không so tuyệt đối giữa hai pool.</p>
+</div>
+</div>
+
+</section>
+</div></div>
+<p class="note"><b>10/14 · Ghi chú người nói:</b> Ba trọng số khung 0,70 / 0,15 / 0,15 cộng bằng 1, cùng nguyên tắc như cấp vật. Đêm = mặt trời dưới −6 độ; thời tiết lấy từ CAM_FRONT. Frame không hợp lệ (outlier, suspect) có S = 0. Hai frame cùng raw nhận hạng trung bình.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="s-thresholds" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:112px 128px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Các ngưỡng định nghĩa “hiếm” · rare_def_v24.yaml</p>
+<table style="font-size:25px;color:#14213D">
+<tr><th style="width:22%">Con số</th><th style="width:30%">Dùng ở đâu</th><th style="width:48%">Vì sao giá trị này</th></tr>
+<tr><td>α = 0,10</td><td>Ngưỡng thẻ R1, R2</td><td>Ngưỡng = phân vị 90 % độ bất ngờ trên V: chỉ 10 % frame V hiếm nhất vượt qua</td></tr>
+<tr style="background:#EEF2F7"><td>Tứ phân vị</td><td>Chia ô khoảng cách, số điểm</td><td>Mỗi lớp chia 4 khoảng có số vật bằng nhau, tự khớp phân bố của từng lớp</td></tr>
+<tr><td>−6°</td><td>Mặt trời → đêm</td><td>Mốc hoàng hôn dân dụng theo thiên văn: dưới −6° trời đã tối</td></tr>
+<tr style="background:#EEF2F7"><td>30 m · 10 điểm</td><td>Thẻ H (khó)</td><td>Vật xa hoặc thưa điểm là nơi detector LiDAR hay bỏ sót</td></tr>
+<tr><td>20 m × ±4 m</td><td>Thẻ I (hành lang)</td><td>Vùng ngay trước xe: làn của mình và một phần làn bên</td></tr>
+<tr style="background:#EEF2F7"><td>0,5 m/s</td><td>VRU “đang di chuyển”</td><td>Thấp hơn tốc độ đi bộ chậm, lọc vật đứng yên và nhiễu bám vết</td></tr>
+<tr><td>P99,5</td><td>Ngưỡng khái niệm camera</td><td>Chỉ 0,5 % ảnh cắt giống khái niệm nhất mới được gắn, giảm báo giả</td></tr>
+<tr style="background:#EEF2F7"><td>0,8 / 0,2</td><td>Trộn LiDAR với camera</td><td>LiDAR vẫn quyết định chính; camera chỉ bổ sung, khoá trước khi chấm T</td></tr>
+</table>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Định nghĩa đóng băng: muốn đổi phải tạo file rare_def_v25.yaml mới, không sửa file cũ.</p>
+
+</section>
+</div></div>
+<p class="note"><b>11/14 · Ghi chú người nói:</b> Thẻ R1/R2/R3/H/C/I chỉ để giải thích cho người duyệt, không cộng vào điểm S và không gộp OR thành một cờ is_rare, vì gộp lại thì gần như frame nào cũng "hiếm" (87,6 % frame nuScenes-mini có VRU xa hoặc ít điểm). Các mốc 30 m, 20 m, 4 m, 0,5 m/s là lựa chọn thiết kế theo bài toán AEB, không học từ dữ liệu.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="s-select" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Bước 4 · Chọn lô</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.1">Không lấy thẳng top-S, vì top-S hay trùng nhau</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:28px 32px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:34px;font-weight:700;color:#C2611A">B = 5 % pool</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Ngân sách gán nhãn chốt từ trước. Pool T 1.389 frame → B = 70.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:28px 32px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:34px;font-weight:700;color:#C2611A">MMR λ = 0,7</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Mỗi lượt chọn frame có 0,7·S − 0,3·độ giống frame đã chọn cao nhất: 70 % theo điểm, 30 % theo đa dạng.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:28px 32px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:34px;font-weight:700;color:#C2611A">Phạt track × 0,5</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Một vật xuất hiện qua nhiều frame: chỉ frame tốt nhất giữ điểm, các frame còn lại bị chia đôi S.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:28px 32px;display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:34px;font-weight:700;color:#C2611A">Quota chia đều scene</h3>
+<p style="font-size:26px;line-height:1.4;color:#4A5568">Mỗi scene tối đa ⌈B / số scene⌉ frame ở lượt đầu, để lô phủ đều cả 35 scene.</p>
+</div>
+</div>
+<p style="font-size:28px;line-height:1.4"><b>Mục đích:</b> 70 frame được chọn là 70 tình huống khác nhau, không phải 70 góc nhìn của cùng một người đi bộ.</p>
+
+</section>
+</div></div>
+<p class="note"><b>12/14 · Ghi chú người nói:</b> Độ giống đo bằng cosine trên embedding LiDAR z0. Frame được chọn dù không nằm trong top-B theo S thuần (do MMR hoặc quota) được gắn cờ explore để người duyệt biết. Đánh giá theo IY đếm vật khác nhau, nên chọn trùng không được thêm điểm.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="s-example" data-transition="fade" style="background:#14213D;color:#F4F6F8;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#7FB2E5">Ví dụ tính tay · chỉ LiDAR, chưa có PointPillars</p>
+<p style="font-size:32px;line-height:1.45;color:#BFD0E6">Frame ban ngày, trời khô, có 3 VRU. Vật nổi nhất: người đi bộ ở ô hiếm (slice 0,95), kích thước bình thường (shape 0,10).</p>
+<div style="display:flex;flex-direction:column;gap:20px">
+<p style="font-family:'JetBrains Mono', monospace;font-size:36px;background:#1F3157;padding:24px 32px;border-radius:14px;color:#F4F6F8">s_obj = 0,15·0,10 + 0,35·0,95 + 0,30·1 + 0,20·0 = <span style="color:#F0A35E">0,648</span></p>
+<p style="font-family:'JetBrains Mono', monospace;font-size:36px;background:#1F3157;padding:24px 32px;border-radius:14px;color:#F4F6F8">raw = 0,70·0,648 + 0,15·(3/5) + 0 = <span style="color:#F0A35E">0,543</span></p>
+<p style="font-family:'JetBrains Mono', monospace;font-size:36px;background:#1F3157;padding:24px 32px;border-radius:14px;color:#F4F6F8">1.200 / 1.389 frame có raw thấp hơn → S ≈ <span style="color:#F0A35E">0,86</span></p>
+</div>
+<p style="font-size:30px;line-height:1.4;color:#BFD0E6">Đọc là: frame này cao hơn khoảng 86 % frame hợp lệ, và lý do chọn hiển thị là “slice p95”.</p>
+
+</section>
+</div></div>
+<p class="note"><b>13/14 · Ghi chú người nói:</b> Con số 1.200 là giả định minh hoạ để tính hạng, không phải số đo. Khi chưa có PointPillars, unc = 0 nên s_obj tối đa 0,80; nếu có PointPillars và model lưỡng lự ở frame này (unc 0,6) thì s_obj tăng thêm 0,12.</p>
+<div class="wrap"><div class="frame"><section class="slide" id="s-verify" data-transition="fade" style="background:#F7F8F5;color:#14213D;font-family:'Be Vietnam Pro', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:28px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#0B5CAD">Kiểm chứng các con số</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.1">Mỗi con số phải chứng minh được giá trị trên tập V</h2>
+<div style="display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;gap:24px;align-items:center;background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:24px 32px">
+<p style="font-size:30px;font-weight:700;color:#0B5CAD;width:360px">Chia đều</p>
+<p style="font-size:28px;line-height:1.4;flex:1">So 0,35/0,30/0,20/0,15 với 4 × 0,25: trọng số thiết kế có thật sự tốt hơn cách chia đều?</p>
+</div>
+<div style="display:flex;gap:24px;align-items:center;background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:24px 32px">
+<p style="font-size:30px;font-weight:700;color:#0B5CAD;width:360px">Bỏ từng phần</p>
+<p style="font-size:28px;line-height:1.4;flex:1">Tắt lần lượt shape, slice, vru, unc: thành phần nào bỏ đi mà IY không giảm thì không cần thiết.</p>
+</div>
+<div style="display:flex;gap:24px;align-items:center;background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:24px 32px">
+<p style="font-size:30px;font-weight:700;color:#0B5CAD;width:360px">Quét lân cận</p>
+<p style="font-size:28px;line-height:1.4;flex:1">Dịch trọng số quanh bộ hiện tại: kết quả ổn định thì con số đáng tin, chỉ tốt ở một điểm thì là may.</p>
+</div>
+<div style="display:flex;gap:24px;align-items:center;background:#FFFFFF;border:1px solid #D6DCE4;border-radius:14px;padding:24px 32px">
+<p style="font-size:30px;font-weight:700;color:#0B5CAD;width:360px">Chấm trên T mới</p>
+<p style="font-size:28px;line-height:1.4;flex:1">Chọn một cấu hình trên V, khoá lại, rồi chấm một lần trên tập T mới có đêm và mưa.</p>
+</div>
+</div>
+
+</section>
+</div></div>
+<p class="note"><b>14/14 · Ghi chú người nói:</b> Nguyên tắc: mọi tinh chỉnh chỉ làm trên V; T mở đúng một lần. Thước đo là IY (số vật hiếm khác nhau trên mỗi frame chọn) và NY, kèm CI95 bootstrap theo scene. Đi kèm: PointPillars train đủ 20 epoch để có thành phần unc và nâng số vật có ứng viên.</p>
+<script>
+// fallback for browsers without container-query units in transforms
+function fit(){document.querySelectorAll('.wrap').forEach(w=>{w.firstElementChild.style.transform='scale('+(w.clientWidth/1920)+')'})}
+addEventListener('resize',fit);fit();
+</script>
+</body></html>

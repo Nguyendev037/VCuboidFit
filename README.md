@@ -98,6 +98,7 @@ Dữ liệu lưu theo file, không cần DB. [Model workflow](docs/model-workflo
 | Pipeline và CLI | [model-workflow](docs/model-workflow.md) |
 | UI, media, benchmark, bàn giao agent | [web](docs/web.md) |
 | IY/NY/capture/CI và thuật ngữ | [glossary](docs/glossary.md) |
+| Tầng camera (OpenCV, OpenCLIP, 13 đặc trưng) và thuật toán điểm S, kèm báo cáo PDF + slide | [camera-layer](docs/camera-layer/README.md) |
 | Colab và giới hạn từng notebook | [colab-dev-setup](docs/colab-dev-setup.md) |
 | GPU thuê | [gpu-rental](docs/gpu-rental.md) |
 | Module | [web](web/README.md), [model](model/README.md), [dataset](dataset/README.md) |

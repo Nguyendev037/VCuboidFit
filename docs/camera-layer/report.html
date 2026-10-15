@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Báo cáo kỹ thuật tầng camera và điểm S</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root { --ink:#1b2430; --muted:#5b6675; --line:#d6dce4; --accent:#0b5cad; --soft:#eef4fb; --warn:#8a5a00; --warnsoft:#fff6e0; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.5; margin: 0; background:#fff; }
+  h1 { font-size: 20pt; margin: 0 0 4px; line-height: 1.2; }
+  h2 { font-size: 13.5pt; color: var(--accent); margin: 20px 0 6px; padding-bottom: 3px; border-bottom: 1.5px solid var(--accent); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 14px 0 4px; break-after: avoid; }
+  p { margin: 4px 0 8px; }
+  .eyebrow { font-size: 8.5pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .meta { color: var(--muted); font-size: 9pt; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 9.2pt; break-inside: avoid; }
+  th, td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; text-align: left; }
+  th { background: #f3f5f8; font-weight: 600; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .formula { font-family: Consolas, "Cascadia Mono", monospace; background: var(--soft); border-left: 3px solid var(--accent); padding: 6px 10px; margin: 6px 0 10px; font-size: 9.6pt; white-space: pre-wrap; break-inside: avoid; }
+  .box { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; margin: 8px 0 12px; break-inside: avoid; }
+  .box.key { background: var(--soft); border-color: #b9d1ea; }
+  .box.warn { background: var(--warnsoft); border-color: #ecd49a; }
+  .box h3 { margin-top: 2px; }
+  code { font-family: Consolas, monospace; font-size: 9pt; background: #f3f5f8; padding: 0 3px; border-radius: 3px; }
+  ul, ol { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
+  .flow { display: flex; gap: 6px; margin: 8px 0 12px; break-inside: avoid; }
+  .flow div { flex: 1; border: 1px solid #b9d1ea; background: var(--soft); border-radius: 6px; padding: 6px; font-size: 8.6pt; line-height: 1.35; }
+  .flow b { display: block; color: var(--accent); font-size: 9pt; margin-bottom: 2px; }
+  .pagebreak { break-before: page; }
+  .small { font-size: 8.8pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">Tài liệu kỹ thuật · VCuboidFIT · engine rare_v24</div>
+<h1>Tầng camera và cơ chế chấm điểm S</h1>
+<div class="meta">Dữ liệu: nuScenes (LiDAR_TOP + 6 camera) · Không dùng VLM/LLM · Cập nhật 15/10/2026<br>
+Nguồn chân lý là mã trong repo <code>github/VCuboidFit</code>: <code>model/worker/c4/rare/</code> (chấm điểm, chọn lô, đánh giá) và <code>c4/context/</code> (tầng camera).</div>
+
+<div class="box key">
+<h3>Đọc nhanh: điểm S là gì</h3>
+<ol>
+  <li><b>Chấm từng vật</b> mà LiDAR đề xuất: hình dạng lạ, rơi vào ô khoảng cách/số điểm hiếm, có phải VRU, model có lưỡng lự không. Ra <code>s_obj</code> từ 0 đến 1.</li>
+  <li><b>Chấm frame</b>: lấy vật điểm cao nhất, cộng thêm mức đông VRU và bối cảnh xấu (đêm, mưa, sương). Ra điểm thô.</li>
+  <li><b>Đổi sang hạng phần trăm</b> trong các frame hợp lệ của chính job đó. Đó là <b>S</b> (<code>s_frame</code>). S = 0,90 nghĩa là “cao hơn 90 % frame hợp lệ”, không phải “90 % khả năng hiếm”.</li>
+  <li><b>Chọn lô B frame</b> (thường 5 % pool): không lấy thẳng top-S mà dùng MMR để vừa ưu tiên S cao vừa tránh frame trùng lặp, phạt frame lặp cùng một track, chia đều theo scene.</li>
+</ol>
+<p style="margin:0">Mọi bước trên <b>không đọc nhãn</b>. Nhãn chỉ được đọc ở bước đánh giá cuối (<code>eval.py</code>) để đo xem lô đã chọn bắt được bao nhiêu vật hiếm thật.</p>
+</div>
+
+<h2>1. Vị trí của tầng camera trong dự án</h2>
+<p>VCuboidFIT chọn keyframe LiDAR đáng gán nhãn cho bài toán phát hiện người đi bộ, xe đạp, xe máy (VRU) phục vụ phanh khẩn cấp (AEB). Hệ thống chọn một lô theo ngân sách, người duyệt xem lý do chọn, point cloud, hộp 3D và 6 camera rồi xuất ZIP.</p>
+<p>Camera <b>không</b> phải pipeline chính và <b>không</b> tự gán nhãn. Nó chỉ chạy khi chọn engine <code>rare_v24</code> với profile <code>multisensor</code>, và góp hai tín hiệu: (a) bối cảnh frame (đêm, chói, ống kính bẩn/mờ, mưa/sương) và (b) khái niệm ngữ nghĩa của vật VRU mà LiDAR đã đề xuất. Profile <code>lidar_only</code> và engine <code>c4_legacy</code> không dùng camera để chấm.</p>
+
+
+<h2>2. Luồng xử lý tầng camera</h2>
+<div class="flow">
+  <div><b>C0 · Mặt trời</b>Độ cao mặt trời từ timestamp + vị trí log (NOAA rút gọn, sai số &lt; 0,3°). CPU.</div>
+  <div><b>C1 · OpenCV</b>13 đặc trưng chất lượng mỗi ảnh (sáng, chói, nhiễu, độ nét). CPU, đa luồng.</div>
+  <div><b>C2 · OpenCLIP</b>Xác suất trên 4 trục bối cảnh từ embedding ảnh đã cache.</div>
+  <div><b>C3 · Fit + ghép</b>Ngưỡng phân vị trên V; luật ghép ra thẻ, biên, cờ review.</div>
+  <div><b>M3a · Crop vật</b>Chiếu vật LiDAR lên camera, OpenCLIP ra điểm khái niệm.</div>
+  <div><b>rare_v24</b>Điểm vật, điểm frame, thẻ RHCIO, chọn lô (mục 3).</div>
+</div>
+
+<h3>C1 · Đặc trưng OpenCV</h3>
+<p>Ảnh đọc ở ½ độ phân giải, co về 448 × 252. Ảnh hỏng: <code>img_ok = False</code>, mọi cờ = 0, frame vào hàng review (<code>IMG_UNREADABLE</code>). Tầng này chỉ sinh đặc trưng, không chứa ngưỡng.</p>
+<table>
+<tr><th style="width:24%">Nhóm</th><th>Đặc trưng</th></tr>
+<tr><td>Độ sáng</td><td><code>luma_mean</code>, <code>v_mean</code>, <code>v_p5</code>, <code>v_p95</code> (kênh V = max(B,G,R), phân vị trên histogram 256 bin)</td></tr>
+<tr><td>Chói / bão hoà</td><td><code>sat_frac</code> (tỉ lệ V ≥ 250), <code>blob_max_frac</code>, <code>blob_count</code> (vùng bão hoà liên thông ≥ 20 px)</td></tr>
+<tr><td>Phân bố không đều</td><td><code>tile_range</code> (chênh sáng max − min trên lưới 4 × 4), <code>veil = v_p5 / v_p95</code> (màn sương / loá phủ)</td></tr>
+<tr><td>Nhiễu và độ nét</td><td><code>noise_sigma</code> (Immerkær 1996), <code>lap_var_raw</code>, <code>lap_var_dn</code>, <code>sharp_ratio = lap_var_dn / σ_noise</code></td></tr>
+</table>
+<p><code>sharp_ratio</code> chuẩn hoá độ nét theo nhiễu: ảnh đêm nhiều nhiễu có phương sai Laplacian cao dù thực tế mờ. Bốn cờ (ngưỡng đều là phân vị trên V): <b>NIGHT_CV</b> v_mean &lt; P95 của frame V có mặt trời &lt; −6°; <b>GLARE_CV</b> sat_frac và blob_max_frac ≥ P97,5 (hoặc tile_range và sat_frac ≥ P97,5); <b>BLUR_CV</b> sharp_ratio &lt; P2,5; <b>VEIL_CV</b> veil ≥ P97,5.</p>
+
+<h3>C2 · Bốn trục bối cảnh bằng OpenCLIP zero-shot</h3>
+<p>OpenCLIP ViT-B/16 (openai), không huấn luyện lại. Mỗi lớp có 3 prompt; vector lớp = trung bình 3 prompt rồi chuẩn hoá L2. Softmax tính riêng từng trục:</p>
+<div class="formula">P(c | ảnh, trục) = softmax_c∈trục( s · cos(z_ảnh, t_c) ),  s = exp(logit_scale) ≈ 100</div>
+<table>
+<tr><th>Trục</th><th>Lớp</th></tr>
+<tr><td>illum</td><td>day · lowlight · night</td></tr>
+<tr><td>glare</td><td>none · headlight · sun</td></tr>
+<tr><td>lens</td><td>clean · droplets · blurred</td></tr>
+<tr><td>weather</td><td>dry · rain · fog</td></tr>
+</table>
+
+<h3>C3 · Fit ngưỡng trên V và luật ghép</h3>
+<p>Biên mỗi trục = P(top-1) − P(top-2). Ngưỡng biên = P20 của biên trên V (hạ về P10 nếu tỉ lệ review trên V &gt; 15 %). Hàm fit chỉ nhận split V; token ngoài V báo lỗi <code>LEAK_T</code>. Mỗi trục ra một trong ba trạng thái: <b>OK</b> (gán thẻ), <b>SOFT</b> (bỏ thẻ, không review), <b>DISAGREE</b> (bỏ thẻ, đưa vào review).</p>
+<ul>
+  <li><b>illum</b>: độ cao mặt trời quyết định (&lt; −6° night, &lt; 6° lowlight, còn lại day), vì CLIP không tách được night/lowlight trên ảnh tối. CLIP chắc chắn ngược mặt trời (vd trong hầm) ⇒ DISAGREE.</li>
+  <li><b>glare</b>: chỉ gán khi cờ CV đồng thuận hoặc CLIP vượt ngưỡng chắc chắn; CLIP “none” nhưng GLARE_CV bật ⇒ DISAGREE.</li>
+  <li><b>lens</b>: droplets/blurred chỉ gán khi BLUR_CV hoặc VEIL_CV xác nhận.</li>
+  <li><b>weather</b>: ban đêm không gán (CLIP zero-shot cho P(rain) ≈ 0,8 ở mọi cảnh đêm); rain/fog cần biên ≥ mức chắc chắn.</li>
+</ul>
+<p>Chưa có file ngưỡng đóng băng ⇒ cảnh báo <code>CONTEXT_NOT_FROZEN</code>, mọi thẻ = null. DISAGREE không bao giờ cho thẻ.</p>
+
+<h2 class="pagebreak">3. Cơ chế chấm điểm S, từng bước</h2>
+<p>Toàn bộ mục này lấy từ <code>c4/rare/gate.py</code>, <code>object_score.py</code>, <code>frame_score.py</code>, <code>select.py</code> và cấu hình <code>configs/rare_def_v24.yaml</code>. Các trọng số mặc định nằm trong <code>c4/rare/pipeline.py</code> và được ghi lại trong manifest của mỗi lần chạy.</p>
+
+<h3>Bước 0 · Cổng frame (không chấm điểm)</h3>
+<table>
+<tr><th style="width:18%">Kết quả</th><th>Khi nào</th><th style="width:28%">Hệ quả</th></tr>
+<tr><td>outlier</td><td>Bộ lọc LiDAR loại frame</td><td>Không bao giờ được chọn; vật không đóng góp điểm</td></tr>
+<tr><td>suspect</td><td>Không có ứng viên; mọi vật dưới <code>min_pts</code>; hoặc embedding z0 lệch &gt; 6σ khỏi trung bình</td><td>Không bao giờ được chọn</td></tr>
+<tr><td>valid</td><td>Còn lại (lệch 3σ–6σ chỉ gắn cờ OOD, không cộng điểm)</td><td>Được chấm hạng và chọn</td></tr>
+</table>
+
+<h3>Bước 1 · Tham chiếu “thế nào là bình thường”, fit trên V bằng dự đoán</h3>
+<p>Từ các vật VRU <b>dự đoán</b> (pedestrian, bicycle, motorcycle, vru_unknown) trong frame thuộc split V, hệ thống học:</p>
+<ul>
+  <li>tần suất từng lớp dự đoán, <code>p(lớp)</code>;</li>
+  <li>cạnh bin khoảng cách và số điểm LiDAR = tứ phân vị theo từng lớp, chia mỗi lớp thành lưới ô (cell) <code>lớp | d? | p?</code>;</li>
+  <li>tần suất cell = tỉ lệ frame V chứa cell đó, <code>p(cell)</code>;</li>
+  <li>kích thước trung vị và độ lệch chuẩn (dài, rộng, cao) mỗi lớp.</li>
+</ul>
+<p>Độ hiếm được đo bằng <b>surprisal</b> (lượng bất ngờ): <code>u = −log p</code>. Cell chưa từng thấy ở V có <code>u = +∞</code>. Tham chiếu này không dùng nhãn và không được fit trên T.</p>
+<div class="box">
+<h3>Tập V và tập T là gì</h3>
+<p>Dữ liệu được chia <b>theo scene</b> (cả scene đi cùng nhau, seed cố định) thành các tập tách rời. Benchmark chính có 170 scene nuScenes:</p>
+<table>
+<tr><th style="width:10%">Tập</th><th style="width:30%">Quy mô</th><th>Dùng để</th></tr>
+<tr><td><b>V</b></td><td>100 scene · 3.973 keyframe</td><td>Học tần suất “bình thường”, fit mọi ngưỡng (surprisal, camera, khái niệm), chỉnh tham số</td></tr>
+<tr><td><b>T</b></td><td>35 scene · 1.389 keyframe</td><td>Chấm điểm cuối cùng, mở <b>đúng một lần</b>; không chỉnh gì theo kết quả T</td></tr>
+<tr><td>S, P</td><td>7 + 28 scene</td><td>Seed và pilot, để riêng, không vào V hay T</td></tr>
+</table>
+<p><b>Ví dụ tần suất:</b> trên V, ô “người đi bộ · rất xa · rất ít điểm” xuất hiện ở 2 % số frame ⇒ u = −log 0,02 ≈ 3,9 (hiếm); ô “người đi bộ · gần · nhiều điểm” xuất hiện ở 40 % ⇒ u = −log 0,4 ≈ 0,9 (thường). Vật trên frame mới rơi vào ô càng ít gặp thì <code>slice</code> càng cao.</p>
+<p style="margin:0"><b>Vì sao phải tách:</b> nếu vừa học tần suất vừa chấm trên cùng một tập thì điểm cao giả, giống học thuộc đề rồi thi đúng đề đó. Code chặn việc này: hàm fit chỉ nhận split V, frame ngoài V báo lỗi <code>LEAK_T</code>.</p>
+</div>
+
+<h3>Bước 2 · Điểm từng vật s_obj</h3>
+<div class="formula">s_obj = 0,15·shape + 0,35·slice + 0,30·vru + 0,20·unc      (cắt về [0, 1])</div>
+<table>
+<tr><th style="width:13%">Thành phần</th><th>Cách tính</th><th style="width:30%">Ý nghĩa</th></tr>
+<tr><td>shape (0,15)</td><td><code>1 − exp(−½·z²)</code>, z = độ lệch lớn nhất của (dài, rộng, cao) so với trung vị lớp, tính theo σ</td><td>Hình dạng lạ so với cùng lớp (vd xe đẩy, người ngồi xe lăn)</td></tr>
+<tr><td>slice (0,35)</td><td>Hạng phần trăm surprisal của cell, chỉ trong nhóm VRU của frame hợp lệ; cell chưa thấy = 1</td><td>VRU ở tổ hợp khoảng cách / số điểm ít gặp (vd người đi bộ xa, rất ít điểm)</td></tr>
+<tr><td>vru (0,30)</td><td>1 nếu pedestrian/bicycle/motorcycle; 0,5 nếu vru_unknown; 0 nếu khác</td><td>Ưu tiên đúng đối tượng của bài toán AEB</td></tr>
+<tr><td>unc (0,20)</td><td>½·hạng(entropy) + ½·hạng(độ bất nhất TTA) của PointPillars, cấp frame gán cho mọi vật</td><td>Model đang lưỡng lự; = 0 khi chưa có Tầng 1</td></tr>
+</table>
+<p>Mỗi vật kèm <code>reasons</code> = thành phần đóng góp lớn nhất (vd <code>slice p95</code>), hiện ở Deep Review.</p>
+<p><b>Profile multisensor</b> trộn thêm camera:</p>
+<div class="formula">s_obj_ms = 0,8·s_obj + 0,2·max( r_sem, 1 nếu crop khớp một khái niệm hiếm, ngược lại 0 )</div>
+<p><code>r_sem</code> = hạng phần trăm độ mới (kNN) của embedding crop vật. 12 khái niệm trong <code>concepts_v1.yaml</code>: nhóm R (wheelchair, stroller, child, scooter_rider, cyclist_passenger, delivery_rider, animal_on_road, person_lying, police_directing, construction_worker) và nhóm I (pedestrian_crossing_front, cyclist_merging). Ngưỡng khái niệm = P99,5 trên crop của split tham chiếu, không dùng nhãn.</p>
+
+<h3>Bước 3 · Điểm frame và S</h3>
+<div class="formula">raw   = 0,70·max(s_obj trong frame) + 0,15·min(số VRU / 5, 1) + 0,15·0,3·[mưa/sương hoặc đêm]
+S     = s_frame = hạng phần trăm của raw trên các frame gate = valid   (frame khác: S = 0)</div>
+<ul>
+  <li><b>Lấy max, không lấy trung bình</b>: một vật cực hiếm đủ kéo cả frame lên; frame nhiều vật bình thường không được cộng dồn.</li>
+  <li><b>Đông VRU</b> bão hoà ở 5 VRU, tối đa +0,15.</li>
+  <li><b>Bối cảnh xấu</b> chỉ cộng tối đa 0,045 (= 0,15 × 0,3). Thời tiết lấy từ CAM_FRONT, đêm là mặt trời &lt; −6°. Đây là tín hiệu phụ có chủ đích; bối cảnh chủ yếu thể hiện qua thẻ C và R3.</li>
+  <li><b>Hạng phần trăm</b>: S không phải xác suất và không so được tuyệt đối giữa hai job khác pool. Hai frame có raw bằng nhau nhận hạng trung bình.</li>
+</ul>
+
+<h3>Bước 4 · Chọn lô B frame</h3>
+<ol>
+  <li><b>Ngân sách</b>: B = ⌈5 % × số frame hợp lệ⌉ (benchmark T: B = 70).</li>
+  <li><b>Phạt track</b>: nếu một vật được theo dõi qua nhiều frame, chỉ frame có s_obj cao nhất của track giữ nguyên điểm; các frame còn lại của track bị nhân S × 0,5.</li>
+  <li><b>MMR</b> (λ = 0,7): mỗi lượt chọn frame tối đa <code>0,7·S − 0,3·độ giống lớn nhất</code> với các frame đã chọn (cosine trên embedding LiDAR z0).</li>
+  <li><b>Quota scene</b> “even”: mỗi scene tối đa ⌈B / số scene⌉ frame ở pha đầu, để lô phủ đều các scene.</li>
+  <li><b>Explore</b>: frame được chọn dù không nằm trong top-B theo S thuần (do MMR/quota) được gắn cờ <code>explore</code> để người duyệt biết.</li>
+</ol>
+
+<h3>Thẻ RHCIO: giải thích, không cộng vào S</h3>
+<table>
+<tr><th style="width:8%">Thẻ</th><th>Điều kiện (suy từ dự đoán, không từ nhãn)</th></tr>
+<tr><td>R1</td><td>Surprisal lớp của một VRU &gt; phân vị 90 % trên V; hoặc crop khớp khái niệm nhóm R</td></tr>
+<tr><td>R2</td><td>Surprisal cell (lớp × khoảng cách × số điểm) &gt; phân vị 90 % trên V</td></tr>
+<tr><td>R3</td><td>VRU di chuyển ≥ 0,5 m/s trong bối cảnh xấu (mưa/sương hoặc đêm)</td></tr>
+<tr><td>H</td><td>Vật xa &gt; 30 m hoặc &lt; 10 điểm LiDAR (chỉ báo cáo)</td></tr>
+<tr><td>C</td><td>Bối cảnh xấu: mưa/sương hoặc đêm</td></tr>
+<tr><td>I</td><td>VRU di chuyển trong hành lang trước xe (0 &lt; x ≤ 20 m, |y| ≤ 4 m); hoặc khái niệm nhóm I</td></tr>
+</table>
+<p>Thẻ <b>không</b> gộp OR thành một cờ <code>is_rare</code>. Lý do: mỗi thẻ là một loại “hiếm” khác nhau, gộp lại sẽ khiến gần như frame nào cũng “hiếm” (trên nuScenes-mini, 87,6 % frame có VRU xa/ít điểm).</p>
+
+<div class="box">
+<h3>Ví dụ tính tay (profile lidar_only, chưa có PointPillars nên unc = 0)</h3>
+<p>Frame ban ngày, trời khô, có 3 VRU. Vật nổi nhất là một người đi bộ ở cell hiếm (slice = 0,95), kích thước bình thường (shape = 0,10):</p>
+<div class="formula">s_obj = 0,15·0,10 + 0,35·0,95 + 0,30·1 + 0,20·0 = 0,648
+raw   = 0,70·0,648 + 0,15·min(3/5, 1) + 0      = 0,453 + 0,090 = 0,543</div>
+<p style="margin:0">Nếu 1.200 frame hợp lệ khác có raw thấp hơn 0,543 trong pool 1.389 frame hợp lệ thì S ≈ 1.200 / 1.389 ≈ 0,86. Khi chưa có Tầng 1, s_obj tối đa chỉ 0,80 vì thành phần unc luôn bằng 0.</p>
+</div>
+
+<h2 class="pagebreak">4. Vì sao điểm S được thiết kế như vậy</h2>
+<p>Mỗi lựa chọn trong công thức S nhằm một mục tiêu cụ thể của bài toán: tìm VRU khó cho phanh khẩn cấp, trên dữ liệu chưa có nhãn, và để người duyệt hiểu được vì sao frame được chọn.</p>
+<table>
+<tr><th style="width:24%">Đặc điểm</th><th>Cách làm và lý do</th></tr>
+<tr><td>Đo “hiếm” bằng surprisal</td><td>Độ hiếm = −log(tần suất) so với tham chiếu học trên V, không đặt ngưỡng cố định kiểu “xa hơn 30 m là hiếm”. Nhờ vậy điểm tự thích ứng với từng bộ dữ liệu: cùng 30 m có thể hiếm ở bộ này nhưng thường ở bộ khác.</td></tr>
+<tr><td>Không dùng nhãn khi chọn</td><td>Tham chiếu học từ <b>dự đoán</b> của model. Pool mới chưa gán nhãn vẫn chạy được, và nhãn không thể rò vào bước chọn (kiểm bằng <code>test_no_leakage_lidar</code>). Nhãn chỉ dùng ở bước đánh giá.</td></tr>
+<tr><td>Chấm vật trước, frame sau</td><td>Frame lấy điểm của vật nổi nhất (max). Một người đi bộ hiếm giữa cảnh đông xe vẫn kéo được cả frame lên; nhiều vật bình thường không cộng dồn thành “hiếm”.</td></tr>
+<tr><td>Trọng số ưu tiên VRU</td><td>slice 0,35 và vru 0,30 cao nhất vì mục tiêu là VRU ở tổ hợp khó (xa, ít điểm). shape chỉ 0,15 vì kích thước lấy từ cụm điểm hình học dễ nhiễu.</td></tr>
+<tr><td>Không cộng dồn tín hiệu</td><td>Bối cảnh xấu góp tối đa 0,045, số VRU bão hoà ở 5, frame lệch phân phối (OOD) chỉ gắn cờ chứ không cộng điểm. Một tín hiệu không bị tính nhiều lần làm điểm phình lên.</td></tr>
+<tr><td>S là hạng phần trăm</td><td>Diễn giải rõ ràng: “frame này cao hơn x % frame hợp lệ trong job”. Không đọc S như xác suất.</td></tr>
+<tr><td>Chọn lô có đa dạng</td><td>MMR + phạt track + chia đều theo scene, để 70 frame chọn ra không phải 70 góc nhìn của cùng một người đi bộ.</td></tr>
+<tr><td>Giải thích được</td><td>Mỗi frame có <code>reasons</code>, thẻ RHCIO và bằng chứng (vật nổi nhất, số VRU, tốc độ, toạ độ) để người duyệt đối chiếu với 3D và camera.</td></tr>
+<tr><td>Chấm kết quả theo vật</td><td>Đo IY theo <b>instance</b> và NY trên thang Random–Oracle, bootstrap theo scene (mục 5). Đếm theo frame dễ cho số đẹp giả vì phần lớn frame đều có VRU.</td></tr>
+</table>
+<div class="box warn">
+<h3>Thiết kế hợp lý chưa có nghĩa là đã tốt hơn</h3>
+<p style="margin:0">Các điểm trên là lý do <b>thiết kế</b>. Trên benchmark T đăng ký trước, so với phương pháp đối chứng chính M1 (điểm hình học Tầng 0): M2 − M1 = −0,014, CI95 [−0,164; 0,084], tức <b>chưa chứng minh được</b> S tốt hơn đối chứng. Trọng số 0,15/0,35/0,30/0,20 là lựa chọn thiết kế, chưa qua ablation trên V nên không gọi là “tối ưu”.</p>
+</div>
+
+<h2>5. Đánh giá điểm S như thế nào</h2>
+<p>Đánh giá nằm trong một module duy nhất được đọc nhãn: <code>c4/rare/eval.py</code>. Quy trình: chốt định nghĩa “hiếm” và ngưỡng trên V, đăng ký trước (prereg, có SHA256), rồi mở T đúng một lần.</p>
+<h3>Mục tiêu (target) là gì</h3>
+<p>Instance GT thuộc trục R2 (tổ hợp lớp × khoảng cách × số điểm hiếm). Với chế độ <code>capture = rare_form</code>, một instance chỉ tính là “bắt được” khi frame chọn chứa nó <b>đúng ở dạng hiếm</b> (không tính frame nó ở gần, dày điểm).</p>
+<h3>Chỉ số</h3>
+<div class="formula">IY@B = số instance mục tiêu khác nhau có ≥ 1 frame trong lô / B
+NY@B = (IY − E[IY_random]) / (IY_oracle − E[IY_random])</div>
+<ul>
+  <li><b>IY</b> (instance yield): mỗi frame gán nhãn thu được bao nhiêu vật hiếm <b>khác nhau</b>. Chọn 10 frame cùng một người đi bộ chỉ được tính 1.</li>
+  <li><b>NY</b> đặt IY lên thang: 0 = ngang Random (trung bình 100 lần), 1 = ngang Oracle (chọn tham lam trên GT, cận dưới (1 − 1/e) của tối ưu). NY âm = kém Random.</li>
+  <li><b>Reach</b> (khả năng tiếp cận): trong các instance mục tiêu, bao nhiêu có ít nhất một ứng viên LiDAR cách tâm ≤ 1 m. Instance không có ứng viên thì không phương pháp xếp hạng nào bắt được.</li>
+  <li><b>CI95</b>: bootstrap theo scene 1.000 lần (lấy lại cả scene, không coi frame liên tiếp là độc lập). CI của chênh lệch chứa 0 ⇒ không được tuyên bố hơn.</li>
+</ul>
+
+<h2 class="pagebreak">6. Đánh giá tầng camera</h2>
+<p>Tầng camera được đánh giá ở hai mức tách biệt: (A) thẻ bối cảnh có đúng không, và (B) thêm camera vào điểm S có giúp chọn frame tốt hơn không. Mức A trả lời “camera nhìn đúng chưa”, mức B trả lời “nhìn đúng thì có ích cho việc chọn không”.</p>
+
+<h3>Mức A · Thẻ bối cảnh có đúng không</h3>
+<p><b>Dữ liệu:</b> job <code>night_v24</code> trên nuScenes trainval: 255 scene, 10.173 keyframe, 61.038 ảnh camera. Chia theo scene: V = 100 scene (fit ngưỡng), phần còn lại dùng để đo. <b>Chỉ đo trên ảnh ngoài V</b>: 37.086 ảnh, 6.181 frame, 155 scene (45 scene đêm, 10 scene mưa).</p>
+<p><b>Đáp án so sánh:</b> mô tả scene của nuScenes (<code>scene.description</code> chứa “night” hoặc “rain”). Đây là nhãn cấp scene, khá thô: cả scene được coi là đêm/mưa dù có đoạn không mưa. Nhãn chỉ được đọc trong script đo, không vào pipeline.</p>
+<p><b>Chỉ số:</b></p>
+<ul>
+  <li><b>Precision (P)</b>: trong các frame hệ thống gắn “đêm”, bao nhiêu % đúng là đêm.</li>
+  <li><b>Recall (R)</b>: trong các frame đêm thật, hệ thống gắn đúng bao nhiêu %.</li>
+  <li><b>F1</b> = trung bình điều hoà của P và R. <b>Macro-F1</b> = trung bình F1 của lớp “có” và lớp “không”, để lớp hiếm (đêm, mưa) không bị lớp đông (ngày, khô) che mất.</li>
+</ul>
+<table>
+<tr><th>Trục (CAM_FRONT)</th><th class="n">Frame đo</th><th class="n">Thật +</th><th class="n">Gắn +</th><th class="n">P</th><th class="n">R</th><th class="n">Macro-F1</th><th>Cổng</th></tr>
+<tr><td>Đêm (<code>tag_illum = night</code>)</td><td class="n">6.181</td><td class="n">1.809</td><td class="n">1.648</td><td class="n">1,000</td><td class="n">0,911</td><td class="n"><b>0,968</b></td><td>≥ 0,85 ✅</td></tr>
+<tr><td>Mưa (<code>tag_weather = rain</code>)</td><td class="n">6.181</td><td class="n">402</td><td class="n">66</td><td class="n">0,000</td><td class="n">0,000</td><td class="n"><b>0,480</b></td><td>≥ 0,70 ❌</td></tr>
+</table>
+<p>Dùng cả 6 camera (đa số phiếu) cho cùng kết quả: đêm 0,968, mưa 0,481.</p>
+<ul>
+  <li><b>Đêm tốt</b> vì luật “độ cao mặt trời quyết định” gần như không thể sai: P = 1,00. Recall 0,911 vì một số frame đêm theo mô tả scene bị luật xếp vào <code>lowlight</code> (lúc chạng vạng).</li>
+  <li><b>Mưa trượt, và trượt đúng như thiết kế dự báo</b>: ban đêm hệ thống cố ý không gắn thẻ thời tiết (CLIP cho P(rain) ≈ 0,8 ở mọi cảnh đêm), nên mưa đêm luôn bị bỏ, 0 lần đúng; còn 66 lần gắn “mưa” đều rơi vào ban ngày không mưa. Chưa dùng được thẻ mưa để kết luận.</li>
+  <li><b>Gánh nặng review</b>: 7,7 % ảnh ngoài V bị đưa vào hàng đợi review (9,7 % trên V, dưới trần 15 %). Theo frame (chỉ cần 1/6 camera cần review) là 34 %, khá cao.</li>
+</ul>
+<p class="small">Đây là phép đo minh hoạ: ngưỡng fit trên V của chính job này, chưa phải nghiệm thu trên tập T độc lập. Nguồn: <code>planning/11_2026-10-13_clip-context-fleet/evidence/X3/context_eval.md</code>.</p>
+
+<h3>Mức B · Camera có giúp chọn frame không (ablation)</h3>
+<p>Chạy hai cấu hình giống hệt nhau (cùng pool T, cùng B = 70, cùng tham chiếu V, cùng bước chọn), chỉ khác có hay không có camera:</p>
+<ul>
+  <li><b>M2 lidar_only</b>: S chỉ từ LiDAR.</li>
+  <li><b>M3 multisensor</b>: S trộn 20 % điểm ngữ nghĩa từ crop camera, cộng bối cảnh từ CAM_FRONT.</li>
+</ul>
+<p>Hiệu M3 − M2 về IY chính là phần đóng góp của tầng camera. Cách đọc giống mục 5: CI95 của chênh lệch phải nằm hẳn trên 0 mới được nói camera có ích.</p>
+<table>
+<tr><th>Cấu hình</th><th class="n">IY</th><th class="n">CI95</th><th class="n">NY</th><th class="n">Thời gian A100</th></tr>
+<tr><td>M2 lidar_only</td><td class="n">0,100</td><td class="n">[0,000; 0,257]</td><td class="n">0,052</td><td class="n">~140 s</td></tr>
+<tr><td>M3 multisensor</td><td class="n">0,057</td><td class="n">[0,000; 0,171]</td><td class="n">−0,030</td><td class="n">~1.035 s</td></tr>
+</table>
+<p><b>Kết luận trung thực:</b> trên T, thêm camera <b>không</b> cho kết quả tốt hơn (M3 thấp hơn M2, NY âm) và tốn thời gian gấp khoảng 7 lần. Nhưng phép thử này chưa công bằng với camera: pool T toàn ban ngày, không có ca đêm/mưa, đúng chỗ tầng bối cảnh được thiết kế để giúp. Đồng thời 28/42 mục tiêu không có ứng viên LiDAR, nên camera (vốn chỉ chấm lại vật LiDAR đã đề xuất) không thể cứu được chúng.</p>
+
+<h3>Chưa đo được, cần làm để đánh giá đủ</h3>
+<ul>
+  <li><b>Điểm khái niệm</b> (xe lăn, trẻ em, người nằm…): chưa có số đo độ chính xác riêng trên nhãn.</li>
+  <li><b>Mưa</b>: cần cách khác cho mưa đêm (vd tín hiệu giọt nước trên ống kính, phản chiếu mặt đường) rồi đo lại trên V.</li>
+  <li><b>Tập T có đêm/mưa</b>: cần một tập T mới, đăng ký trước, có đủ scene đêm/mưa, rồi chạy lại ablation M3 − M2.</li>
+</ul>
+
+<h2>7. Kết quả đo và giới hạn</h2>
+<p>Benchmark T đăng ký trước (pitch-v2), Colab A100, đêm 13–14/10/2026: 1.389 frame, 35 scene, B = 70, 42 instance mục tiêu. Nguồn: <code>web/public/demo/bench_pitch.json</code> (run <code>20261013-192329-49de1480</code>).</p>
+<table>
+<tr><th>Phương pháp</th><th class="n">IY</th><th class="n">CI95</th><th class="n">NY</th><th class="n">Reach 1 m</th></tr>
+<tr><td>M0 Random (TB 100 lần)</td><td class="n">0,073</td><td class="n">[0,020; 0,156]</td><td class="n">0,000</td><td class="n">–</td></tr>
+<tr><td>M1 điểm hình học Tầng 0 (đối chứng)</td><td class="n">0,114</td><td class="n">[0,000; 0,291]</td><td class="n">0,079</td><td class="n">–</td></tr>
+<tr><td>M2 rare_v24 lidar_only</td><td class="n">0,100</td><td class="n">[0,000; 0,257]</td><td class="n">0,052</td><td class="n">14/42</td></tr>
+<tr><td>M3 rare_v24 multisensor (có camera)</td><td class="n">0,057</td><td class="n">[0,000; 0,171]</td><td class="n">−0,030</td><td class="n">14/42</td></tr>
+</table>
+<ul>
+  <li><b>So sánh chính</b> M2 − M1 = −0,014, CI95 [−0,164; 0,084] ⇒ <i>not shown / underpowered</i>. Chưa có bằng chứng tầng camera cải thiện kết quả: trên T, M3 thấp hơn M2.</li>
+  <li><b>Pool T toàn ban ngày</b>, không có ca đêm/mưa, nên không đo được giá trị chính của tầng bối cảnh. Không suy rộng sang đêm/mưa.</li>
+  <li><b>Nút thắt ở bước bắt ứng viên</b>: Reach chỉ 14/42 (33 %). 28 instance mục tiêu không có ứng viên LiDAR nào gần, nên công thức S không thể chọn được chúng dù trọng số tốt đến đâu.</li>
+  <li><b>Thời gian trên A100</b>: M2 ~140 s, M3 ~1.035 s, toàn lượt ~1.236 s.</li>
+  <li><b>Job minh hoạ night_v24</b> (không phải T, ngưỡng fit trên V): macro-F1 đêm 0,968, mưa 0,48. Mưa còn yếu.</li>
+</ul>
+
+<h3>Cập nhật Tầng 1: PointPillars (sau benchmark T)</h3>
+<p>Để giải nút thắt reach và bật thành phần <code>unc</code>, PointPillars đã được train trên nuScenes trainval (Colab A100) và đo riêng trên 602 frame VAL (RTX 4060 Laptop, 10 sweep). Đây là đánh giá tham khảo, không dùng để chọn checkpoint và <b>chưa</b> chạy lại benchmark T.</p>
+<table>
+<tr><th>Checkpoint</th><th class="n">mAP</th><th class="n">NDS</th><th>Ghi chú</th></tr>
+<tr><td>mini-e80 (nuScenes mini, 80 epoch)</td><td class="n">0,017</td><td class="n">0,065</td><td>Mốc trước khi train lớn</td></tr>
+<tr><td>trainval e6/20</td><td class="n">0,209</td><td class="n">0,282</td><td>~285 ms/frame, 1,1 GB VRAM</td></tr>
+<tr><td>trainval e12/20 (mới nhất)</td><td class="n">0,220</td><td class="n">0,343</td><td>~330 ms/frame, 1,1 GB VRAM</td></tr>
+</table>
+<p>AP theo lớp ở e12: ô tô 0,790 · xe tải 0,702 · xe máy 0,547 · người đi bộ 0,132 · xe đạp 0,012 · rào chắn 0,013 · cọc giao thông 0,000. Bus, trailer, xe công trình không có nhãn trong 602 frame nên mAP 10 lớp có trần 0,7. Lớp nhỏ còn yếu vì mới train tới epoch 12/20, tắt gt_sampling để tránh rò nhãn và chỉ dùng 29 % dữ liệu trainval.</p>
+
+<h2>8. Chạy lại bằng CLI</h2>
+<div class="formula">python -m c4.cli.extract_clip --data-root D --job-dir J --device cuda   # embedding ảnh (GPU)
+python -m c4.cli.context cv  --data-root D --job-dir J                  # C1 OpenCV (CPU)
+python -m c4.cli.context fit --job-dir J --split V                      # C3 fit ngưỡng, chỉ V
+python -m c4.cli.context run --data-root D --job-dir J                  # C2 + ghép -> context_frame
+python -m c4.cli.rare crops  --data-root D --job-dir J --device cuda    # M3a crops
+python -m c4.cli.rare run    --data-root D --job-dir J --profile multisensor</div>
+<p>Mã thoát rare CLI: 0 hoàn tất · 2 thiếu đầu vào / contract / crops lỗi thời · 3 cấu hình sai · 1 lỗi khác. Cần <code>split_manifest.csv</code> trước khi fit; không gộp V/T.</p>
+
+<h2>9. Bất biến và vùng cấm</h2>
+<ul>
+  <li>Không VLM/LLM ở bất kỳ bước nào; ca khó đưa cho người duyệt.</li>
+  <li>Bước chấm và chọn không đọc nhãn của pool; thẻ camera là dự đoán, không phải nhãn.</li>
+  <li>Ngưỡng và tham chiếu chỉ fit trên V, lưu kèm SHA; định nghĩa hiếm <code>rare_def_v24.yaml</code> đóng băng (đổi định nghĩa = file v25 mới).</li>
+  <li>Không tune lại trọng số bằng kết quả T; không mở lại T để chấm.</li>
+  <li>Một model GPU mỗi process; bảng dữ liệu qua <code>c4.contracts</code> (Parquet, không DB).</li>
+</ul>
+<p class="small">Bước tiếp theo đề xuất: (1) train PointPillars đủ 20 epoch; (2) dùng PointPillars làm nguồn ứng viên để nâng Reach; (3) chạy ablation trọng số trên V (equal weights, bỏ từng thành phần) trước khi chấm một tập T mới.</p>
+
+</body>
+</html>
