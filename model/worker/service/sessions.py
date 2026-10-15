@@ -130,6 +130,14 @@ def delete_session(settings, queue, sid: str) -> dict:
             else:
                 shutil.rmtree(child, ignore_errors=True)
             deleted[key] += 1
+    if settings.remote.is_dir():
+        for task_file in list(settings.remote.glob("t1_*.json")):
+            try:
+                task = json.loads(task_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if task.get("sessionId") == sid:
+                task_file.unlink(missing_ok=True)
     _session_file(settings, sid).unlink(missing_ok=True)
     return deleted
 
@@ -139,6 +147,8 @@ def purge_orphans(settings, now: float) -> dict:
     removed = 0
     for root, meta_name in ((settings.uploads, None), (settings.datasets, "report.json"), (settings.jobs, "job.json")):
         for child in list(root.iterdir()) if root.is_dir() else []:
+            if child.is_symlink():
+                continue
             try:
                 doc = json.loads((child / meta_name).read_text(encoding="utf-8")) if meta_name else {}
                 stale = child.stat().st_mtime < cutoff
