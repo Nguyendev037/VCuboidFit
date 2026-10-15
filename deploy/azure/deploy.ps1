@@ -36,6 +36,8 @@ if (Test-Path $namesPath) {
 } else {
   $acr = "acrvcf" + ((Get-Random -Minimum 100000 -Maximum 999999).ToString())
   $st = "stvcf" + ((Get-Random -Minimum 100000 -Maximum 999999).ToString())
+  # Persist at once: a failed run must not mint new names (and duplicate resources) on rerun.
+  @{ resourceGroup = $rg; acr = $acr; storage = $st } | ConvertTo-Json | Set-Content -Encoding utf8 $namesPath
 }
 
 # RG location is metadata only; an existing RG in another region is reused as-is.
@@ -73,8 +75,9 @@ if (-not (Test-AzResource @("identity", "show", "-n", $identity, "-g", $rg, "-o"
 }
 $idId = (& az identity show -n $identity -g $rg --query id -o tsv).Trim()
 $idPrincipal = (& az identity show -n $identity -g $rg --query principalId -o tsv).Trim()
-$hasPull = (& az role assignment list --assignee $idPrincipal --scope $acrId --role AcrPull --query "length(@)" -o tsv).Trim()
-if ($hasPull -eq "0") {
+# No parentheses in --query: az.bat goes through cmd.exe, which mis-parses "length(@)".
+$pullIds = @(& az role assignment list --assignee $idPrincipal --scope $acrId --role AcrPull --query "[].id" -o tsv)
+if ($pullIds.Count -eq 0 -or -not $pullIds[0]) {
   Invoke-Az @("role", "assignment", "create", "--assignee-object-id", $idPrincipal,
     "--assignee-principal-type", "ServicePrincipal", "--role", "AcrPull", "--scope", $acrId, "-o", "none")
 }
