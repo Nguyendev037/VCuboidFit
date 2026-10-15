@@ -3,7 +3,9 @@ param(
   [string]$Tag = "",
   # ACR Tasks (`az acr build`) is not offered in every region (e.g. malaysiawest has no
   # registries/runs); the registry may live elsewhere, the app pulls cross-region.
-  [string]$AcrLocation = "japaneast"
+  [string]$AcrLocation = "japaneast",
+  # Image vcf:$Tag already pushed (e.g. by an earlier run) => skip docker build/push.
+  [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -84,8 +86,12 @@ if ($pullIds.Count -eq 0 -or -not $pullIds[0]) {
   Invoke-Az @("role", "assignment", "create", "--assignee-object-id", $idPrincipal,
     "--assignee-principal-type", "ServicePrincipal", "--role", "AcrPull", "--scope", $acrId, "-o", "none")
 }
-# Build from a staged context holding only what the Dockerfile COPYs: `az acr build` walks
-# and filters the whole tree itself (model/workspace + .venv ≈ 21 GB) and stalls for minutes.
+# Local `docker build` + push: Azure for Students rejects ACR Tasks (`az acr build` =>
+# TasksOperationsNotAllowed). Build from a staged context holding only what the Dockerfile
+# COPYs (the repo carries ~21 GB of model/workspace + .venv).
+$acrServer = (& az acr show -n $acr -g $rg --query loginServer -o tsv).Trim()
+$image = "$acrServer/vcf:$Tag"
+if (-not $SkipBuild) {
 $tmpRoot = if (Test-Path "E:\") { "E:\" } else { $env:TEMP }
 $ctx = Join-Path $tmpRoot ("vcf-ctx-" + $Tag)
 if (Test-Path $ctx) { Remove-Item -LiteralPath $ctx -Recurse -Force }
@@ -108,9 +114,16 @@ try {
   Copy-Item (Join-Path $repo ".dockerignore") (Join-Path $ctx ".dockerignore")
   $ctxMb = [math]::Round(((Get-ChildItem $ctx -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1)
   Write-Output "Build context: $ctx ($ctxMb MB)"
-  Invoke-Az @("acr", "build", "-r", $acr, "-t", "vcf:$Tag", "-f", "deploy/azure/Dockerfile", $ctx)
+  $ErrorActionPreference = "Continue"  # docker writes progress to stderr
+  & docker build -f (Join-Path $ctx "deploy/azure/Dockerfile") -t $image $ctx
+  if ($LASTEXITCODE -ne 0) { throw "docker build failed with exit code $LASTEXITCODE" }
+  Invoke-Az @("acr", "login", "-n", $acr)
+  & docker push $image
+  if ($LASTEXITCODE -ne 0) { throw "docker push failed with exit code $LASTEXITCODE" }
+  $ErrorActionPreference = "Stop"
 } finally {
   Remove-Item -LiteralPath $ctx -Recurse -Force -ErrorAction SilentlyContinue
+}
 }
 
 if (-not (Test-AzResource @("storage", "account", "show", "-n", $st, "-g", $rg, "-o", "none"))) {
@@ -137,9 +150,7 @@ Invoke-Az @("containerapp", "env", "storage", "set", "-n", "cae-vcuboidfit", "-g
 
 @{ resourceGroup = $rg; acr = $acr; storage = $st; tag = $Tag } |
   ConvertTo-Json | Set-Content -Encoding utf8 $namesPath
-$acrServer = (& az acr show -n $acr -g $rg --query loginServer -o tsv).Trim()
 $envId = (& az containerapp env show -n "cae-vcuboidfit" -g $rg --query id -o tsv).Trim()
-$image = "$acrServer/vcf:$Tag"
 
 if (-not (Test-AzResource @("containerapp", "show", "-n", "ca-vcuboidfit", "-g", $rg, "-o", "none"))) {
   $demoSecure = Read-Host "Demo password" -AsSecureString
