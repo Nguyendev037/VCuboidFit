@@ -23,6 +23,7 @@ from starlette.formparsers import MultiPartException, MultiPartParser
 from service.errors import ApiError
 from service.models import FailIn, HeartbeatIn, RemoteParams, RemoteTask
 from service.settings import Settings
+from service.sessions import require_job_owner
 
 TASK_ID = re.compile(r"^t1_[0-9a-f]{12}$")
 JOB_ID = re.compile(r"^[0-9a-f]{12}$")
@@ -121,6 +122,7 @@ class RemoteQueue:
         self.settings = settings
         self.clock = clock  # test thay để giả thời gian
         self._lock = threading.RLock()
+        self.last_seen: str | None = None
 
     # ---- file ----
     def _now(self) -> datetime:
@@ -176,6 +178,7 @@ class RemoteQueue:
                 params = {**params, "sweeps": seed["sweeps"]}
             rec = dict(taskId=f"t1_{uuid.uuid4().hex[:12]}", jobId=job_id,
                        datasetId=meta.get("datasetId", ""), state="queued", params=params,
+                       sessionId=meta.get("sessionId"),
                        seed=seed,
                        createdAt=self._iso(self._now()), leasedAt=None, leaseUntil=None,
                        attempts=0, error=None, bundleSha256=None, leaseId=None)
@@ -384,6 +387,7 @@ async def _json_body(request: Request, model):
 @router.post("/jobs/{job_id}/t1-remote", status_code=201)
 async def create_task(job_id: str, request: Request):
     _enabled(request)
+    require_job_owner(request, job_id)
     params = await _json_body(request, RemoteParams)
     try:
         rec = _q(request).create(job_id, params.model_dump())
@@ -396,6 +400,7 @@ async def create_task(job_id: str, request: Request):
 @router.get("/jobs/{job_id}/t1-remote")
 def get_task(job_id: str, request: Request):
     _enabled(request)
+    require_job_owner(request, job_id)
     rec = _q(request).latest(job_id)
     if rec is None:
         raise ApiError(404, "not_found", "Job chưa có việc Tầng 1 từ xa.")
@@ -405,6 +410,7 @@ def get_task(job_id: str, request: Request):
 @router.delete("/jobs/{job_id}/t1-remote")
 def cancel_task(job_id: str, request: Request):
     _enabled(request)
+    require_job_owner(request, job_id)
     q = _q(request)
     rec = q.latest(job_id)
     if rec is None:
@@ -416,6 +422,7 @@ def cancel_task(job_id: str, request: Request):
 
 @router.get("/remote/t1/next", dependencies=[Depends(require_token)])
 def next_task(request: Request):
+    _q(request).last_seen = _q(request)._iso(_q(request)._now())
     rec = _q(request).claim()
     if rec is None:
         return Response(status_code=204)

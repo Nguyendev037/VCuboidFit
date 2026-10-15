@@ -21,6 +21,10 @@ class Settings:
     # Thí nghiệm có trọng số seed (t1/ckpt/seed_latest.pth): Colab dùng lại, bỏ bước train.
     # Trống = tự dò thư mục mới nhất trong <workspace>/experiments; "none" = tắt.
     t1_exp: str = field(default_factory=lambda: os.environ.get("VCF_T1_EXP", "").strip())
+    sessions: bool = field(default_factory=lambda: os.environ.get("VCF_SESSIONS", "0") == "1")
+    session_ttl_h: int = field(default_factory=lambda: max(1, int(os.environ.get("VCF_SESSION_TTL_H", "24"))))
+    sweep_sec: int = field(default_factory=lambda: max(30, int(os.environ.get("VCF_SWEEP_SEC", "300"))))
+    demo_password: str = field(default_factory=lambda: os.environ.get("VCF_DEMO_PASSWORD", ""))
 
     def __post_init__(self):
         self.workspace = Path(self.workspace)

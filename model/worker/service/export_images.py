@@ -20,6 +20,7 @@ from fastapi.responses import StreamingResponse
 from c4.contracts import CAMS, read_table
 from service.engines import AXES, context_table, split_tags
 from service.errors import ApiError
+from service.sessions import require_job_owner
 from service.frames import SelectionData, _budget, _check_budget, get_data
 
 router = APIRouter()
@@ -186,6 +187,7 @@ def _stream(spool) -> Iterator[bytes]:
 @router.get("/jobs/{job_id}/selections/{sid}/export-images.zip")
 def export_images(job_id: str, sid: str, request: Request, budget: float | None = None,
                   cams: Literal["all", "front"] = "all", lidar: bool = True):
+    require_job_owner(request, job_id)
     _check_budget(budget)
     try:
         data = get_data(request, job_id, sid)

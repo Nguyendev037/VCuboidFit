@@ -14,6 +14,7 @@ from c4.contracts import CAMS, read_table
 from c4.mining.query import apply_queries
 from c4.mining.score import apply_quality
 from service.errors import ApiError
+from service.sessions import require_job_owner
 from service.models import (
     Analysis,
     Box2D,
@@ -111,6 +112,7 @@ class SelectionData:
 
 def get_data(request: Request, job_id: str, sid: str) -> SelectionData:
     s = request.app.state.settings
+    require_job_owner(request, job_id)
     request.app.state.queue.status(job_id)  # 404 nếu job không có
     key = (str(s.workspace), f"{job_id}/{sid}")
     with _CACHE_LOCK:

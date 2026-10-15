@@ -25,6 +25,7 @@ from service.archives import (
 from service.errors import ApiError
 from service.models import DatasetReport
 from service.settings import Settings
+from service.sessions import require_owner, owner_for_dataset
 
 
 def check_manifest(upload_dir: Path) -> list[str]:
@@ -77,10 +78,13 @@ def validate_dataset(data_root: Path, dataset_id: str = "") -> DatasetReport:
     return rep
 
 
-def _save(settings: Settings, rep: DatasetReport) -> None:
+def _save(settings: Settings, rep: DatasetReport, session_id: str | None = None) -> None:
     d = settings.datasets / rep.dataset_id
     d.mkdir(parents=True, exist_ok=True)
-    (d / "report.json").write_text(rep.model_dump_json(by_alias=True), encoding="utf-8")
+    doc = rep.model_dump(by_alias=True)
+    if session_id:
+        doc["sessionId"] = session_id
+    (d / "report.json").write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
 
 
 class _Progress:
@@ -120,7 +124,7 @@ def _drop_upload_files(up: Path) -> None:
                 pass
 
 
-def create_dataset(settings: Settings, upload_id: str) -> DatasetReport:
+def create_dataset(settings: Settings, upload_id: str, session_id: str | None = None) -> DatasetReport:
     up = settings.uploads / upload_id
     if not up.is_dir():
         raise ApiError(404, "not_found", "Không tìm thấy phiên tải lên.")
@@ -161,7 +165,7 @@ def create_dataset(settings: Settings, upload_id: str) -> DatasetReport:
     else:
         prog.write("validate", 0, 1, "steps")
         rep = validate_dataset(data, ds_id)
-    _save(settings, rep)
+    _save(settings, rep, session_id)
     if rep.ok:
         _drop_upload_files(up)  # lỗi ⇒ giữ file để xét lại / gỡ lỗi
     prog.write("done" if rep.ok else "error", 1, 1, "steps")
@@ -177,7 +181,15 @@ router = APIRouter()
 
 @router.post("/datasets", response_model=DatasetReport, response_model_by_alias=True)
 def post_dataset(body: CreateDatasetIn, request: Request):
-    return create_dataset(request.app.state.settings, body.uploadId)
+    sid = getattr(request.state, "session_id", None)
+    if request.app.state.settings.sessions:
+        try:
+            upload_doc = json.loads((request.app.state.settings.uploads / body.uploadId / "session.json")
+                                    .read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            upload_doc = {}
+        require_owner(request.app.state.settings, sid, upload_doc.get("sessionId"))
+    return create_dataset(request.app.state.settings, body.uploadId, sid)
 
 
 @router.get("/datasets/progress/{upload_id}")
@@ -186,11 +198,20 @@ def get_progress(upload_id: str, request: Request):
     f = request.app.state.settings.uploads / upload_id / "progress.json"
     if not re.fullmatch(r"[A-Za-z0-9_-]+", upload_id) or not f.is_file():
         raise ApiError(404, "not_found", "Chưa có tiến độ xét tệp.")
+    if request.app.state.settings.sessions:
+        try:
+            meta = json.loads((f.parent / "session.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            meta = {}
+        require_owner(request.app.state.settings, getattr(request.state, "session_id", None),
+                      meta.get("sessionId"))
     return json.loads(f.read_text(encoding="utf-8"))
 
 
 @router.get("/datasets/{dataset_id}", response_model=DatasetReport, response_model_by_alias=True)
 def get_dataset(dataset_id: str, request: Request):
+    require_owner(request.app.state.settings, getattr(request.state, "session_id", None),
+                  owner_for_dataset(request.app.state.settings, dataset_id))
     f = request.app.state.settings.datasets / dataset_id / "report.json"
     if not f.is_file():
         raise ApiError(404, "not_found", "Không tìm thấy bộ dữ liệu.")

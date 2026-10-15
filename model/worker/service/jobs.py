@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from service.errors import ApiError
 from service.models import DatasetReport, JobList, JobStatus, JobSummary, Tier0Info, Tier1Info
 from service.settings import Settings
+from service.sessions import require_job_owner, require_owner, owner_for_dataset, owner_for_job
 
 ACTIVE = ("queued", "running")
 # Imported/demo runs use readable IDs; allow only a single safe path segment.
@@ -76,11 +77,11 @@ class JobQueue:
         _write_json(self._dir(job_id) / "job.json", meta)
 
     # ---- API ----
-    def submit(self, dataset_id: str, pipeline: str = "camera") -> str:
+    def submit(self, dataset_id: str, pipeline: str = "camera", session_id: str | None = None) -> str:
         job_id = uuid.uuid4().hex[:12]
         _write_json(self._dir(job_id) / "job.json", dict(
             jobId=job_id, datasetId=dataset_id, pipeline=pipeline, createdAt=_now(),
-            state="queued"))
+            state="queued", **({"sessionId": session_id} if session_id else {})))
         with self._cv:
             self._queue.append(job_id)
             self._cv.notify()
@@ -246,6 +247,9 @@ class JobQueue:
             self._stop = False
             self._thread = threading.Thread(target=self._loop, name="job-worker", daemon=True)
             self._thread.start()
+            if self.settings.sessions:
+                self._sweep_thread = threading.Thread(target=self._sweep_loop, name="session-sweep", daemon=True)
+                self._sweep_thread.start()
 
     def stop(self) -> None:
         with self._cv:
@@ -256,6 +260,24 @@ class JobQueue:
         if self._thread is not None:
             self._thread.join(timeout=10)
             self._thread = None
+        sweep = getattr(self, "_sweep_thread", None)
+        if sweep is not None:
+            sweep.join(timeout=10)
+            self._sweep_thread = None
+
+    def _sweep_loop(self) -> None:
+        from service.sessions import delete_session, expired, purge_orphans
+        while not self._stop:
+            with self._cv:
+                self._cv.wait(timeout=self.settings.sweep_sec)
+            if self._stop:
+                return
+            for sid in expired(self.settings, time.time()):
+                try:
+                    delete_session(self.settings, self, sid)
+                except (ApiError, OSError):
+                    continue
+            purge_orphans(self.settings, time.time())
 
     # ---- thread nền ----
     def _finish(self, job_id: str, status: dict) -> None:
@@ -305,6 +327,8 @@ router = APIRouter()
 @router.post("/jobs")
 def post_job(body: CreateJobIn, request: Request):
     s: Settings = request.app.state.settings
+    sid = getattr(request.state, "session_id", None)
+    require_owner(s, sid, owner_for_dataset(s, body.datasetId))
     f = s.datasets / body.datasetId / "report.json"
     rep = _read_json(f)
     if rep is None:
@@ -315,16 +339,17 @@ def post_job(body: CreateJobIn, request: Request):
                        "Bộ dữ liệu chưa hợp lệ: " + "; ".join(report.errors or ["không rõ lý do"]))
     # 01-CONTRACTS §4: mặc định lidar khi dataset có LiDAR, ngược lại camera
     pipeline = body.pipeline or ("lidar" if report.has_lidar else "camera")
-    return {"jobId": request.app.state.queue.submit(body.datasetId, pipeline)}
+    return {"jobId": request.app.state.queue.submit(body.datasetId, pipeline, sid)}
 
 
-def list_jobs(settings: Settings, limit: int = 50) -> list[JobSummary]:
+def list_jobs(settings: Settings, limit: int = 50, session_id: str | None = None) -> list[JobSummary]:
     """Job gần nhất trước (createdAt), đọc từ job.json/status.json/report.json trên đĩa."""
     from service.selection import list_selections  # nhập muộn: tránh vòng import
     metas = []
     for meta_file in settings.jobs.glob("*/job.json"):
         meta = _read_json(meta_file)
-        if isinstance(meta, dict) and meta.get("jobId"):
+        if isinstance(meta, dict) and meta.get("jobId") and (
+            not settings.sessions or (session_id is not None and meta.get("sessionId") == session_id)):
             metas.append(meta)
     metas.sort(key=lambda m: (m.get("createdAt", ""), m["jobId"]), reverse=True)
     items = []
@@ -352,21 +377,26 @@ def list_jobs(settings: Settings, limit: int = 50) -> list[JobSummary]:
 
 @router.get("/jobs", response_model=JobList, response_model_by_alias=True)
 def get_jobs(request: Request):
-    return JobList(items=list_jobs(request.app.state.settings))
+    sid = getattr(request.state, "session_id", None)
+    items = list_jobs(request.app.state.settings, session_id=sid)
+    return JobList(items=items)
 
 
 @router.get("/jobs/{job_id}", response_model=JobStatus, response_model_by_alias=True)
 def get_job(job_id: str, request: Request):
+    require_job_owner(request, job_id)
     return request.app.state.queue.status(job_id)
 
 
 @router.post("/jobs/{job_id}/t1/run", status_code=202)
 def run_job_t1(job_id: str, request: Request):
+    require_job_owner(request, job_id)
     return request.app.state.queue.run_t1(job_id)
 
 
 @router.post("/jobs/{job_id}/cancel", response_model=JobStatus, response_model_by_alias=True)
 def cancel_job(job_id: str, request: Request):
+    require_job_owner(request, job_id)
     return request.app.state.queue.cancel(job_id)
 
 
@@ -387,10 +417,22 @@ def _cancel_remote(request: Request):
 
 @router.delete("/jobs/{job_id}")
 def delete_job(job_id: str, request: Request):
+    require_job_owner(request, job_id)
     request.app.state.queue.delete(job_id, _cancel_remote(request))
     return {"deleted": [job_id]}
 
 
 @router.delete("/jobs")
 def delete_jobs(request: Request):
-    return request.app.state.queue.delete_all(_cancel_remote(request))
+    sid = getattr(request.state, "session_id", None)
+    if not request.app.state.settings.sessions:
+        return request.app.state.queue.delete_all(_cancel_remote(request))
+    deleted, skipped = [], []
+    for item in list_jobs(request.app.state.settings):
+        if owner_for_job(request.app.state.settings, item.job_id) == sid:
+            try:
+                request.app.state.queue.delete(item.job_id, _cancel_remote(request))
+                deleted.append(item.job_id)
+            except ApiError:
+                skipped.append({"jobId": item.job_id, "reason": "active"})
+    return {"deleted": deleted, "skipped": skipped}

@@ -13,6 +13,7 @@ from c4.lidar.pipeline import machine_schema
 from c4.lidar.pipeline import schema as lidar_params_schema
 from service import engines
 from service.errors import ApiError
+from service.sessions import require_job_owner
 from service.models import (
     FrameSummary,
     SelectionInfo,
@@ -155,6 +156,7 @@ router = APIRouter()
 
 @router.post("/jobs/{job_id}/select", response_model=SelectionResult, response_model_by_alias=True)
 def select(job_id: str, params: SelectParamsIn, request: Request):
+    require_job_owner(request, job_id)
     app = request.app
     st = app.state.queue.status(job_id)  # 404 nếu job không có
     if st.state != "done" and not t1_only_running(st):
@@ -182,7 +184,7 @@ def select(job_id: str, params: SelectParamsIn, request: Request):
             response_model_by_alias=True)
 def review_queue(job_id: str, request: Request, kind: str = "context",
                  offset: int = Query(0, ge=0), limit: int = Query(200, ge=1, le=200)):
-    request.app.state.queue.status(job_id)
+    require_job_owner(request, job_id)
     if kind != "context":
         raise ApiError(422, "bad_params", "Loại hàng đợi không được hỗ trợ.")
     ctx = engines.context_table(request.app.state.settings.jobs / job_id)
@@ -203,6 +205,7 @@ def machine_params_schema():
 @router.get("/jobs/{job_id}/params-schema")
 def params_schema(job_id: str, request: Request):
     """01-CONTRACTS §4: lược đồ cho panel ẩn của web; web KHÔNG hard-code miền giá trị."""
+    require_job_owner(request, job_id)
     st = request.app.state.queue.status(job_id)  # 404 nếu job không có
     if st.pipeline != "lidar":
         raise ApiError(404, "not_lidar", "Job này không phải pipeline LiDAR.")
@@ -212,6 +215,7 @@ def params_schema(job_id: str, request: Request):
 @router.get("/jobs/{job_id}/selections/{sid}", response_model=SelectionResult,
             response_model_by_alias=True)
 def get_selection(job_id: str, sid: str, request: Request):
+    require_job_owner(request, job_id)
     request.app.state.queue.status(job_id)
     s: Settings = request.app.state.settings
     return to_selection_result(job_id, s.jobs / job_id, load_selection(s, job_id, sid))
@@ -220,5 +224,6 @@ def get_selection(job_id: str, sid: str, request: Request):
 @router.get("/jobs/{job_id}/selections", response_model=SelectionList,
             response_model_by_alias=True)
 def get_selections(job_id: str, request: Request):
+    require_job_owner(request, job_id)
     request.app.state.queue.status(job_id)  # 404 nếu job không có
     return SelectionList(items=list_selections(request.app.state.settings, job_id))
