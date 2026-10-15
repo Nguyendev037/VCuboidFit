@@ -79,7 +79,7 @@ def owner_for_dataset(settings, dataset_id: str) -> str | None:
 
 
 def require_job_owner(request: Request, job_id: str) -> str | None:
-    sid = getattr(request.state, "session_id", None)
+    sid = getattr(getattr(request, "state", None), "session_id", None)
     require_owner(request.app.state.settings, sid, owner_for_job(request.app.state.settings, job_id))
     return sid
 
@@ -101,9 +101,12 @@ def expired(settings, now: float) -> list[str]:
 def delete_session(settings, queue, sid: str) -> dict:
     require_owner(settings, sid, sid)
     deleted = {"uploads": 0, "datasets": 0, "jobs": 0}
-    for root, key in ((settings.uploads, "uploads"), (settings.datasets, "datasets"), (settings.jobs, "jobs")):
+    for root, key, meta_name in (
+        (settings.uploads, "uploads", "session.json"),
+        (settings.datasets, "datasets", "report.json"),
+        (settings.jobs, "jobs", "job.json"),
+    ):
         for child in list(root.iterdir()) if root.is_dir() else []:
-            meta_name = "job.json" if key == "jobs" else "report.json"
             try:
                 doc = json.loads((child / meta_name).read_text(encoding="utf-8"))
             except (OSError, ValueError):
