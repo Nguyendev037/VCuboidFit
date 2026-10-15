@@ -5,7 +5,10 @@ param(
   # registries/runs); the registry may live elsewhere, the app pulls cross-region.
   [string]$AcrLocation = "japaneast",
   # Image vcf:$Tag already pushed (e.g. by an earlier run) => skip docker build/push.
-  [switch]$SkipBuild
+  [switch]$SkipBuild,
+  # First create without an operator: lock the app with an unknown random password; set the
+  # real one later with set-demo-password.ps1.
+  [switch]$DeferDemoPassword
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,6 +39,31 @@ function Test-AzResource {
   $ErrorActionPreference = "Continue"
   & az @Arguments *> $null
   return $LASTEXITCODE -eq 0
+}
+
+# App/job are created by ARM PUT: `az containerapp create --yaml` (api 2025-07-01) sends an
+# envelope full of nulls that a WorkloadProfiles environment rejects (400 "could not be
+# converted to System.Boolean"). The body holds secrets => temp file, never echoed, deleted.
+$armApi = "2026-07-01"
+$tagMap = @{ project = "vcuboidfit"; owner = "nguyendev037"; expires = "2026-11-01" }
+function Invoke-ArmPut {
+  param([Parameter(Mandatory = $true)][string]$Uri, [Parameter(Mandatory = $true)]$Body)
+  $file = Join-Path $env:TEMP ("vcf-arm-" + [guid]::NewGuid().ToString() + ".json")
+  try {
+    $Body | ConvertTo-Json -Depth 20 | Set-Content -Encoding utf8 $file
+    Invoke-Az @("rest", "--method", "put", "--uri", $Uri, "--body", "@$file", "-o", "none")
+  } finally { Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue }
+}
+function Wait-ArmSucceeded {
+  param([Parameter(Mandatory = $true)][string]$Uri)
+  for ($i = 0; $i -lt 40; $i++) {
+    $state = (& az rest --method get --uri $Uri --query properties.provisioningState -o tsv)
+    if ($state) { $state = $state.Trim() }
+    if ($state -eq "Succeeded") { return }
+    if ($state -eq "Failed" -or $state -eq "Canceled") { throw "provisioning $state for $Uri" }
+    Start-Sleep -Seconds 30
+  }
+  throw "timed out waiting for $Uri"
 }
 
 if (Test-Path $namesPath) {
@@ -144,9 +172,35 @@ if (-not (Test-AzResource @("storage", "share-rm", "show", "-g", $rg, "--storage
 $storageKey = (& az storage account keys list -g $rg -n $st --query "[0].value" -o tsv).Trim()
 if ($LASTEXITCODE -ne 0 -or -not $storageKey) { throw "storage account key lookup failed" }
 
+# `az containerapp env create` (CLI 2.91) yields an Express environment here (no Azure Files,
+# no jobs: ExpressEnvironmentResourceNotSupported) and has no mode flag. Create it via ARM with
+# an explicit mode; only api >= 2026-07-01 exposes environmentMode (older ones return null).
+# Valid modes: WorkloadProfiles, ConsumptionOnly, Reserved, Express ("Standard" is rejected).
+$subId = (& az account show --query id -o tsv).Trim()
+$envUri = "https://management.azure.com/subscriptions/$subId/resourceGroups/$rg/providers/Microsoft.App/managedEnvironments/cae-vcuboidfit?api-version=2026-07-01"
 if (-not (Test-AzResource @("containerapp", "env", "show", "-n", "cae-vcuboidfit", "-g", $rg, "-o", "none"))) {
-  Invoke-Az @("containerapp", "env", "create", "-n", "cae-vcuboidfit", "-g", $rg,
-    "--location", $Location, "--logs-destination", "none", "--tags", $tags, "-o", "none")
+  $envBody = Join-Path $env:TEMP ("vcf-env-" + [guid]::NewGuid().ToString() + ".json")
+  @{
+    location   = $Location
+    tags       = @{ project = "vcuboidfit"; owner = "nguyendev037"; expires = "2026-11-01" }
+    properties = @{
+      environmentMode       = "WorkloadProfiles"
+      workloadProfiles      = @(@{ name = "Consumption"; workloadProfileType = "Consumption" })
+      zoneRedundant         = $false
+    }
+  } | ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 $envBody
+  try { Invoke-Az @("rest", "--method", "put", "--uri", $envUri, "--body", "@$envBody", "-o", "none") }
+  finally { Remove-Item -LiteralPath $envBody -Force -ErrorAction SilentlyContinue }
+  for ($i = 0; $i -lt 40; $i++) {
+    $envState = (& az containerapp env show -n "cae-vcuboidfit" -g $rg --query properties.provisioningState -o tsv).Trim()
+    if ($envState -eq "Succeeded") { break }
+    if ($envState -eq "Failed") { throw "environment cae-vcuboidfit provisioning failed" }
+    Start-Sleep -Seconds 30
+  }
+}
+$envMode = (& az rest --method get --uri $envUri --query properties.environmentMode -o tsv)
+if ($envMode -and $envMode.Trim() -eq "Express") {
+  throw "cae-vcuboidfit is an Express environment (no Azure Files / jobs). Delete it and rerun."
 }
 Invoke-Az @("containerapp", "env", "storage", "set", "-n", "cae-vcuboidfit", "-g", $rg,
   "--storage-name", "vcfws", "--azure-file-account-name", $st,
@@ -156,139 +210,98 @@ Invoke-Az @("containerapp", "env", "storage", "set", "-n", "cae-vcuboidfit", "-g
 @{ resourceGroup = $rg; acr = $acr; storage = $st; tag = $Tag } |
   ConvertTo-Json | Set-Content -Encoding utf8 $namesPath
 $envId = (& az containerapp env show -n "cae-vcuboidfit" -g $rg --query id -o tsv).Trim()
+$armBase = "https://management.azure.com/subscriptions/$subId/resourceGroups/$rg/providers/Microsoft.App"
 
 if (-not (Test-AzResource @("containerapp", "show", "-n", "ca-vcuboidfit", "-g", $rg, "-o", "none"))) {
-  $demoSecure = Read-Host "Demo password" -AsSecureString
-  $demoPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($demoSecure)
-  try { $demoPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($demoPtr) }
-  finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($demoPtr) }
-  # YAML single-quoted scalar: only ' needs escaping (as '').
-  $demoYaml = "'" + $demoPassword.Replace("'", "''") + "'"
+  if ($DeferDemoPassword) {
+    # Unattended run: a random password nobody sees locks the app until the operator runs
+    # set-demo-password.ps1; the token goes to a file outside the repo, never to the console.
+    $demoPassword = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 40 | ForEach-Object { [char]$_ })
+  } else {
+    $demoSecure = Read-Host "Demo password" -AsSecureString
+    $demoPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($demoSecure)
+    try { $demoPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($demoPtr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($demoPtr) }
+  }
   $remoteToken = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 48 | ForEach-Object { [char]$_ })
-  Write-Output "Copy this remote-token once for the GPU agent: $remoteToken"
-  $appYaml = Join-Path $env:TEMP ("vcf-app-" + [guid]::NewGuid().ToString() + ".yaml")
-  $appYamlContent = @"
-location: $Location
-name: ca-vcuboidfit
-type: Microsoft.App/containerApps
-tags:
-  project: vcuboidfit
-  owner: nguyendev037
-  expires: 2026-11-01
-identity:
-  type: UserAssigned
-  userAssignedIdentities:
-    ${idId}: {}
-properties:
-  managedEnvironmentId: $envId
-  configuration:
-    activeRevisionsMode: Single
-    ingress:
-      external: true
-      targetPort: 3000
-      transport: auto
-    registries:
-      - server: $acrServer
-        identity: $idId
-    secrets:
-      - name: demo-password
-        value: $demoYaml
-      - name: remote-token
-        value: $remoteToken
-  template:
-    containers:
-      - name: vcuboidfit
-        image: $image
-        resources:
-          cpu: 2.0
-          memory: 4Gi
-        env:
-          - name: VCF_DEMO_PASSWORD
-            secretRef: demo-password
-          - name: VCF_REMOTE_TOKEN
-            secretRef: remote-token
-          - name: VCF_SESSIONS
-            value: "1"
-          - name: NEXT_PUBLIC_VCF_SESSIONS
-            value: "1"
-          - name: WORKSPACE
-            value: /data/workspace
-          - name: MAX_UPLOAD_GB
-            value: "20"
-        volumeMounts:
-          - volumeName: vcfws
-            mountPath: /data/workspace
-    scale:
-      minReplicas: 0
-      maxReplicas: 1
-    volumes:
-      - name: vcfws
-        storageType: AzureFile
-        storageName: vcfws
-"@
-Set-Content -Value $appYamlContent -Encoding utf8 $appYaml
-  try { Invoke-Az @("containerapp", "create", "-n", "ca-vcuboidfit", "-g", $rg, "--yaml", $appYaml, "-o", "none") }
-  finally { Remove-Item -LiteralPath $appYaml -Force -ErrorAction SilentlyContinue }
+  if ($DeferDemoPassword) {
+    $tokenDir = Join-Path $env:USERPROFILE ".vcuboidfit"
+    New-Item -ItemType Directory -Force $tokenDir | Out-Null
+    Set-Content -Encoding ascii -Value $remoteToken (Join-Path $tokenDir "remote-token.txt")
+    Write-Output "remote-token written to $tokenDir\remote-token.txt (outside the repo)"
+  } else {
+    Write-Output "Copy this remote-token once for the GPU agent: $remoteToken"
+  }
+  $vol = @(@{ name = "vcfws"; storageType = "AzureFile"; storageName = "vcfws" })
+  $mount = @(@{ volumeName = "vcfws"; mountPath = "/data/workspace" })
+  $app = @{
+    location   = $Location
+    tags       = $tagMap
+    identity   = @{ type = "UserAssigned"; userAssignedIdentities = @{ $idId = @{} } }
+    properties = @{
+      environmentId = $envId
+      configuration = @{
+        activeRevisionsMode = "Single"
+        ingress    = @{ external = $true; targetPort = 3000; transport = "auto" }
+        registries = @(@{ server = $acrServer; identity = $idId })
+        secrets    = @(@{ name = "demo-password"; value = $demoPassword },
+                       @{ name = "remote-token"; value = $remoteToken })
+      }
+      template = @{
+        containers = @(@{
+          name = "vcuboidfit"; image = $image
+          resources = @{ cpu = 2.0; memory = "4Gi" }
+          env = @(
+            @{ name = "VCF_DEMO_PASSWORD"; secretRef = "demo-password" },
+            @{ name = "VCF_REMOTE_TOKEN"; secretRef = "remote-token" },
+            @{ name = "VCF_SESSIONS"; value = "1" },
+            @{ name = "NEXT_PUBLIC_VCF_SESSIONS"; value = "1" },
+            @{ name = "WORKSPACE"; value = "/data/workspace" },
+            @{ name = "MAX_UPLOAD_GB"; value = "20" })
+          volumeMounts = $mount
+        })
+        scale   = @{ minReplicas = 0; maxReplicas = 1 }
+        volumes = $vol
+      }
+    }
+  }
+  Invoke-ArmPut "$armBase/containerApps/ca-vcuboidfit?api-version=$armApi" $app
+  Wait-ArmSucceeded "$armBase/containerApps/ca-vcuboidfit?api-version=$armApi"
 } else {
   Invoke-Az @("containerapp", "update", "-n", "ca-vcuboidfit", "-g", $rg, "--image", $image, "-o", "none")
 }
 
 if (-not (Test-AzResource @("containerapp", "job", "show", "-n", "job-vcf-sweep", "-g", $rg, "-o", "none"))) {
-  $jobYaml = Join-Path $env:TEMP ("vcf-job-" + [guid]::NewGuid().ToString() + ".yaml")
-  $jobYamlContent = @"
-location: $Location
-name: job-vcf-sweep
-type: Microsoft.App/jobs
-tags:
-  project: vcuboidfit
-  owner: nguyendev037
-  expires: 2026-11-01
-identity:
-  type: UserAssigned
-  userAssignedIdentities:
-    ${idId}: {}
-properties:
-  environmentId: $envId
-  configuration:
-    registries:
-      - server: $acrServer
-        identity: $idId
-    triggerType: Schedule
-    scheduleTriggerConfig:
-      cronExpression: "0 * * * *"
-      replicaCompletionCount: 1
-      parallelism: 1
-    replicaRetryLimit: 0
-    replicaTimeout: 600
-  template:
-    containers:
-      - name: vcf-sweep
-        image: $image
-        resources:
-          cpu: 0.5
-          memory: 1Gi
-        command:
-          - python
-          - -m
-          - service.sweep
-        env:
-          - name: WORKSPACE
-            value: /data/workspace
-          - name: VCF_SESSIONS
-            value: "1"
-          - name: VCF_SESSION_TTL_H
-            value: "24"
-        volumeMounts:
-          - volumeName: vcfws
-            mountPath: /data/workspace
-    volumes:
-      - name: vcfws
-        storageType: AzureFile
-        storageName: vcfws
-"@
-Set-Content -Value $jobYamlContent -Encoding utf8 $jobYaml
-  try { Invoke-Az @("containerapp", "job", "create", "-n", "job-vcf-sweep", "-g", $rg, "--yaml", $jobYaml, "-o", "none") }
-  finally { Remove-Item -LiteralPath $jobYaml -Force -ErrorAction SilentlyContinue }
+  $job = @{
+    location   = $Location
+    tags       = $tagMap
+    identity   = @{ type = "UserAssigned"; userAssignedIdentities = @{ $idId = @{} } }
+    properties = @{
+      environmentId = $envId
+      configuration = @{
+        registries            = @(@{ server = $acrServer; identity = $idId })
+        triggerType           = "Schedule"
+        scheduleTriggerConfig = @{ cronExpression = "0 * * * *"; replicaCompletionCount = 1; parallelism = 1 }
+        replicaRetryLimit     = 0
+        replicaTimeout        = 600
+      }
+      template = @{
+        containers = @(@{
+          name = "vcf-sweep"; image = $image
+          resources = @{ cpu = 0.5; memory = "1Gi" }
+          command = @("python", "-m", "service.sweep")
+          env = @(
+            @{ name = "WORKSPACE"; value = "/data/workspace" },
+            @{ name = "VCF_SESSIONS"; value = "1" },
+            @{ name = "VCF_SESSION_TTL_H"; value = "24" })
+          volumeMounts = $mount
+        })
+        volumes = $vol
+      }
+    }
+  }
+  Invoke-ArmPut "$armBase/jobs/job-vcf-sweep?api-version=$armApi" $job
+  Wait-ArmSucceeded "$armBase/jobs/job-vcf-sweep?api-version=$armApi"
 } else {
   Invoke-Az @("containerapp", "job", "update", "-n", "job-vcf-sweep", "-g", $rg, "--image", $image, "-o", "none")
 }

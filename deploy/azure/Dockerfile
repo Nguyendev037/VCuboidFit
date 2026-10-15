@@ -26,6 +26,8 @@ COPY --from=web /src/web/.next/standalone /app/web
 COPY --from=web /src/web/.next/static /app/web/.next/static
 COPY --from=web /src/web/public /app/web/public
 COPY deploy/azure/start.sh /opt/vcf/start.sh
+# A Windows checkout may carry CRLF despite .gitattributes => "set: pipefail\r: invalid option".
+RUN sed -i 's/\r$//' /opt/vcf/start.sh
 ENV WORKSPACE=/data/workspace WORKER_URL=http://127.0.0.1:8001 VCF_PORT=8001 \
     PORT=3000 HOSTNAME=0.0.0.0 C4_PROFILE=azure-lite VCF_SESSIONS=1 \
     PYTHONIOENCODING=utf-8 SEVENZIP_PATH=/usr/local/bin/7zz NEXT_TELEMETRY_DISABLED=1
