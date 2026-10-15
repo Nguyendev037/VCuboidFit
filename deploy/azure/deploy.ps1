@@ -84,7 +84,34 @@ if ($pullIds.Count -eq 0 -or -not $pullIds[0]) {
   Invoke-Az @("role", "assignment", "create", "--assignee-object-id", $idPrincipal,
     "--assignee-principal-type", "ServicePrincipal", "--role", "AcrPull", "--scope", $acrId, "-o", "none")
 }
-Invoke-Az @("acr", "build", "-r", $acr, "-t", "vcf:$Tag", "-f", "deploy/azure/Dockerfile", ".")
+# Build from a staged context holding only what the Dockerfile COPYs: `az acr build` walks
+# and filters the whole tree itself (model/workspace + .venv ≈ 21 GB) and stalls for minutes.
+$tmpRoot = if (Test-Path "E:\") { "E:\" } else { $env:TEMP }
+$ctx = Join-Path $tmpRoot ("vcf-ctx-" + $Tag)
+if (Test-Path $ctx) { Remove-Item -LiteralPath $ctx -Recurse -Force }
+$repo = (git rev-parse --show-toplevel).Trim()
+$stage = @(
+  @{ src = "web"; xd = @("node_modules", ".next", "test-results", "mock-media") },
+  @{ src = "model/worker/c4"; xd = @("__pycache__") },
+  @{ src = "model/worker/service"; xd = @("__pycache__") },
+  @{ src = "model/worker/configs"; xd = @() },
+  @{ src = "deploy/azure"; xd = @() }
+)
+try {
+  foreach ($s in $stage) {
+    $rcArgs = @((Join-Path $repo $s.src), (Join-Path $ctx $s.src), "/E", "/NFL", "/NDL", "/NJH", "/NJS", "/NP")
+    if ($s.xd.Count) { $rcArgs += "/XD"; $rcArgs += $s.xd }
+    & robocopy @rcArgs | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "robocopy $($s.src) failed with exit code $LASTEXITCODE" }
+  }
+  Copy-Item (Join-Path $repo "model/worker/pyproject.toml") (Join-Path $ctx "model/worker/pyproject.toml")
+  Copy-Item (Join-Path $repo ".dockerignore") (Join-Path $ctx ".dockerignore")
+  $ctxMb = [math]::Round(((Get-ChildItem $ctx -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1)
+  Write-Output "Build context: $ctx ($ctxMb MB)"
+  Invoke-Az @("acr", "build", "-r", $acr, "-t", "vcf:$Tag", "-f", "deploy/azure/Dockerfile", $ctx)
+} finally {
+  Remove-Item -LiteralPath $ctx -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 if (-not (Test-AzResource @("storage", "account", "show", "-n", $st, "-g", $rg, "-o", "none"))) {
   Invoke-Az @("storage", "account", "create", "-n", $st, "-g", $rg, "-l", $Location,
