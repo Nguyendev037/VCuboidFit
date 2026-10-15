@@ -5,7 +5,7 @@ an SMB Azure Files share `workspace` mounted at `/data/workspace`, an hourly Con
 `job-vcf-sweep` that deletes expired sessions, and the CPU `azure-lite` worker profile.
 Planning record: BuildLab `planning/20_2026-10-15_azure-deploy-lite/`. No credentials live in this repo.
 
-## Current deployment (2026-10-15)
+## Current deployment (2026-10-16)
 
 | Item | Value |
 |---|---|
@@ -15,6 +15,9 @@ Planning record: BuildLab `planning/20_2026-10-15_azure-deploy-lite/`. No creden
 | Budget | `budget-vcuboidfit-demo`, subscription scope, 100 USD/month, alerts Actual 25/50/75 + Forecast 100 |
 | Pull identity | user-assigned `id-vcuboidfit` with `AcrPull` (shared by app and job) |
 | Names | `deploy/azure/.names.json` (git-ignored): ACR `acrvcf…`, storage `stvcf…` |
+| Environment | `cae-vcuboidfit`, `environmentMode: WorkloadProfiles` (Consumption profile), storage `vcfws` |
+| App | `ca-vcuboidfit`, ingress external :3000, min 0 / max 1, FQDN `ca-vcuboidfit.graymeadow-7a5b88aa.japaneast.azurecontainerapps.io` |
+| Job | `job-vcf-sweep`, cron `0 * * * *`, 0.5 vCPU / 1 GiB |
 
 ## Prerequisites (operator machine)
 
@@ -42,14 +45,25 @@ What the script does (idempotent; reruns reuse `.names.json`):
 3. Stage a minimal build context (~6 MB: `web` without `node_modules/.next/mock-media/.env*.local`,
    `model/worker/{pyproject.toml,c4,service,configs}`, `deploy/azure`) on `E:\` (else `%TEMP%`),
    `docker build`, `az acr login`, `docker push <acr>.azurecr.io/vcf:<git short sha>`, delete the stage.
-4. Storage account + share `workspace` (100 GiB); environment `cae-vcuboidfit` with storage `vcfws`.
+4. Storage account + share `workspace` (100 GiB); environment `cae-vcuboidfit` created by ARM PUT
+   (api `2026-07-01`) with `environmentMode: WorkloadProfiles` — the script refuses to continue on an
+   `Express` environment — then storage `vcfws`.
 5. First run only: prompts **Demo password** (hidden) and prints the **remote-token once** — copy it
-   somewhere outside the repo. Creates `ca-vcuboidfit` and `job-vcf-sweep` from temporary YAML.
-   Later runs: `containerapp update --image` for app and job.
+   somewhere outside the repo. Creates `ca-vcuboidfit` and `job-vcf-sweep` by ARM PUT (body in a temp
+   file, deleted). Later runs: `containerapp update --image` for app and job.
 6. Prints the FQDN.
 
 Flags: `-Tag <sha>` (default HEAD), `-AcrLocation <region>`, `-SkipBuild` (image `vcf:<Tag>` already
-pushed — e.g. the build ran unattended and only the password step is left).
+pushed), `-DeferDemoPassword` (unattended first create: the app is locked with a random password nobody
+sees and the remote-token is written to `%USERPROFILE%\.vcuboidfit\remote-token.txt`, outside the repo).
+
+Set or rotate the demo password at any time (hidden prompt, restarts the revision):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\azure\set-demo-password.ps1
+```
+
+Avoid spaces and `" & | < > ^ % !` in the password (`az.cmd` passes it through cmd.exe).
 
 Commit before deploying so the image tag matches the code.
 
@@ -80,7 +94,7 @@ docker run --rm --gpus all -e VCF_REMOTE_TOKEN=<token> -v E:\vcf_agent:/work `
 
 `E:\vcf_agent` is temporary. Never commit the token.
 
-## Known pitfalls (all hit on 2026-10-15)
+## Known pitfalls (hit on 2026-10-15/16)
 
 | Symptom | Cause | Fix in script |
 |---|---|---|
@@ -94,6 +108,11 @@ docker run --rm --gpus all -e VCF_REMOTE_TOKEN=<token> -v E:\vcf_agent:/work `
 | `Environments: .env.local` in build log | local config copied into the image | excluded in stage, `.dockerignore`, and `rm` in Dockerfile |
 | `InvalidResourceGroupLocation` | `az group create` with another region on an existing RG | create RG only if missing |
 | First revision cannot pull (401) | system identity exists only after create | user-assigned identity granted `AcrPull` before create |
+| `ExpressEnvironmentResourceNotSupported` on `env storage set` | `az containerapp env create` (CLI 2.91, no mode flag) produced an **Express** environment: no Azure Files, no jobs. Visible only with api `>= 2026-07-01` (older APIs return `environmentMode: null`) | ARM PUT with `environmentMode: WorkloadProfiles`; `Standard` is rejected (valid: `WorkloadProfiles`, `ConsumptionOnly`, `Reserved`, `Express`) |
+| `Object of type date is not JSON serializable` | bare YAML `expires: 2026-11-01` parsed as a date | moot: app/job created by ARM PUT with JSON |
+| 400 `could not be converted to System.Boolean. Path: $` on `containerapp create --yaml` | CLI (api 2025-07-01) sends an envelope full of nulls | ARM PUT, api `2026-07-01`, minimal body |
+| Revision stuck `Activating`, console `set: pipefail\r: invalid option` | `start.sh` checked out with CRLF before the `*.sh eol=lf` rule | Dockerfile strips `\r` from `start.sh` |
+| `AADSTS530035 … blocked by security defaults` | cached token expired; tenant requires interactive MFA | `az login --tenant <tenant-id>` (browser) |
 
 ## Teardown
 
