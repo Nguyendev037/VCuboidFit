@@ -23,7 +23,11 @@ function Invoke-Az {
   $ErrorActionPreference = "Continue"  # judge az by exit code, not by stderr text
   & az @Arguments
   if ($LASTEXITCODE -ne 0) {
-    throw "az $($Arguments -join ' ') failed with exit code $LASTEXITCODE"
+    # Never echo secrets: mask the value after any *-key / *-password / *-token flag.
+    $shown = for ($i = 0; $i -lt $Arguments.Count; $i++) {
+      if ($i -gt 0 -and $Arguments[$i - 1] -match '-(key|password|token)$') { "***" } else { $Arguments[$i] }
+    }
+    throw "az $($shown -join ' ') failed with exit code $LASTEXITCODE"
   }
 }
 
