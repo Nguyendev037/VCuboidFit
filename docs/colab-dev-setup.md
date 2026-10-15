@@ -1,7 +1,7 @@
 # Chạy VCuboidFIT trên Google Colab
 
 Có 2 cách. **Cách 1** là cách chính: máy bạn chạy web, Colab chỉ làm phần nặng (Tầng 1, cần GPU).
-Ngoài ra có notebook benchmark nghiên cứu và notebook seed PointPillars trainval (chẩn đoán trên V) ở cuối tài liệu. T đã hoàn tất trên A100; đó là luồng riêng, không chứng minh cầu nối Tầng 1 từ xa đã đạt gate Colab thật. Không mở lại tập T để thử hướng dẫn này. [Số đo và gate còn lại](project-status.md).
+Ngoài ra có notebook benchmark nghiên cứu và notebook huấn luyện PointPillars trainval lớn (>50 GB, A100) ở cuối tài liệu. T đã hoàn tất trên A100; đó là luồng riêng, không chứng minh cầu nối Tầng 1 từ xa đã đạt gate Colab thật. Không mở lại tập T để thử hướng dẫn này. [Số đo và gate còn lại](project-status.md).
 
 | Cách | Dùng khi | Notebook |
 |---|---|---|
@@ -177,30 +177,39 @@ log từng CLI, hai thư mục `mini/` và `pool/` riêng, cùng bản sao job.
 VRAM là đỉnh bộ nhớ GPU toàn thiết bị qua `nvidia-smi`, lấy mẫu 1 giây;
 không phải peak allocator riêng của PyTorch. Lượt T thực tế có tổng thời gian 1.236 s; chỉ báo VRAM nếu evidence chứa số đo thiết bị tương ứng. Nguồn và phạm vi ở [project-status](project-status.md).
 
-## Seed PointPillars trên trainval + chẩn đoán trên V
+## Huấn luyện PointPillars trainval lớn (>50 GB LiDAR, A100)
 
-Notebook: [vcf_night_pp_trainval.ipynb](../model/notebooks/vcf_night_pp_trainval.ipynb) · script
-[colab_pp_night.py](../model/scripts/colab_pp_night.py). Runtime **A100 + High-RAM**, **Run all**.
-Không đụng T: không có `bench_pitch --mode pool`, `diag --split T` thoát mã 3. Kết quả V là **chẩn đoán**
-(tham chiếu fit và chấm cùng trên V), không thay prereg `pitch-v2`.
+Notebook: [TrainModel.ipynb](../model/notebooks/TrainModel.ipynb) (File → Upload notebook trong Colab).
+Tên hiển thị khi nhập là **TrainModel.ipynb**; đây là notebook huấn luyện chính thức của hồ sơ 16, dùng **Run all**.
+Runtime yêu cầu **GPU A100 + High-RAM**, đĩa `/content` còn trống tối thiểu dung lượng source pack + 35 GB dự phòng.
+Không đụng tập T cũ: toàn bộ 205 scene complete official TRAIN (8.182 keyframes, 10 sweeps, >50 GB LiDAR) được dùng để huấn luyện từ đầu; tập kiểm tra nội bộ là 15 scene complete official VAL ngoài pool cũ (602 keyframes). Các scene V/P cũ trong pool được xếp vào TRAIN, không gọi là holdout và không chuyển giao kết luận chẩn đoán.
 
-- Train seed từ đầu trên S của pool (7 scene, 279 keyframe) + 70 scene TRAIN chính thức ngoài pool
-  (`scene-1007…1110`, 2.818 keyframe, Singapore đêm). Không bao giờ V, T, P hoặc scene VAL. `sweeps = 1` vì các gói
-  không có sweeps (đủ sweeps cần thêm ~58 GB).
-- Suy luận trên mọi frame của job pool (không đọc nhãn), rồi `rare_v24` trên V: A `cluster_only` lidar_only,
-  B `cluster+pp` lidar_only, C `cluster+pp` multisensor (+A2 tuỳ chọn). Đo IY@B capture B, reach 1 m, bootstrap cụm scene.
+- Huấn luyện PointPillars từ đầu (khởi tạo ngẫu nhiên, không checkpoint có sẵn, không `--init-ckpt`), 10 sweeps, 20 epochs, batch 8 (tự động hạ 4 rồi 2 nếu gặp lỗi CUDA OOM thực sự), 8 workers, `gt_sampling: False`.
+- Script đóng gói và kiểm tra toàn vẹn metadata: `model/scripts/trainval_full.py` (CLI `pack`, `index`, `verify`).
 
-Chuẩn bị (sau khi commit, vì code ZIP = `git archive HEAD`; lệnh từ chối cây chưa commit):
+Chuẩn bị gói dữ liệu và mã nguồn:
 ```powershell
-model\worker\.venv\Scripts\python.exe model\scripts\colab_pp_night.py pack-seed --data-root E:/nuscenes_trainval `
-  --pool-index model/workspace/jobs/pool_v24/lidar/index.parquet --out F:/vcf_pack/seed_pp_v1 --code
+python model/scripts/trainval_full.py pack --data-root E:/nuscenes_trainval `
+  --pool-index model/workspace/jobs/pool_v24/lidar/index.parquet --out F:/vcf_pack/trainval_pp_v2
 ```
-Chép cả thư mục `F:/vcf_pack/seed_pp_v1/` vào `MyDrive/datatest/seed_pp_v1/`. Gói pool cũ (`pool_v24`) được tìm ở
-`MyDrive/datatest/pool_v24`, `MyDrive/vcf_pack/pool_v24` hoặc `MyDrive/pool_v24`. Notebook đọc `repo_sha` từ
-manifest gói seed — không cần sửa tay.
+Chép toàn bộ thư mục `F:/vcf_pack/trainval_pp_v2/` (bao gồm các part `trainval_part_*.zip`, `code_trainmodel.zip` và `manifest.json`) vào `MyDrive/datatest/trainval_pp_v2/`.
 
-Ngắt runtime: kết nối lại A100 và **Run all** với cùng `RUN_ID`; bước đã lưu trên Drive được bỏ qua, checkpoint giữa
-chừng được đồng bộ mỗi 5 phút. Kết quả ở `MyDrive/vcf_results/<RUN_ID>/` (`diag/diag_table.md`, `seed/seed_latest.pth`
-kèm `.sha256`, `SHA256SUMS.txt`). Checkpoint chỉ để trong Drive riêng, không chia sẻ công khai.
-Thời gian dự kiến là **ước tính** 2,2–4,2 giờ (train chiếm phần lớn); chi tiết từng ô, điểm cần người quyết và
-rollback nằm trong hồ sơ kế hoạch 15 của workspace quản trị (`planning/15_2026-10-14_colab-pp-trainval/`).
+Vận hành và khôi phục khi ngắt quãng (Resume):
+- Thư mục làm việc cục bộ trong Colab: `/content/vcf_trainmodel` (mã nguồn giải nén tại `repo/`, dữ liệu tại `data/`, thí nghiệm tại `exp/`).
+- Checkpoint được đồng bộ nguyên tử lên Drive mỗi 300 giây (`.part` rồi đổi tên, kèm `.sha256`), tự động giữ tối đa 2 bản checkpoint mới nhất trên Drive tại `MyDrive/vcf_results/<RUN_ID>/train/pcdet_output/`.
+- Nếu ngắt runtime giữa chừng: kết nối lại A100 và chạy lại **Run all** với cùng `RUN_ID` (mặc định `trainmodel-full-20261014`); notebook tự động khôi phục checkpoint hợp lệ từ Drive và OpenPCDet tiếp tục huấn luyện từ epoch gần nhất.
+- Kết quả hoàn tất lưu tại `MyDrive/vcf_results/<RUN_ID>/`: `manifest.json`, `parameters.json`, `seed/{seed_latest.pth,pp_seed.yaml,train_config.yaml,seed_tokens.txt,index.parquet}`, checkpoint mirror, logs và `SHA256SUMS.txt`.
+- Lưu ý đánh giá: NuScenes devkit evaluation sau train trên tập heldout 15 scene có thể báo lỗi do devkit mặc định đòi đủ 150 scene VAL; checkpoint epoch 20 vẫn được nghiệm thu hoàn tất với `post_train_eval=failed` ghi nhận trung thực (SPEC-P01 §3). Không công bố mAP/NDS toàn bộ tập val chính thức từ tập con này.
+
+
+Bẫy môi trường Colab đã gặp và đã vá trong notebook (lượt 2026-10-14):
+- `dist-packages` của Colab có file `.gitignore` ⇒ `pccm` tưởng cumm là bản editable và tự JIT-build (lỗi thiếu `tensorview/pybind_utils.h`). Ô 4 đặt `CUMM_DISABLE_JIT=1`, `SPCONV_DISABLE_JIT=1` trước mọi import.
+- Bước cài OpenPCDet kéo `numba`/`scikit-image` mới ⇒ numpy lên 2.x, nuscenes-devkit/spconv vỡ. Ô 4 ghim `numpy<2 numba==0.61.2 llvmlite==0.44.0`. Nếu kernel đã nạp numpy cũ (`numpy.dtype size changed` khi `import pandas`): khởi động lại kernel rồi chạy lại từ ô 1.
+- Ô 5 đọc mỗi part trên Drive đúng **một lượt** (chép về `/content/_part_tmp` và băm SHA cùng lúc), giải nén từ đĩa local; part có marker `markers/part_<tên>` thì bỏ qua khi chạy lại.
+- Khi dữ liệu đã giải nén (`markers/data_unpacked`), ô 1 chỉ đòi 35 GB trống thay vì source + 35 GB.
+
+Thời gian đo trên A100-80GB (batch 8, 10 sweeps, CBGS): `create_info` ~10 phút; 4.327 iteration/epoch × ~0,71 s ≈ **51 phút/epoch**; VRAM ~27–36 GB. 20 epoch ≈ 17 giờ + chuẩn bị ~1 giờ.
+
+Dừng sớm có chủ đích (ô **8b**): bấm ⏹ ô 8, đặt `STOP_EARLY=True` ở ô 8b rồi chạy 8b → 9 → 10. Ô 8b dừng tiến trình train, lấy checkpoint epoch mới nhất làm `seed_latest.pth` (qua `train_seed --init-ckpt`), ghi `epochs_trained` vào `run_identity.json`. Ô 10 gọi `runtime.unassign()` để ngừng tốn compute unit sau khi ô 9 đã xuất bản.
+
+Kết quả lượt đầu (`RUN_ID=trainmodel-full-20261014`): dừng sớm ở **epoch 6/20** để kịp hạn; trọng số trong repo tại [`model/weights/pointpillars-trainval-e6/`](../model/weights/pointpillars-trainval-e6/) — chi tiết ở [model-workflow §9](model-workflow.md#9-trọng-số-pointpillars-trainval-epoch-6-trainmodel-2026-10-15).
