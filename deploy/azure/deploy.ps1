@@ -34,32 +34,45 @@ if (Test-Path $namesPath) {
   $st = "stvcf" + ((Get-Random -Minimum 100000 -Maximum 999999).ToString())
 }
 
-Invoke-Az @("group", "create", "-n", $rg, "-l", $Location, "--tags", $tags, "-o", "none")
-$subscription = (& az account show --query id -o tsv).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $subscription) { throw "az account show failed" }
-$scope = "/subscriptions/$subscription"
+# RG location is metadata only; an existing RG in another region is reused as-is.
+if ((& az group exists -n $rg).Trim() -ne "true") {
+  Invoke-Az @("group", "create", "-n", $rg, "-l", $Location, "--tags", $tags, "-o", "none")
+}
 
-if (-not (Test-AzResource @("consumption", "budget", "show", "--budget-name", $budget,
-      "--scope", $scope, "-o", "none"))) {
+# `az consumption budget` has no --scope flag; without -g it targets the subscription.
+if (-not (Test-AzResource @("consumption", "budget", "show", "--budget-name", $budget, "-o", "none"))) {
   try {
     Invoke-Az @("consumption", "budget", "create", "--budget-name", $budget, "--amount", "100",
       "--category", "Cost", "--time-grain", "Monthly",
-      "--time-period", "start=2026-10-01", "end=2026-11-01", "--scope", $scope,
-      "--notifications", '{"actual25":{"enabled":true,"operator":"GreaterThanOrEqual","threshold":25,"contactEmails":["nguyenndev037@gmail.com"]},"actual50":{"enabled":true,"operator":"GreaterThanOrEqual","threshold":50,"contactEmails":["nguyenndev037@gmail.com"]},"actual75":{"enabled":true,"operator":"GreaterThanOrEqual","threshold":75,"contactEmails":["nguyenndev037@gmail.com"]},"forecast100":{"enabled":true,"operator":"GreaterThanOrEqual","threshold":100,"contactEmails":["nguyenndev037@gmail.com"]}}')
+      "--start-date", "2026-10-01", "--end-date", "2026-11-30")
   } catch {
     Write-Error "Budget creation failed. Create budget-vcuboidfit-demo manually in Azure Portal (Cost Management > Budgets), then rerun this script."
     exit 1
   }
 }
-if (-not (Test-AzResource @("consumption", "budget", "show", "--budget-name", $budget,
-      "--scope", $scope, "-o", "none"))) {
+if (-not (Test-AzResource @("consumption", "budget", "show", "--budget-name", $budget, "-o", "none"))) {
   Write-Error "Budget $budget was not found; no chargeable resources will be created."
   exit 1
 }
 
 if (-not (Test-AzResource @("acr", "show", "-n", $acr, "-g", $rg, "-o", "none"))) {
-  Invoke-Az @("acr", "create", "-n", $acr, "-g", $rg, "--sku", "Basic",
+  Invoke-Az @("acr", "create", "-n", $acr, "-g", $rg, "-l", $Location, "--sku", "Basic",
     "--admin-enabled", "false", "--tags", $tags, "-o", "none")
+}
+$acrId = (& az acr show -n $acr -g $rg --query id -o tsv).Trim()
+
+# One user-assigned identity with AcrPull, granted BEFORE the app/job exist so the first
+# revision can pull (a system identity only exists after create => first pull is 401).
+$identity = "id-vcuboidfit"
+if (-not (Test-AzResource @("identity", "show", "-n", $identity, "-g", $rg, "-o", "none"))) {
+  Invoke-Az @("identity", "create", "-n", $identity, "-g", $rg, "-l", $Location, "--tags", $tags, "-o", "none")
+}
+$idId = (& az identity show -n $identity -g $rg --query id -o tsv).Trim()
+$idPrincipal = (& az identity show -n $identity -g $rg --query principalId -o tsv).Trim()
+$hasPull = (& az role assignment list --assignee $idPrincipal --scope $acrId --role AcrPull --query "length(@)" -o tsv).Trim()
+if ($hasPull -eq "0") {
+  Invoke-Az @("role", "assignment", "create", "--assignee-object-id", $idPrincipal,
+    "--assignee-principal-type", "ServicePrincipal", "--role", "AcrPull", "--scope", $acrId, "-o", "none")
 }
 Invoke-Az @("acr", "build", "-r", $acr, "-t", "vcf:$Tag", "-f", "deploy/azure/Dockerfile", ".")
 
@@ -88,7 +101,6 @@ Invoke-Az @("containerapp", "env", "storage", "set", "-n", "cae-vcuboidfit", "-g
 @{ resourceGroup = $rg; acr = $acr; storage = $st; tag = $Tag } |
   ConvertTo-Json | Set-Content -Encoding utf8 $namesPath
 $acrServer = (& az acr show -n $acr -g $rg --query loginServer -o tsv).Trim()
-$acrId = (& az acr show -n $acr -g $rg --query id -o tsv).Trim()
 $envId = (& az containerapp env show -n "cae-vcuboidfit" -g $rg --query id -o tsv).Trim()
 $image = "$acrServer/vcf:$Tag"
 
@@ -97,6 +109,8 @@ if (-not (Test-AzResource @("containerapp", "show", "-n", "ca-vcuboidfit", "-g",
   $demoPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($demoSecure)
   try { $demoPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($demoPtr) }
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($demoPtr) }
+  # YAML single-quoted scalar: only ' needs escaping (as '').
+  $demoYaml = "'" + $demoPassword.Replace("'", "''") + "'"
   $remoteToken = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 48 | ForEach-Object { [char]$_ })
   Write-Output "Copy this remote-token once for the GPU agent: $remoteToken"
   $appYaml = Join-Path $env:TEMP ("vcf-app-" + [guid]::NewGuid().ToString() + ".yaml")
@@ -109,7 +123,9 @@ tags:
   owner: nguyendev037
   expires: 2026-11-01
 identity:
-  type: SystemAssigned
+  type: UserAssigned
+  userAssignedIdentities:
+    ${idId}: {}
 properties:
   managedEnvironmentId: $envId
   configuration:
@@ -120,10 +136,10 @@ properties:
       transport: auto
     registries:
       - server: $acrServer
-        identity: system
+        identity: $idId
     secrets:
       - name: demo-password
-        value: $demoPassword
+        value: $demoYaml
       - name: remote-token
         value: $remoteToken
   template:
@@ -158,11 +174,8 @@ properties:
         storageName: vcfws
 "@
 Set-Content -Value $appYamlContent -Encoding utf8 $appYaml
-  try { Invoke-Az @("containerapp", "create", "--yaml", $appYaml, "-o", "none") }
+  try { Invoke-Az @("containerapp", "create", "-n", "ca-vcuboidfit", "-g", $rg, "--yaml", $appYaml, "-o", "none") }
   finally { Remove-Item -LiteralPath $appYaml -Force -ErrorAction SilentlyContinue }
-  $appPrincipal = (& az containerapp show -n "ca-vcuboidfit" -g $rg --query identity.principalId -o tsv).Trim()
-  Invoke-Az @("role", "assignment", "create", "--assignee-object-id", $appPrincipal,
-    "--assignee-principal-type", "ServicePrincipal", "--role", "AcrPull", "--scope", $acrId, "-o", "none")
 } else {
   Invoke-Az @("containerapp", "update", "-n", "ca-vcuboidfit", "-g", $rg, "--image", $image, "-o", "none")
 }
@@ -178,10 +191,15 @@ tags:
   owner: nguyendev037
   expires: 2026-11-01
 identity:
-  type: SystemAssigned
+  type: UserAssigned
+  userAssignedIdentities:
+    ${idId}: {}
 properties:
   environmentId: $envId
   configuration:
+    registries:
+      - server: $acrServer
+        identity: $idId
     triggerType: Schedule
     scheduleTriggerConfig:
       cronExpression: "0 * * * *"
@@ -216,11 +234,8 @@ properties:
         storageName: vcfws
 "@
 Set-Content -Value $jobYamlContent -Encoding utf8 $jobYaml
-  try { Invoke-Az @("containerapp", "job", "create", "--yaml", $jobYaml, "-o", "none") }
+  try { Invoke-Az @("containerapp", "job", "create", "-n", "job-vcf-sweep", "-g", $rg, "--yaml", $jobYaml, "-o", "none") }
   finally { Remove-Item -LiteralPath $jobYaml -Force -ErrorAction SilentlyContinue }
-  $jobPrincipal = (& az containerapp job show -n "job-vcf-sweep" -g $rg --query identity.principalId -o tsv).Trim()
-  Invoke-Az @("role", "assignment", "create", "--assignee-object-id", $jobPrincipal,
-    "--assignee-principal-type", "ServicePrincipal", "--role", "AcrPull", "--scope", $acrId, "-o", "none")
 } else {
   Invoke-Az @("containerapp", "job", "update", "-n", "job-vcf-sweep", "-g", $rg, "--image", $image, "-o", "none")
 }
