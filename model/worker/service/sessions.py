@@ -112,6 +112,15 @@ def delete_session(settings, queue, sid: str) -> dict:
                 continue
             if key == "jobs":
                 queue.cancel(child.name)
+                deadline = time.monotonic() + 30
+                while time.monotonic() < deadline:
+                    try:
+                        meta = json.loads((child / "job.json").read_text(encoding="utf-8"))
+                    except (OSError, ValueError):
+                        meta = {}
+                    if meta.get("state") not in ("queued", "running"):
+                        break
+                    time.sleep(0.1)
                 try:
                     queue.delete(child.name)
                 except ApiError as exc:
