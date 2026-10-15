@@ -2,7 +2,7 @@
 
 **Tuyển chọn keyframe LiDAR đáng gán nhãn cho bài toán phát hiện người đi bộ, xe đạp và xe máy (VRU) phục vụ phanh khẩn cấp AEB trên nuScenes.** Hệ thống chọn lô theo ngân sách, thường là 5%, rồi cho người gán nhãn kiểm tra lý do chọn, point cloud, hộp 3D và camera trước khi xuất kết quả.
 
-Phiên bản cấu hình **0.9.0** · cập nhật **15/10/2026** · [báo cáo tiến độ và bằng chứng](docs/project-status.md).
+Phiên bản cấu hình **0.11.0** · cập nhật **15/10/2026** · [báo cáo tiến độ và bằng chứng](docs/project-status.md).
 
 ## Hiện đã làm được gì?
 
