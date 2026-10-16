@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { GpuWarmupController, type GpuStatus } from "./gpuWarmup";
+import { GpuWarmupController, type GpuStatus } from "./gpuWarmupState";
 
 const GpuContext = createContext<GpuStatus>({ state: "starting", reason: null, since: null });
 export const useGpuStatus = () => useContext(GpuContext);

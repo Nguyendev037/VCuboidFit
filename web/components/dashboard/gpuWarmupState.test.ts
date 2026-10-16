@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GpuWarmupController } from "./gpuWarmup";
+import { GpuWarmupController } from "./gpuWarmupState";
 
 const response = () => new Response(JSON.stringify({ state: "starting", reason: null, since: null }));
 afterEach(() => { vi.useRealTimers(); });
@@ -17,7 +17,7 @@ describe("A14 dashboard GPU warmup", () => {
     expect(controller.snapshot.overlay).toBe(true);
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0][0]).toBe("/api/gpu/warm");
-    expect(request.mock.calls[0][1].method).toBe("POST");
+    expect(request.mock.calls[0][1]?.method).toBe("POST");
     await vi.advanceTimersByTimeAsync(1);
     expect(controller.snapshot.overlay).toBe(false);
     controller.stop();
