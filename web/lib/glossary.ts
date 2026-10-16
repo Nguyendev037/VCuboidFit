@@ -96,9 +96,15 @@ export const PANEL_HELP: Record<PanelHelpKey, HelpItem> = {
 };
 
 interface UploadNotice {
-  online: Record<"intro" | "soft" | "middle" | "large" | "localLink" | "warning" | "confirmWarning" | "confirm", string>;
+  online: Record<"intro" | "soft" | "middle" | "large" | "localLink" | "warning" | "confirmWarning" | "confirm", string> & { levels: { range: string; label: string }[] };
   checklist: { path: string; label: string; files: string[]; detail: string }[];
   missing: string;
+  zip: string;
+  exampleLabel: string;
+  example: string;
+  sampleHelp: string;
+  sampleLink: string;
+  license: string;
 }
 
 export const UPLOAD_HELP: Record<"dropzone" | "limit" | "limitFallback" | "notice", HelpItem> & { notice: HelpItem & UploadNotice } = {
@@ -116,6 +122,11 @@ export const UPLOAD_HELP: Record<"dropzone" | "limit" | "limitFallback" | "notic
   },
   notice: {
     online: {
+      levels: [
+        { range: "< 1 GB", label: "Phù hợp" },
+        { range: "1–5 GB", label: "Chậm, 20–40 phút" },
+        { range: "> 5 GB", label: "Nên chạy local" },
+      ],
       intro: "Bản online phù hợp dữ liệu",
       soft: "dưới 1 GB",
       middle: ". Từ 1–5 GB vẫn chạy được nhưng upload + giải nén có thể mất 20–40 phút.",
@@ -126,12 +137,18 @@ export const UPLOAD_HELP: Record<"dropzone" | "limit" | "limitFallback" | "notic
       confirm: "Vẫn tải lên",
     },
     checklist: [
-      { path: "data/v1.0-<tên>/", label: "Bắt buộc", files: ["scene", "sample", "sample_data", "calibrated_sensor", "ego_pose", "sensor"], detail: "Các bảng .json" },
-      { path: "data/v1.0-<tên>/", label: "Tùy chọn", files: ["category", "instance", "sample_annotation", "visibility", "attribute", "log"], detail: "Các bảng .json" },
-      { path: "data/samples/LIDAR_TOP/", label: "Bắt buộc", files: ["*.pcd.bin"], detail: "Tầng 0 + Tầng 1" },
-      { path: "data/sweeps/LIDAR_TOP/", label: "Nên có", files: [], detail: "Tầng 1 gộp 10 sweeps; thiếu thì kết quả Tầng 1 kém hơn" },
-      { path: "data/samples/CAM_*/", label: "Tùy chọn", files: [], detail: "Ảnh camera, chỉ để xem trong Review" },
+      { path: "data/v1.0-<tên>/", label: "Bắt buộc", files: ["scene", "sample", "sample_data", "calibrated_sensor", "ego_pose", "sensor"], detail: "Thông tin cảnh, frame, cảm biến" },
+      { path: "data/v1.0-<tên>/", label: "Tùy chọn", files: ["category", "instance", "sample_annotation", "visibility", "attribute", "log"], detail: "Nhãn và thông tin bổ sung" },
+      { path: "data/samples/LIDAR_TOP/", label: "Bắt buộc", files: ["*.pcd.bin"], detail: "Đám mây điểm LiDAR" },
+      { path: "data/sweeps/LIDAR_TOP/", label: "Nên có", files: [], detail: "Giúp Tầng 1 chính xác hơn" },
+      { path: "data/samples/CAM_*/", label: "Tùy chọn", files: [], detail: "Ảnh camera, chỉ để xem" },
     ],
+    zip: "Nén cả thư mục data/ thành một file .zip là đủ",
+    exampleLabel: "Xem ví dụ thật",
+    example: "data/\n├── v1.0-mini/scene.json\n├── samples/LIDAR_TOP/n015-2018-07-24-11-22-45+0800__LIDAR_TOP__1532402927647951.pcd.bin\n├── sweeps/LIDAR_TOP/…\n└── samples/CAM_FRONT/…jpg",
+    sampleHelp: "Chưa có dữ liệu? Bấm Chạy thử dữ liệu mẫu ở Bước 2",
+    sampleLink: "Tải nuScenes mini (≈ 4 GB, miễn phí, cần đăng ký)",
+    license: "nuScenes / Motional · CC BY-NC-SA 4.0",
     missing: "Thiếu file bắt buộc ⇒ bước Chỉ mục LiDAR báo lỗi kèm tên file thiếu.",
     label: "Lưu ý cấu trúc",
     tooltip: "Mỗi file nén phải chứa thư mục data/ ở gốc theo cấu trúc nuScenes (data/v1.0-*/, data/samples/LIDAR_TOP/…). Nén cả thư mục data/ thành một file .zip là đủ; công cụ vcf-pack chỉ cần khi muốn lọc bớt scene hoặc chia nhỏ để lưu trữ.",

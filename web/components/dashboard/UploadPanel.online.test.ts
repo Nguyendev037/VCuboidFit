@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 import type { ComponentProps } from "react";
 import { UPLOAD_HELP } from "@/lib/glossary";
@@ -58,6 +60,25 @@ describe("A12 online upload consent", () => {
 });
 
 describe("A13 nuScenes checklist", () => {
+  it.each(["0", "1"])("renders a readable folder tree, example and sample links (sessions=%s)", (online) => {
+    vi.stubEnv("NEXT_PUBLIC_VCF_SESSIONS", online);
+    const props = { items: [], uploading: false } as unknown as ComponentProps<typeof UploadPanel>;
+    const html = renderToStaticMarkup(React.createElement(UploadPanel, props));
+    const text = html.replace(/<[^>]*>/g, "");
+    expect(text).not.toContain(" ? ");
+    expect(text).toContain("Xem ví dụ thật");
+    expect(text).toContain("v1.0-mini/scene.json");
+    expect(text).toContain("n015-2018-07-24-11-22-45+0800__LIDAR_TOP__1532402927647951.pcd.bin");
+    expect(text).toContain("Chạy thử dữ liệu mẫu ở Bước 2");
+    expect(text).toContain("CC BY-NC-SA 4.0");
+    expect(html).toContain('href="https://www.nuscenes.org/nuscenes#download"');
+    expect(text.includes("Chậm, 20–40 phút")).toBe(online === "1");
+    for (const item of UPLOAD_HELP.notice.checklist) {
+      expect(text).toContain(item.label);
+      expect(text).toContain(item.detail);
+      expect(item.detail.split(/\s+/).length).toBeLessThanOrEqual(8);
+    }
+  });
   it("matches REQUIRED and OPTIONAL Python tables exactly", () => {
     const source = readFileSync(new URL("../../../model/worker/c4/data/nusc.py", import.meta.url), "utf8");
     const names = (key: string) => JSON.parse(source.match(new RegExp(`^${key} = (\\[.*\\])$`, "m"))![1]);

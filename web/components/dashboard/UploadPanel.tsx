@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CheckCircle2, Clock3, HardDrive, Folder, FileText } from "lucide-react";
 
 import { uploadSelection } from "./uploadSelection";
 import { getUploadLimits } from "@/lib/api/client";
@@ -117,10 +118,17 @@ export function UploadPanel(state: Pick<
       </p>
 
       {online && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-relaxed text-blue-950">
-          {UPLOAD_HELP.notice.online.intro} <strong>{UPLOAD_HELP.notice.online.soft}</strong>
-          {UPLOAD_HELP.notice.online.middle} <strong>{UPLOAD_HELP.notice.online.large}</strong>.{" "}
-          <a className="underline" href="/huong-dan#chay-local">{UPLOAD_HELP.notice.online.localLink}</a>
+        <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3 text-xs text-blue-950">
+          <div className="grid gap-2 sm:grid-cols-3">
+            {UPLOAD_HELP.notice.online.levels.map((level, index) => {
+              const Icon = [CheckCircle2, Clock3, HardDrive][index];
+              return <div key={level.range} className="flex items-start gap-2 rounded-lg border border-blue-100 bg-white p-3">
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
+                <div><p className="font-semibold">{level.range}</p><p className="mt-1 text-slate-600">{level.label}</p></div>
+              </div>;
+            })}
+          </div>
+          <a className="mt-3 inline-block font-medium underline underline-offset-2" href="/huong-dan#chay-local">{UPLOAD_HELP.notice.online.localLink}</a>
         </div>
       )}
       {/* Dropzone */}
@@ -289,16 +297,29 @@ export function UploadPanel(state: Pick<
       <div className="p-3.5 bg-blue-50/80 border border-blue-200 text-blue-950 rounded-xl flex items-start gap-2.5 text-xs leading-relaxed">
         <span className="text-blue-600 font-bold text-sm leading-none mt-0.5">ℹ</span>
         <div data-testid="data-notice" className="min-w-0 space-y-2">
-          <ul className="space-y-2">
+          <p className="flex items-center gap-2 font-mono font-semibold"><Folder className="h-4 w-4" aria-hidden="true" />data/</p>
+          <ul className="ml-2 space-y-3 border-l border-blue-200 pl-3">
             {UPLOAD_HELP.notice.checklist.map((item, index) => (
-              <li key={index} className="break-words">
-                <strong>{item.label}</strong>: <code>{item.path}</code>{" "}
-                {item.files.length > 0 && <span>{item.files.join(", ")} ? </span>}{item.detail}
+              <li key={index} className="min-w-0 space-y-1 break-words">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Folder className="h-3.5 w-3.5 shrink-0 text-blue-600" aria-hidden="true" />
+                  <code>{item.path.replace(/^data\//, "")}</code>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${item.label === "Bắt buộc" ? "border-blue-200 bg-blue-100 text-blue-900" : item.label === "Nên có" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-slate-200 bg-white text-slate-600"}`}>{item.label}</span>
+                </div>
+                <p className="ml-5 text-slate-600">{item.detail}</p>
+                {item.files.length > 0 && <div className="ml-5 flex items-start gap-1.5 text-slate-500"><FileText className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" /><code className="break-words">{item.files.map((file) => file.includes(".") ? file : `${file}.json`).join(", ")}</code></div>}
               </li>
             ))}
           </ul>
-          <p>{UPLOAD_HELP.notice.missing}</p>
-          <p><NoticeBody text={UPLOAD_HELP.notice.tooltip} /></p>
+          <p className="font-medium">{UPLOAD_HELP.notice.zip}</p>
+          <details className="rounded-lg border border-blue-100 bg-white/80 p-3">
+            <summary className="cursor-pointer font-semibold">{UPLOAD_HELP.notice.exampleLabel}</summary>
+            <pre className="mt-3 whitespace-pre-wrap break-all font-mono text-[11px] text-slate-600">{UPLOAD_HELP.notice.example}</pre>
+            <p className="mt-3">{UPLOAD_HELP.notice.missing}</p>
+            <p className="mt-2"><NoticeBody text={UPLOAD_HELP.notice.tooltip} /></p>
+          </details>
+          <p>{UPLOAD_HELP.notice.sampleHelp}</p>
+          <p><a href="https://www.nuscenes.org/nuscenes#download" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">{UPLOAD_HELP.notice.sampleLink}</a><span className="mt-1 block text-slate-500">{UPLOAD_HELP.notice.license}</span></p>
         </div>
       </div>
 
