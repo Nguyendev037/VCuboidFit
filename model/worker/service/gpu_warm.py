@@ -1,0 +1,269 @@
+"""On-demand GPU warm-up (SPEC-P05 W2/W4/W5).
+
+Official Vast REST references, checked 2026-10-16 (documentation only):
+https://docs.vast.ai/api-reference/creating-instances-with-api
+https://docs.vast.ai/api-reference/search/search-offers
+https://vast.ai/developers/api (v0 instances listing)
+
+Open contract issue: retrying an ambiguous create PUT can rent a second machine.
+Until W4/W5 are reconciled, only read/search calls retry; create fails closed and
+persists its attempt before sending. No account key or remote token is persisted.
+"""
+import json
+import math
+import os
+import shlex
+import time
+from datetime import datetime, timezone
+from typing import Literal
+from urllib.parse import quote
+
+import httpx
+from fastapi import APIRouter, Request
+from filelock import FileLock
+from pydantic import BaseModel
+
+from service.errors import ApiError
+
+LABEL = "vcuboidfit-agent"
+GPU_NAMES = ("RTX_3090", "RTX_4090", "RTX_A5000")
+IMAGE = "pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel"
+
+
+class GpuStatus(BaseModel):
+    state: Literal["ready", "starting", "idle", "disabled", "error"]
+    reason: str | None = None
+    since: str | None = None
+
+
+class VastError(Exception):
+    def __init__(self, reason="vast-unreachable"):
+        self.reason = reason
+        super().__init__(reason)  # never expose upstream bodies or credentials
+
+
+class VastClient:
+    """Small injectable REST boundary; each attempt has a 10-second timeout."""
+
+    def __init__(self, api_key: str, transport=None):
+        self._api_key = api_key
+        self._transport = transport
+
+    def _request(self, method, path, body=None, *, retry=True):
+        for attempt in range(2 if retry else 1):
+            try:
+                with httpx.Client(timeout=10.0, transport=self._transport) as client:
+                    response = client.request(
+                        method, "https://console.vast.ai/api/v0/" + path,
+                        headers={"Authorization": "Bearer " + self._api_key}, json=body)
+                if response.status_code in (401, 403):
+                    raise VastError("vast-auth")
+                if response.status_code >= 500:
+                    if retry and attempt == 0:
+                        continue
+                    raise VastError()
+                if response.is_error:
+                    raise VastError()
+                result = response.json()
+                if not isinstance(result, dict) or result.get("success") is False:
+                    raise VastError()
+                return result
+            except httpx.TransportError:
+                if retry and attempt == 0:
+                    continue
+                raise VastError() from None
+            except ValueError:
+                raise VastError() from None
+        raise VastError()
+
+    def instances(self):
+        result = self._request("GET", "instances/").get("instances")
+        if not isinstance(result, list) or not all(isinstance(x, dict) for x in result):
+            raise VastError()
+        return result
+
+    def offers(self, max_dph):
+        result = self._request("POST", "bundles/", {
+            "gpu_name": {"in": list(GPU_NAMES)}, "num_gpus": {"eq": 1},
+            "cuda_max_good": {"gte": 11.8}, "reliability": {"gt": 0.98},
+            "dph_total": {"lte": max_dph}, "disk_space": {"gte": 40},
+            "rentable": {"eq": True}, "rented": {"eq": False},
+            "type": "ondemand", "allocated_storage": 40,
+            "order": [["dph_total", "asc"]],
+        }).get("offers")
+        if not isinstance(result, list):
+            raise VastError()
+        return result
+
+    def create(self, offer_id, payload):
+        result = self._request("PUT", f"asks/{int(offer_id)}/", payload, retry=False)
+        instance_id = result.get("new_contract")
+        if not isinstance(instance_id, int) or isinstance(instance_id, bool):
+            raise VastError()
+        return instance_id
+
+
+def _iso(ts):
+    return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds")
+
+
+def _timestamp(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        # RemoteQueue historically uses naive local datetime.now().
+        return datetime.fromisoformat(value).timestamp()
+    except ValueError:
+        return None
+
+
+class GpuWarmer:
+    def __init__(self, settings, remote, client_factory=VastClient, clock=time.time):
+        self.settings, self.remote = settings, remote
+        self.client_factory, self.clock = client_factory, clock
+        self.directory = settings.workspace / "gpu"
+        self.path = self.directory / "warm.json"
+
+    def _load(self):
+        try:
+            record = json.loads(self.path.read_text(encoding="utf-8"))
+            if not isinstance(record, dict):
+                raise ValueError
+            return record
+        except FileNotFoundError:
+            return {}
+        except (OSError, ValueError):
+            # A corrupt rate-limit record must never unlock a new rental.
+            raise VastError() from None
+
+    def _save(self, record):
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(record), encoding="utf-8")
+        tmp.replace(self.path)
+
+    def _offer(self, offers, max_dph):
+        valid = []
+        for offer in offers:
+            try:
+                price = float(offer["dph_total"])
+                if (str(offer["gpu_name"]).replace(" ", "_") in GPU_NAMES
+                        and offer["num_gpus"] == 1
+                        and float(offer["cuda_max_good"]) >= 11.8
+                        and float(offer["reliability"]) > 0.98
+                        and math.isfinite(price) and 0 <= price <= max_dph):
+                    int(offer["id"])
+                    valid.append(offer)
+            except (KeyError, ValueError, TypeError):
+                continue
+        return min(valid, key=lambda x: float(x["dph_total"])) if valid else None
+
+    def _payload(self):
+        server = os.environ.get("VCF_SERVER", "").strip()
+        if not server or not self.settings.remote_token:
+            raise VastError()  # incomplete server configuration: do not rent
+        ref = os.environ.get("VCF_VAST_REF", "main") or "main"
+        url = ("https://raw.githubusercontent.com/Nguyendev037/VCuboidFit/"
+               + quote(ref, safe="/") + "/deploy/vast/onstart.sh")
+        return {
+            "image": IMAGE, "disk": 40, "label": LABEL, "runtype": "ssh_direct",
+            "env": {"VCF_SERVER": server, "VCF_REMOTE_TOKEN": self.settings.remote_token,
+                    "VCF_IDLE_MIN": "15", "VCF_VAST_REF": ref},
+            "onstart": "curl -fsSL " + shlex.quote(url)
+                       + " -o /tmp/vcf-onstart.sh && bash /tmp/vcf-onstart.sh",
+        }
+
+    def status(self, *, warm=False):
+        key = os.environ.get("VAST_API_KEY", "").strip()
+        if not key or os.environ.get("VCF_GPU_AUTOSTART") != "1":
+            return GpuStatus(state="disabled")
+        now = self.clock()
+        seen = _timestamp(self.remote.last_seen)
+        if seen is not None and 0 <= now - seen <= 120:
+            return GpuStatus(state="ready", since=self.remote.last_seen)
+        try:
+            self.directory.mkdir(parents=True, exist_ok=True)
+            # OS-backed lock shared by threads AND worker processes on this volume.
+            with FileLock(str(self.directory / "warm.lock")):
+                return self._locked(now, key, warm)
+        except (VastError, OSError) as exc:
+            return GpuStatus(state="error", reason=(
+                exc.reason if isinstance(exc, VastError) else "vast-unreachable"))
+
+    def _locked(self, now, key, warm):
+        record = self._load()
+        created = _timestamp(record.get("createdAt"))
+        since = record.get("createdAt")
+        client = self.client_factory(key)
+        instances = [x for x in client.instances() if x.get("label") == LABEL]
+        seen = _timestamp(self.remote.last_seen)
+        contacted = created is not None and seen is not None and seen >= created
+        if instances:
+            if created is None or record.get("ambiguous"):
+                # External/manual instance: remember when first observed, never rent another.
+                since = _iso(now)
+                record.update(createdAt=since, ambiguous=False)
+                self._save(record)
+                created = now
+            if not contacted and now - created >= 25 * 60:
+                return GpuStatus(state="error", reason="agent-timeout", since=since)
+            return GpuStatus(state="starting", since=since)
+        if record.get("ambiguous"):
+            # A timed-out PUT may have succeeded. Only a later positive listing
+            # or manual reconciliation can resolve this; cooldown alone cannot.
+            return GpuStatus(state="error", reason="vast-unreachable",
+                             since=record.get("attemptedAt"))
+        if contacted:
+            # A previously healthy agent has self-destroyed after idle. Allow
+            # another dashboard visit to warm a fresh instance, retaining cooldown.
+            record.pop("createdAt", None)
+            record.pop("instanceId", None)
+            self._save(record)
+            created, since = None, None
+        if created is not None:
+            if not contacted and now - created >= 25 * 60:
+                return GpuStatus(state="error", reason="agent-timeout", since=since)
+            if now - created < 20 * 60:
+                return GpuStatus(state="starting", since=since)
+        attempt = _timestamp(record.get("attemptedAt"))
+        if attempt is not None and now - attempt < 10 * 60:
+            return GpuStatus(state="error", reason="vast-unreachable",
+                             since=record["attemptedAt"])
+        if not warm:
+            return GpuStatus(state="idle")
+        payload = self._payload()
+        try:
+            max_dph = float(os.environ.get("VCF_VAST_MAX_DPH", "0.6"))
+            if not math.isfinite(max_dph) or max_dph <= 0:
+                raise ValueError
+        except ValueError:
+            raise VastError() from None
+        offer = self._offer(client.offers(max_dph), max_dph)
+        if offer is None:
+            return GpuStatus(state="error", reason="no-offer")
+        # Persist BEFORE PUT: a crash/timeout cannot unlock an immediate duplicate.
+        record = {"attemptedAt": _iso(now), "ambiguous": True}
+        self._save(record)
+        instance_id = client.create(offer["id"], payload)
+        record.update(createdAt=_iso(now), instanceId=instance_id, ambiguous=False)
+        self._save(record)
+        return GpuStatus(state="starting", since=record["createdAt"])
+
+
+router = APIRouter()
+
+
+def _manager(request):
+    # Demo Basic Auth is enforced by the same Next middleware as /api/jobs/*.
+    if request.app.state.settings.sessions and not request.state.session_id:
+        raise ApiError(404, "not_found", "Không tìm thấy phiên.")
+    return request.app.state.gpu_warm
+
+
+@router.post("/gpu/warm", response_model=GpuStatus)
+def warm_gpu(request: Request):
+    return _manager(request).status(warm=True)
+
+
+@router.get("/gpu/status", response_model=GpuStatus)
+def gpu_status(request: Request):
+    return _manager(request).status()

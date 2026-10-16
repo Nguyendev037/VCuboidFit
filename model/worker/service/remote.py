@@ -247,6 +247,7 @@ class RemoteQueue:
     def heartbeat(self, task_id: str, stage: str, progress: float, lease_id: str | None) -> dict:
         with self._lock:
             r = self.leased(task_id, lease_id, check=True)
+            self.last_seen = self._iso(self._now())
             r["leaseUntil"] = self._iso(
                 self._now() + timedelta(seconds=self.settings.remote_lease_sec))
             r["stage"], r["progress"] = stage, progress

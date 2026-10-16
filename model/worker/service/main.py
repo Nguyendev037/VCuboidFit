@@ -5,7 +5,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, Request
 
-from service import datasets, frames, jobs, remote, selection, sessions
+from service import datasets, frames, gpu_warm, jobs, remote, selection, sessions
 from service.errors import ApiError, install_handlers
 from service.settings import Settings
 
@@ -36,6 +36,7 @@ def create_app(settings: Settings | None = None, runner=None, encoder_factory=No
     app.state.encoders = selection.EncoderHolder(encoder_factory)
     app.state.job_locks = selection.JobLocks()
     app.state.remote = remote.RemoteQueue(settings)
+    app.state.gpu_warm = gpu_warm.GpuWarmer(settings, app.state.remote)
     @app.middleware("http")
     async def session_middleware(request, call_next):
         request.state.session_id = sessions.session_from(request)
@@ -48,6 +49,7 @@ def create_app(settings: Settings | None = None, runner=None, encoder_factory=No
     app.include_router(selection.router)
     app.include_router(frames.router)
     app.include_router(remote.router)
+    app.include_router(gpu_warm.router)
     app.include_router(__import__("service.export_images", fromlist=["router"]).router)
 
     @app.get("/health")
