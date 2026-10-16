@@ -1,3 +1,4 @@
+import { OnlineTierStatus } from "./OnlineTierStatus";
 import type { Tier1State } from "@/lib/api/types";
 import { PRESETS } from "@/lib/api/types";
 import { AdvancedParamsPanel, ColabBox } from "@/components/AdvancedParamsPanel";
@@ -241,7 +242,7 @@ export function FilterBar(state: Pick<
           )}
 
           {/* TierStatus + ColabBox */}
-          {activePipeline === "lidar" && tierStatusProps && <TierStatus {...tierStatusProps} />}
+          {activePipeline === "lidar" && tierStatusProps && (process.env.NEXT_PUBLIC_VCF_SESSIONS === "1" ? <OnlineTierStatus {...tierStatusProps} /> : <TierStatus {...tierStatusProps} />)}
           {activePipeline === "lidar" && colabProps && <ColabBox colab={colabProps} />}
 
           {/* Thanh Công thức đang dùng */}

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /** Chỉ các tiền tố này được chuyển cho worker; mọi thứ khác 404 (upload/media/login có route riêng).
  *  `params-schema` = lược đồ theo máy khi chưa có job (plan 09 D1), chỉ GET. */
-const ALLOWED_PREFIXES = new Set(["datasets", "jobs", "params-schema", "sessions", "health"]);
+const ALLOWED_PREFIXES = new Set(["datasets", "jobs", "params-schema", "sessions", "health", "gpu"]);
 /** Header của worker được trả về trình duyệt (không rò hop-by-hop, cookie…). */
 const FORWARD_HEADERS = ["content-type", "content-disposition", "cache-control", "etag", "last-modified"];
 
@@ -22,8 +22,9 @@ async function handle(req: Request, ctx: Ctx): Promise<Response> {
   }
   const sessionsEnabled = process.env.NEXT_PUBLIC_VCF_SESSIONS === "1";
   const prefixEnabled = ALLOWED_PREFIXES.has(path[0]) &&
-    (sessionsEnabled || !["sessions", "health"].includes(path[0]));
-  if (!prefixEnabled || (path[0] === "params-schema" && (path.length > 1 || req.method !== "GET"))) {
+    (sessionsEnabled || !["sessions", "health", "gpu"].includes(path[0]));
+  const gpuAllowed = path[0] !== "gpu" || (path.length === 2 && ((path[1] === "warm" && req.method === "POST") || (path[1] === "status" && req.method === "GET")));
+  if (!gpuAllowed || !prefixEnabled || (path[0] === "params-schema" && (path.length > 1 || req.method !== "GET"))) {
     return errorResponse(404, "not_found", "Không tìm thấy tài nguyên được yêu cầu.");
   }
 

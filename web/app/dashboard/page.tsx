@@ -1,5 +1,6 @@
 "use client";
 
+import { GpuWarmup } from '@/components/dashboard/GpuWarmup';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { JobPicker } from '@/components/dashboard/JobPicker';
 import { UploadPanel } from '@/components/dashboard/UploadPanel';
@@ -14,6 +15,7 @@ export default function Home() {
   const { done, error, setError } = state;
 
   return (
+    <GpuWarmup>
     <div className="min-h-screen bg-[#F7F8FA] text-[#0F172A] flex flex-col font-sans">
       {/* 1. Header ứng dụng theo Figma (Screens 01 & 02) */}
       <DashboardHeader {...state} />
@@ -60,5 +62,6 @@ export default function Home() {
         <FilterBar {...state} />
       </main>
     </div>
+    </GpuWarmup>
   );
 }
