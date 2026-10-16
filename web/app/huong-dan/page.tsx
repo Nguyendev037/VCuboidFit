@@ -37,6 +37,7 @@ export default function GuidePage() {
             <a href="#chi-so" className="text-vcf-muted hover:text-vcf-accent font-medium transition-colors">4. Chỉ số đánh giá</a>
             <a href="#tham-so" className="text-vcf-muted hover:text-vcf-accent font-medium transition-colors">5. Tham số nâng cao</a>
             <a href="#faq" className="text-vcf-muted hover:text-vcf-accent font-medium transition-colors">6. FAQ</a>
+            <a href="#chay-local" className="text-vcf-muted hover:text-vcf-accent font-medium transition-colors">Chạy bản local</a>
           </nav>
         </aside>
 
@@ -46,6 +47,13 @@ export default function GuidePage() {
             <h1 className="text-3xl font-bold text-vcf-text tracking-tight">Cẩm nang & Bảng thuật ngữ</h1>
             <p className="text-vcf-subtle mt-2 text-sm">Tài liệu chi tiết giúp bạn hiểu rõ các chỉ số đánh giá và cơ chế lọc frame của VCuboidFIT.</p>
           </div>
+
+          <section id="chay-local" className="scroll-mt-24 text-sm leading-relaxed">
+            <h2 className="text-xl font-bold text-vcf-text border-b border-vcf-border pb-2 mb-4">Chạy bản local</h2>
+            <p>Với dữ liệu trên 5 GB, nên chạy VCuboidFIT trên máy của bạn.</p>
+            <p>Chuẩn bị môi trường, khởi động web và worker theo hướng dẫn đầy đủ.</p>
+            <p><a href="https://github.com/Nguyendev037/VCuboidFit/blob/main/docs/run-local.md" className="font-semibold text-vcf-accent-ink hover:underline">Mở hướng dẫn chạy local trên GitHub →</a></p>
+          </section>
 
           <section className="rounded-vcf-card border border-vcf-accent-soft bg-vcf-surface p-6 text-sm leading-relaxed"><h2 className="mb-3 text-xl font-bold">Quy trình v2: từ dữ liệu đến ảnh hiếm</h2><ol className="list-decimal space-y-3 pl-5"><li>Chuẩn bị nuScenes: LiDAR, ego pose, timestamp; thêm camera nếu muốn xem bối cảnh. Nạp đủ các phần ZIP trên dashboard.</li><li>Trong Chi tiết kỹ thuật, chọn rare_v24. Chỉ LiDAR (lidar_only) bỏ tầng bối cảnh; LiDAR + camera (multisensor) dùng OpenCLIP + OpenCV. Mặc định vẫn là c4_legacy.</li><li>Thẻ RHCIO: độ hiếm R1/R2/R3, khó H, bối cảnh C, tương tác I, ngoại lệ O. Đây là dự đoán, không phải nhãn thật. Viewer hiển thị ứng viên Chưa xác nhận và bốn trục bối cảnh cho camera đang xem.</li><li>Mở Hàng đợi duyệt bối cảnh để xem ảnh, xác suất, cờ CV và lý do chưa chắc. Hàng đợi không chặn selection.</li><li>Xuất ảnh hiếm (ZIP): 6 camera hoặc chỉ camera trước, tuỳ chọn ảnh LiDAR đã có. ZIP gồm index.csv, meta.json và ảnh gốc; ảnh thiếu được ghi lại.</li></ol><p className="mt-4 text-vcf-warn">Giới hạn: pool không có đêm/mưa thì không thể chọn ra các cảnh đó. Số mini chỉ minh hoạ; capture B là số đo chính, A là số đo phụ. Thẻ và xác suất cần người duyệt.</p><Link href="/dashboard" className="mt-4 inline-block font-semibold text-vcf-accent-ink">Vào dashboard →</Link></section>
  <section id="tong-quan" className="scroll-mt-24">
