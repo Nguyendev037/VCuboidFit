@@ -25,7 +25,9 @@ export class GpuWarmupController {
     const abort = new AbortController();
     const timeout = setTimeout(() => abort.abort(), 8000);
     try {
-      const response = await this.request(url, { method, signal: abort.signal, cache: "no-store" });
+      // An empty POST reaches the API proxy as a body stream, which fetch rejects (=> 503).
+      const body = method === "POST" ? { body: "{}", headers: { "content-type": "application/json" } } : {};
+      const response = await this.request(url, { method, signal: abort.signal, cache: "no-store", ...body });
       if (!response.ok) throw new Error("gpu-unreachable");
       const status = await response.json() as GpuStatus;
       if (!["ready", "starting", "idle", "disabled", "error"].includes(status.state)) throw new Error("gpu-unreachable");
