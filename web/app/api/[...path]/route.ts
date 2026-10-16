@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic";
 
 /** Chỉ các tiền tố này được chuyển cho worker; mọi thứ khác 404 (upload/media/login có route riêng).
  *  `params-schema` = lược đồ theo máy khi chưa có job (plan 09 D1), chỉ GET. */
-const ALLOWED_PREFIXES = new Set(["datasets", "jobs", "params-schema", "sessions", "health", "gpu"]);
+/** `remote` = GPU agent pull queue (token-auth in the worker; proxy.ts skips the demo password). */
+const ALLOWED_PREFIXES = new Set(["datasets", "jobs", "params-schema", "sessions", "health", "gpu", "remote"]);
 /** Header của worker được trả về trình duyệt (không rò hop-by-hop, cookie…). */
 const FORWARD_HEADERS = ["content-type", "content-disposition", "cache-control", "etag", "last-modified"];
 
@@ -44,7 +45,10 @@ async function handle(req: Request, ctx: Ctx): Promise<Response> {
     if (value) headers[name] = value;
   }
 
-  const res = await workerFetch(target, { method: req.method, headers, body });
+  // Node fetch needs duplex for a streamed body (agent result upload is multipart).
+  const init: RequestInit & { duplex?: "half" } = { method: req.method, headers, body };
+  if (body && typeof body !== "string") init.duplex = "half";
+  const res = await workerFetch(target, init);
 
   const out = new Headers();
   for (const h of FORWARD_HEADERS) {
