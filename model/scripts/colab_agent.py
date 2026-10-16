@@ -334,9 +334,11 @@ def gpu_name(dry: bool) -> str:
         return "unknown"
 
 
-def loop(a, sleep=time.sleep) -> int:
+def loop(a, sleep=time.sleep, clock=time.monotonic) -> int:
     c = Client(a.server, a.token, sleep)
     idle = 0
+    idle_since = clock()
+    idle_limit = max(0, getattr(a, "idle_exit_min", 0)) * 60
     try:
         while True:
             try:
@@ -348,13 +350,17 @@ def loop(a, sleep=time.sleep) -> int:
                 sleep(IDLE_SEC)
                 continue
             if r.status_code == 204:
+                if idle_limit and clock() - idle_since >= idle_limit:
+                    log("het viec - tu tat")
+                    return 0
                 if a.once:
                     log("khong co viec")
                     return 0
                 if idle % 5 == 0:  # in lan dau roi ~5 phut/lan: agent van song
                     log(f"khong co viec - dang cho (hoi lai moi {IDLE_SEC} s)")
                 idle += 1
-                sleep(IDLE_SEC)
+                remaining = idle_limit - (clock() - idle_since) if idle_limit else IDLE_SEC
+                sleep(min(IDLE_SEC, max(0, remaining)))
                 continue
             idle = 0
             task = r.json()
@@ -368,6 +374,8 @@ def loop(a, sleep=time.sleep) -> int:
                     return 1
                 sleep(IDLE_SEC)
                 continue
+            finally:
+                idle_since = clock()
             if a.once:
                 return 0
     except Stop as e:
@@ -387,7 +395,12 @@ def main(argv=None) -> int:
     ap.add_argument("--dry-run", action="store_true",
                     help="bo train/infer, ghi signals.parquet gia (test khong GPU)")
     ap.add_argument("--heartbeat-sec", type=float, default=60, help=argparse.SUPPRESS)
+    ap.add_argument("--idle-exit-min", type=float,
+                    default=float(os.environ.get("VCF_IDLE_MIN", "0")),
+                    help="thoat sau N phut khong nhan viec; 0 = tat (env VCF_IDLE_MIN)")
     a = ap.parse_args(argv)
+    if a.idle_exit_min < 0:
+        ap.error("--idle-exit-min phai >= 0")
     if not a.token:
         ap.error("thieu --token (hoac bien VCF_REMOTE_TOKEN)")
     return loop(a)
