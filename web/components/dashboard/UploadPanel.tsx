@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { uploadSelection } from "./uploadSelection";
 import { getUploadLimits } from "@/lib/api/client";
 import { UPLOAD_HELP } from "@/lib/glossary";
 import { checkUploadLimits, checkProgressPct, formatEta, PHASE_LABELS } from "@/lib/upload";
@@ -62,6 +63,28 @@ export function UploadPanel(state: Pick<
     uploading,
   }=state;
 
+  const online = process.env.NEXT_PUBLIC_VCF_SESSIONS === "1";
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [onlineWarning, setOnlineWarning] = useState(false);
+  const beginUpload = (files: File[]) => {
+    setPendingFiles([]);
+    uploadIdRef.current = undefined;
+    setItems([]);
+    setDataset(null);
+    void startUpload(files);
+  };
+  const selectFiles = (files: File[]) => {
+    if (!files.length || uploading) return;
+    setPendingFiles([]);
+    const total = files.reduce((sum, file) => sum + file.size, 0);
+    const verdict = checkUploadLimits(total, limits, formatBytes);
+    setLimitNotice(verdict);
+    const selection = uploadSelection(total, online);
+    setOnlineWarning(selection.warning);
+    if (verdict.blocked) return;
+    if (selection.confirm) setPendingFiles(files);
+    else beginUpload(files);
+  };
   const [limits, setLimits] = useState<UploadLimits | null>(null);
   const [limitNotice, setLimitNotice] = useState<UploadLimitVerdict | null>(null);
 
@@ -93,8 +116,20 @@ export function UploadPanel(state: Pick<
         Tải lên một hoặc nhiều file nén (.zip, .rar, .7z) chứa dataset nuScenes.
       </p>
 
+      {online && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-relaxed text-blue-950">
+          {UPLOAD_HELP.notice.online.intro} <strong>{UPLOAD_HELP.notice.online.soft}</strong>
+          {UPLOAD_HELP.notice.online.middle} <strong>{UPLOAD_HELP.notice.online.large}</strong>.{" "}
+          <a className="underline" href="/huong-dan#chay-local">{UPLOAD_HELP.notice.online.localLink}</a>
+        </div>
+      )}
       {/* Dropzone */}
       <div
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          selectFiles(Array.from(event.dataTransfer.files));
+        }}
         role="button"
         tabIndex={uploading? -1:0}
         aria-label="Chọn hoặc thả tệp dữ liệu"
@@ -132,18 +167,8 @@ export function UploadPanel(state: Pick<
           className="hidden"
           disabled={uploading}
           onChange={(e) => {
-            const files=Array.from(e.target.files??[]);
-            if(!files.length) return;
-            const verdict=checkUploadLimits(files.reduce((sum,f)=>sum+f.size,0), limits, formatBytes);
-            setLimitNotice(verdict);
-            if(verdict.blocked) {
-              e.target.value=""; // cho phép chọn lại đúng tệp đó sau khi bớt dung lượng
-              return;
-            }
-            uploadIdRef.current=undefined;
-            setItems([]);
-            setDataset(null);
-            void startUpload(files);
+            selectFiles(Array.from(e.target.files ?? []));
+            e.target.value = "";
           }}
         />
       </div>
@@ -160,6 +185,18 @@ export function UploadPanel(state: Pick<
         </p>
       )}
 
+      {onlineWarning && !pendingFiles.length && !limitNotice?.blocked && (
+        <p className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-900">{UPLOAD_HELP.notice.online.warning}</p>
+      )}
+      {pendingFiles.length > 0 && (
+        <div role="alert" className="rounded-lg border border-orange-300 bg-orange-50 p-3 text-xs text-orange-950">
+          <p>{UPLOAD_HELP.notice.online.confirmWarning}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <button type="button" disabled={uploading} onClick={() => beginUpload(pendingFiles)} className="min-h-9 rounded-lg bg-orange-700 px-3 font-semibold text-white">{UPLOAD_HELP.notice.online.confirm}</button>
+            <a href="/huong-dan#chay-local" className="underline">{UPLOAD_HELP.notice.online.localLink}</a>
+          </div>
+        </div>
+      )}
       {/* Điều khiển upload khi đang tiến hành */}
       {uploading&&!checking&&(
         <div className="flex items-center gap-3">
@@ -251,9 +288,18 @@ export function UploadPanel(state: Pick<
       {/* Hộp lưu ý cấu trúc data/ (SPEC-P02 U4): chữ lấy từ UPLOAD_HELP.notice */}
       <div className="p-3.5 bg-blue-50/80 border border-blue-200 text-blue-950 rounded-xl flex items-start gap-2.5 text-xs leading-relaxed">
         <span className="text-blue-600 font-bold text-sm leading-none mt-0.5">ℹ</span>
-        <p data-testid="data-notice">
-          <NoticeBody text={UPLOAD_HELP.notice.tooltip} />
-        </p>
+        <div data-testid="data-notice" className="min-w-0 space-y-2">
+          <ul className="space-y-2">
+            {UPLOAD_HELP.notice.checklist.map((item, index) => (
+              <li key={index} className="break-words">
+                <strong>{item.label}</strong>: <code>{item.path}</code>{" "}
+                {item.files.length > 0 && <span>{item.files.join(", ")} ? </span>}{item.detail}
+              </li>
+            ))}
+          </ul>
+          <p>{UPLOAD_HELP.notice.missing}</p>
+          <p><NoticeBody text={UPLOAD_HELP.notice.tooltip} /></p>
+        </div>
       </div>
 
       {/* Báo cáo dataset nếu đã nạp xong */}
