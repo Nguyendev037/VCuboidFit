@@ -100,6 +100,7 @@ interface UploadNotice {
   checklist: { path: string; label: string; files: string[]; detail: string }[];
   missing: string;
   zip: string;
+  title: string;
   exampleLabel: string;
   example: string;
   sampleHelp: string;
@@ -144,6 +145,7 @@ export const UPLOAD_HELP: Record<"dropzone" | "limit" | "limitFallback" | "notic
       { path: "data/samples/CAM_*/", label: "Tùy chọn", files: [], detail: "Ảnh camera, chỉ để xem" },
     ],
     zip: "Nén cả thư mục data/ thành một file .zip là đủ",
+    title: "Cấu trúc thư mục cần có trong file nén",
     exampleLabel: "Xem ví dụ thật",
     example: "data/\n├── v1.0-mini/scene.json\n├── samples/LIDAR_TOP/n015-2018-07-24-11-22-45+0800__LIDAR_TOP__1532402927647951.pcd.bin\n├── sweeps/LIDAR_TOP/…\n└── samples/CAM_FRONT/…jpg",
     sampleHelp: "Chưa có dữ liệu? Bấm Chạy thử dữ liệu mẫu ở Bước 2",

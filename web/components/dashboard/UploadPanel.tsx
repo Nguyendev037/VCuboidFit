@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Clock3, HardDrive, Folder, FileText } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock3, HardDrive, Folder, FileText } from "lucide-react";
 
 import { uploadSelection } from "./uploadSelection";
 import { getUploadLimits } from "@/lib/api/client";
@@ -294,9 +294,13 @@ export function UploadPanel(state: Pick<
       )}
 
       {/* Hộp lưu ý cấu trúc data/ (SPEC-P02 U4): chữ lấy từ UPLOAD_HELP.notice */}
-      <div className="p-3.5 bg-blue-50/80 border border-blue-200 text-blue-950 rounded-xl flex items-start gap-2.5 text-xs leading-relaxed">
-        <span className="text-blue-600 font-bold text-sm leading-none mt-0.5">ℹ</span>
-        <div data-testid="data-notice" className="min-w-0 space-y-2">
+      <details className="group bg-blue-50/80 border border-blue-200 text-blue-950 rounded-xl text-xs leading-relaxed">
+        <summary className="flex cursor-pointer list-none items-center gap-2.5 p-3.5 font-semibold [&::-webkit-details-marker]:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 rounded-xl">
+          <span className="text-blue-600 font-bold text-sm leading-none">ℹ</span>
+          <span className="flex-1">{UPLOAD_HELP.notice.title}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-blue-700 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+        </summary>
+        <div data-testid="data-notice" className="min-w-0 space-y-2 px-3.5 pb-3.5 pl-9">
           <p className="flex items-center gap-2 font-mono font-semibold"><Folder className="h-4 w-4" aria-hidden="true" />data/</p>
           <ul className="ml-2 space-y-3 border-l border-blue-200 pl-3">
             {UPLOAD_HELP.notice.checklist.map((item, index) => (
@@ -312,8 +316,11 @@ export function UploadPanel(state: Pick<
             ))}
           </ul>
           <p className="font-medium">{UPLOAD_HELP.notice.zip}</p>
-          <details className="rounded-lg border border-blue-100 bg-white/80 p-3">
-            <summary className="cursor-pointer font-semibold">{UPLOAD_HELP.notice.exampleLabel}</summary>
+          <details className="group/ex rounded-lg border border-blue-100 bg-white/80 p-3">
+            <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
+              <span className="flex-1">{UPLOAD_HELP.notice.exampleLabel}</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-blue-700 transition-transform group-open/ex:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+            </summary>
             <pre className="mt-3 whitespace-pre-wrap break-all font-mono text-[11px] text-slate-600">{UPLOAD_HELP.notice.example}</pre>
             <p className="mt-3">{UPLOAD_HELP.notice.missing}</p>
             <p className="mt-2"><NoticeBody text={UPLOAD_HELP.notice.tooltip} /></p>
@@ -321,7 +328,7 @@ export function UploadPanel(state: Pick<
           <p>{UPLOAD_HELP.notice.sampleHelp}</p>
           <p><a href="https://www.nuscenes.org/nuscenes#download" target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">{UPLOAD_HELP.notice.sampleLink}</a><span className="mt-1 block text-slate-500">{UPLOAD_HELP.notice.license}</span></p>
         </div>
-      </div>
+      </details>
 
       {/* Báo cáo dataset nếu đã nạp xong */}
       {dataset&&(
