@@ -37,7 +37,7 @@ while true; do
   code=0
   python3 -u "$REPO/model/scripts/colab_agent.py" --server "$VCF_SERVER" --work "$VCF_HOME/work" --idle-exit-min "${VCF_IDLE_MIN:-15}" || code=$?
   if [ "$code" -eq 0 ]; then
-    # Official container credentials: https://docs.vast.ai/documentation/instances/docker-environment
+    # Official credentials: https://github.com/vast-ai/docs/blob/main/guides/instances/docker-environment.mdx
     # Verified 2026-10-16. Never use the account-wide VAST_API_KEY here.
     if [ -z "${CONTAINER_ID:-}" ] || [ -z "${CONTAINER_API_KEY:-}" ]; then
       echo "WARNING: missing CONTAINER_ID/CONTAINER_API_KEY; idle agent will not restart; destroy manually"
