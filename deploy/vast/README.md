@@ -51,8 +51,17 @@ secret `vast-api-key`; never expose it with a `NEXT_PUBLIC_` variable.
 An operator can run `deploy/azure/set-vast-key.ps1` to enter the key without writing it
 to a file. A later `deploy.ps1 -SkipBuild` references that secret and sets autostart and
 the price ceiling only when the secret exists. `VCF_GPU_AUTOSTART=0` disables autostart.
-H04 does not authorize adding `VCF_SERVER` in deploy.ps1: that configuration remains an
-open deployment gate, along with the first real Azure/Vast A17 measurement.
+`deploy.ps1` sets `VCF_SERVER=https://<app-fqdn>/api` in an env update after the app
+FQDN is available, including on first creation (D29). Without `VCF_SERVER`, warm and
+status return `disabled` / `no-server-url` without constructing a network client.
+The first real Azure/Vast A17 measurement remains pending.
+
+Create PUT requests are never retried. If a timeout or 5xx leaves the result unknown,
+the worker persists the attempt and reports `starting` for up to 20 minutes. Listing
+an instance with label `vcuboidfit-agent` resumes normal startup tracking. If none
+appears after 20 minutes, it reports `error` / `create-unknown` and continues blocking
+new rentals, even after restart. Check Vast instances manually before reconciling the
+attempt; do not retry a rental or clear `warm.json` while its outcome is unknown.
 
 `colab_agent.py --idle-exit-min N` exits successfully with `het viec - tu tat` after N
 minutes without receiving a task. The environment default is `VCF_IDLE_MIN` (0 disables

@@ -326,4 +326,9 @@ if (-not (Test-AzResource @("containerapp", "job", "show", "-n", "job-vcf-sweep"
 }
 
 $fqdn = (& az containerapp show -n "ca-vcuboidfit" -g $rg --query properties.configuration.ingress.fqdn -o tsv).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($fqdn)) {
+  throw "Cannot configure VCF_SERVER without the Container App FQDN."
+}
+Invoke-Az @("containerapp", "update", "-n", "ca-vcuboidfit", "-g", $rg,
+  "--set-env-vars", "VCF_SERVER=https://$fqdn/api", "-o", "none")
 Write-Output "Container App FQDN: $fqdn"
