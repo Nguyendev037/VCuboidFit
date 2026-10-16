@@ -6,12 +6,11 @@ import { useGpuStatus } from "./GpuWarmup";
 import { TIER1_LABEL, formatSeconds } from "@/lib/tierStatus";
 
 const NO_OFFER_HELP = "Chạy Tầng 0 hoặc thử lại sau.";
-function gpuLabel(state: string, reason: string | null) {
-  return state === "ready" ? "GPU sẵn sàng"
-    : state === "starting" ? "GPU đang khởi động (~10–15 phút)"
-    : state === "idle" ? "GPU tắt"
-    : state === "disabled" ? "Bản này không có GPU tự động"
-    : `Không bật được GPU: ${reason ?? "không rõ lý do"}`;
+function gpuLabel(state: string) {
+  return state === "ready" ? "Model nâng cao sẵn sàng"
+    : state === "starting" ? "Model nâng cao đang khởi động, thường mất vài phút"
+    : state === "idle" || state === "disabled" ? "Model nâng cao chưa bật — bạn vẫn dùng được Tầng 0"
+    : "Model nâng cao tạm chưa sẵn sàng — bạn vẫn dùng được Tầng 0";
 }
 
 export interface TierStatusProps {
@@ -88,12 +87,12 @@ function Tier1Card({ tier1, runBusy, runError, onRunTier1 }: Omit<TierStatusProp
         <Badge tone={tone}>{state ? TIER1_LABEL[state] : "Chưa rõ"}</Badge>
       </header>
       <p className="text-[10px] leading-snug text-slate-500">
-        Model PointPillars đã học (chạy GPU) cho thêm hai tiêu chí: Lạ với model và Model chưa chắc chắn.
+        Model PointPillars đã học cho thêm hai tiêu chí: Lạ với model và Model chưa chắc chắn.
       </p>
       {active && (
         <p role="status" className="flex items-center gap-1.5 text-blue-700">
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          {state === "queued" ? "Đang chờ tới lượt chạy…" : "Đang chạy trên GPU, thường mất vài phút. Kết quả Tầng 0 vẫn dùng được."}
+          {state === "queued" ? "Đang chờ tới lượt chạy…" : "Model đang chạy, thường mất vài phút. Kết quả Tầng 0 vẫn dùng được."}
         </p>
       )}
       {state === "done" && (
@@ -104,15 +103,15 @@ function Tier1Card({ tier1, runBusy, runError, onRunTier1 }: Omit<TierStatusProp
             : "Đã có đủ tín hiệu. Chọn “Nâng cao” ở trên để dùng."}
         </p>
       )}
-      <p role="status" aria-live="polite">{gpuLabel(gpu.state, gpu.reason)}</p>
+      <p role="status" aria-live="polite" data-reason={gpu.reason ?? undefined}>{gpuLabel(gpu.state)}</p>
       {gpu.state === "error" && gpu.reason === "no-offer" && <p>{NO_OFFER_HELP}</p>}
       {tier1?.reason && state === "failed" && (
-        <p className="flex items-start gap-1.5 text-amber-800">
+        <p data-reason={tier1.reason} className="flex items-start gap-1.5 text-amber-800">
           <CircleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          {tier1.reason}
+          Model nâng cao tạm chưa sẵn sàng — bạn vẫn dùng được Tầng 0
         </p>
       )}
-      {runError && <p role="alert" className="text-red-700">{runError}</p>}
+      {runError && <p role="alert" data-reason={runError} className="text-red-700">Chưa gửi được yêu cầu chạy model. Vui lòng thử lại.</p>}
       {canRun && onRunTier1 && (
         <button
           type="button"
