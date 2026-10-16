@@ -104,7 +104,9 @@ PYEOF
 fi
 
 echo "== [4/5] phu thuoc worker"
-"$PY" -m pip -q install -e "$REPO/model/worker[service,dev]"
+# Step 2 already pinned c4's runtime deps; resolving [service,dev] on the Python 3.10 of the
+# pytorch 2.1.2 image ends in ResolutionTooDeep (c4 declares >=3.11). The agent needs neither.
+"$PY" -m pip -q install --no-deps --ignore-requires-python -e "$REPO/model/worker"
 
 echo "== [5/5] tom tat"
 "$PY" --version
