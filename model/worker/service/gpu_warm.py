@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from service.errors import ApiError
 
 LABEL = "vcuboidfit-agent"
-GPU_NAMES = ("RTX_3090", "RTX_4090", "RTX_A5000")
+GPU_NAMES = ("RTX_3060", "RTX_3090", "RTX_4090", "RTX_A5000")
 IMAGE = "pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel"
 
 
@@ -173,15 +173,16 @@ class GpuWarmer:
         }
 
     def status(self, *, warm=False):
+        # A live agent (e.g. rented by hand) is ready even when autostart is off.
+        now = self.clock()
+        seen = _timestamp(self.remote.last_seen)
+        if seen is not None and 0 <= now - seen <= 120:
+            return GpuStatus(state="ready", since=self.remote.last_seen)
         key = os.environ.get("VAST_API_KEY", "").strip()
         if not key or os.environ.get("VCF_GPU_AUTOSTART") != "1":
             return GpuStatus(state="disabled")
         if not os.environ.get("VCF_SERVER", "").strip():
             return GpuStatus(state="disabled", reason="no-server-url")
-        now = self.clock()
-        seen = _timestamp(self.remote.last_seen)
-        if seen is not None and 0 <= now - seen <= 120:
-            return GpuStatus(state="ready", since=self.remote.last_seen)
         try:
             self.directory.mkdir(parents=True, exist_ok=True)
             # OS-backed lock shared by threads AND worker processes on this volume.

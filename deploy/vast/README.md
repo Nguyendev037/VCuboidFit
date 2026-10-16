@@ -19,7 +19,7 @@ $token = az containerapp secret show -n ca-vcuboidfit -g rg-vcuboidfit-demo --se
 ## Launch
 
 ```powershell
-vastai search offers "gpu_name in [RTX_3090,RTX_4090,RTX_A5000] num_gpus=1 cuda_vers>=11.8 disk_space>=40 reliability>0.98 inet_down>200" -o dph
+vastai search offers "gpu_name in [RTX_3060,RTX_3090,RTX_4090,RTX_A5000] num_gpus=1 cuda_vers>=11.8 disk_space>=40 reliability>0.98 inet_down>200" -o dph
 vastai create instance <offer_id> --image pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel --disk 40 --ssh --direct `
   --env "-e VCF_SERVER=https://<fqdn>/api -e VCF_REMOTE_TOKEN=$token" --onstart deploy/vast/onstart.sh
 ```

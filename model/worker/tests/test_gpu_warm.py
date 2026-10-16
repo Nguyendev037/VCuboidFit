@@ -259,7 +259,7 @@ def test_missing_server_configuration_never_constructs_client(setup, monkeypatch
         pytest.fail("missing server URL constructed a network client")
 
     manager.client_factory = forbidden
-    manager.remote.last_seen = _iso(NOW - 1)
+    manager.remote.last_seen = None  # a live agent is "ready" regardless (checked first)
     for warm in (False, True):
         assert manager.status(warm=warm).model_dump() == {
             "state": "disabled", "reason": "no-server-url", "since": None}
@@ -354,3 +354,13 @@ def test_successful_heartbeat_refreshes_last_seen(tmp_path):
                  "leaseUntil": "2026-10-16T13:00:00", "jobId": "a" * 12})
     queue.heartbeat("t1_" + "a" * 12, "inference", 0.5, "lease")
     assert queue.last_seen == "2026-10-16T12:00:00"
+
+
+@pytest.mark.parametrize("missing", ["VAST_API_KEY", "VCF_GPU_AUTOSTART"])
+def test_live_agent_is_ready_even_when_autostart_is_off(setup, monkeypatch, missing):
+    # A GPU rented by hand must show "ready" on the dashboard without a Vast key.
+    manager, fake = setup
+    monkeypatch.delenv(missing)
+    manager.remote.last_seen = _iso(NOW - 30)
+    assert manager.status(warm=True).state == "ready"
+    assert fake.calls == []
