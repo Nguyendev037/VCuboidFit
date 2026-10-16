@@ -1,7 +1,6 @@
 """A15: offline fakes only; execution awaits the requested test approval.
 
-The ambiguous-create test documents the unresolved W4/W5 retry conflict rather
-than claiming full W5 acceptance.
+D29: ambiguous creates are never retried, including after the 20-minute window.
 """
 import json
 import threading
@@ -177,26 +176,67 @@ def test_successful_create_cooldown_still_applies_after_agent_disappears(setup):
     assert len(fake.created) == 2
 
 
-def test_ambiguous_create_not_retried_and_cooldown_survives_restart(setup):
-    """LIMITATION: W5 retry of create remains blocked by W4 max-one invariant."""
+@pytest.mark.parametrize("failure", ["5xx", "timeout"])
+def test_ambiguous_create_not_retried_and_survives_restart(setup, failure):
     manager, fake = setup
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if failure == "timeout":
+            raise httpx.ReadTimeout("upstream-secret", request=request)
+        return httpx.Response(503, json={"message": "upstream-secret"})
 
     def uncertain(_offer, _payload):
         fake.calls.append("create-uncertain")
-        raise VastError()
+        return VastClient("secret", httpx.MockTransport(handler)).create(_offer, _payload)
 
     fake.create = uncertain
-    assert manager.status(warm=True).reason == "vast-unreachable"
+    assert manager.status(warm=True).model_dump() == {
+        "state": "starting", "reason": None, "since": _iso(NOW)}
+    record = json.loads(manager.path.read_text())
+    assert record == {"attemptedAt": _iso(NOW), "ambiguous": True}
     later = GpuWarmer(manager.settings, manager.remote, lambda _key: fake,
-                      clock=lambda: NOW + 9 * 60)
-    assert later.status(warm=True).reason == "vast-unreachable"
+                      clock=lambda: NOW + 20 * 60 - 1)
+    for warm in (False, True):
+        assert later.status(warm=warm).model_dump() == {
+            "state": "starting", "reason": None, "since": _iso(NOW)}
+    for elapsed in (20 * 60, 60 * 60):
+        later.clock = lambda: NOW + elapsed
+        for warm in (False, True):
+            assert later.status(warm=warm).model_dump() == {
+                "state": "error", "reason": "create-unknown", "since": _iso(NOW)}
     assert fake.calls.count("create-uncertain") == 1
-    later.clock = lambda: NOW + 60 * 60
-    assert later.status(warm=True).reason == "vast-unreachable"
-    assert fake.calls.count("create-uncertain") == 1
+    assert len(calls) == 1
+    assert json.loads(manager.path.read_text()) == record
     fake.existing = [{"id": 123, "label": LABEL}]
     assert later.status(warm=True).state == "starting"
+    assert json.loads(manager.path.read_text())["ambiguous"] is False
     assert fake.calls.count("create-uncertain") == 1
+    assert len(calls) == 1
+
+
+def test_ambiguous_create_discovered_before_deadline(setup):
+    manager, fake = setup
+    manager.directory.mkdir()
+    manager._save({"attemptedAt": _iso(NOW - 60), "ambiguous": True})
+    fake.existing = [{"id": 123, "label": LABEL}]
+    assert manager.status(warm=True).state == "starting"
+    assert json.loads(manager.path.read_text())["ambiguous"] is False
+    assert fake.created == []
+
+
+def test_create_auth_error_is_reported_without_retry(setup):
+    manager, fake = setup
+
+    def unauthorized(_offer, _payload):
+        fake.calls.append("create-unauthorized")
+        raise VastError("vast-auth")
+
+    fake.create = unauthorized
+    assert manager.status(warm=True).model_dump() == {
+        "state": "error", "reason": "vast-auth", "since": None}
+    assert fake.calls.count("create-unauthorized") == 1
 
 
 def test_corrupt_state_fails_closed(setup):
@@ -207,10 +247,24 @@ def test_corrupt_state_fails_closed(setup):
     assert fake.calls == []
 
 
-def test_missing_server_configuration_does_not_rent(setup, monkeypatch):
+@pytest.mark.parametrize("server", [None, "", "   "])
+def test_missing_server_configuration_never_constructs_client(setup, monkeypatch, server):
     manager, fake = setup
-    monkeypatch.delenv("VCF_SERVER")
-    assert manager.status(warm=True).reason == "vast-unreachable"
+    if server is None:
+        monkeypatch.delenv("VCF_SERVER")
+    else:
+        monkeypatch.setenv("VCF_SERVER", server)
+
+    def forbidden(_key):
+        pytest.fail("missing server URL constructed a network client")
+
+    manager.client_factory = forbidden
+    manager.remote.last_seen = _iso(NOW - 1)
+    for warm in (False, True):
+        assert manager.status(warm=warm).model_dump() == {
+            "state": "disabled", "reason": "no-server-url", "since": None}
+    assert not manager.directory.exists()
+    assert fake.calls == []
     assert fake.created == []
 
 

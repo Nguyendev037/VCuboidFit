@@ -5,9 +5,9 @@ https://docs.vast.ai/api-reference/creating-instances-with-api
 https://docs.vast.ai/api-reference/search/search-offers
 https://vast.ai/developers/api (v0 instances listing)
 
-Open contract issue: retrying an ambiguous create PUT can rent a second machine.
-Until W4/W5 are reconciled, only read/search calls retry; create fails closed and
-persists its attempt before sending. No account key or remote token is persisted.
+D29: only read/search calls retry. An ambiguous create PUT stays starting for
+20 minutes, then reports create-unknown without unlocking another rental.
+The attempt is persisted before sending; no account key or token is persisted.
 """
 import json
 import math
@@ -176,6 +176,8 @@ class GpuWarmer:
         key = os.environ.get("VAST_API_KEY", "").strip()
         if not key or os.environ.get("VCF_GPU_AUTOSTART") != "1":
             return GpuStatus(state="disabled")
+        if not os.environ.get("VCF_SERVER", "").strip():
+            return GpuStatus(state="disabled", reason="no-server-url")
         now = self.clock()
         seen = _timestamp(self.remote.last_seen)
         if seen is not None and 0 <= now - seen <= 120:
@@ -208,9 +210,11 @@ class GpuWarmer:
                 return GpuStatus(state="error", reason="agent-timeout", since=since)
             return GpuStatus(state="starting", since=since)
         if record.get("ambiguous"):
-            # A timed-out PUT may have succeeded. Only a later positive listing
-            # or manual reconciliation can resolve this; cooldown alone cannot.
-            return GpuStatus(state="error", reason="vast-unreachable",
+            # Never retry an uncertain rental, including after the 20-minute window.
+            attempt = _timestamp(record.get("attemptedAt"))
+            if attempt is not None and now - attempt < 20 * 60:
+                return GpuStatus(state="starting", since=record["attemptedAt"])
+            return GpuStatus(state="error", reason="create-unknown",
                              since=record.get("attemptedAt"))
         if contacted:
             # A previously healthy agent has self-destroyed after idle. Allow
@@ -243,7 +247,12 @@ class GpuWarmer:
         # Persist BEFORE PUT: a crash/timeout cannot unlock an immediate duplicate.
         record = {"attemptedAt": _iso(now), "ambiguous": True}
         self._save(record)
-        instance_id = client.create(offer["id"], payload)
+        try:
+            instance_id = client.create(offer["id"], payload)
+        except VastError as exc:
+            if exc.reason == "vast-auth":
+                raise
+            return GpuStatus(state="starting", since=record["attemptedAt"])
         record.update(createdAt=_iso(now), instanceId=instance_id, ambiguous=False)
         self._save(record)
         return GpuStatus(state="starting", since=record["createdAt"])
