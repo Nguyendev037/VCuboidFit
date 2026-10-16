@@ -35,6 +35,8 @@ deploy/*
 !deploy/azure-media-storage.md
 !deploy/azure/
 !deploy/azure/**
+!deploy/vast/
+!deploy/vast/**
 
 # Azure deploy: generated resource names (deploy/azure/deploy.ps1)
 deploy/azure/.names.json

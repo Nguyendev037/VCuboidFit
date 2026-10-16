@@ -271,6 +271,25 @@ if (-not (Test-AzResource @("containerapp", "show", "-n", "ca-vcuboidfit", "-g",
   Invoke-Az @("containerapp", "update", "-n", "ca-vcuboidfit", "-g", $rg, "--image", $image, "-o", "none")
 }
 
+# Keep the account key out of ARM JSON temp files and exception argument dumps.
+if ($env:VAST_API_KEY) {
+  if ($env:VAST_API_KEY -match '[\s"&|<>^%!]') { throw "VAST_API_KEY contains characters unsupported by az.cmd." }
+  $ErrorActionPreference = "Continue"
+  & az containerapp secret set -n ca-vcuboidfit -g $rg --secrets "vast-api-key=$env:VAST_API_KEY" -o none *> $null
+  $vastCode = $LASTEXITCODE
+  $ErrorActionPreference = "Stop"
+  if ($vastCode -ne 0) { throw "Vast secret update failed with exit code $vastCode (value not shown)." }
+}
+$vastSecrets = @(& az containerapp secret list -n ca-vcuboidfit -g $rg --query "[].name" -o tsv)
+if ($LASTEXITCODE -ne 0) { throw "Cannot check Vast secret names." }
+if ($vastSecrets -contains "vast-api-key") {
+  $gpuAutostart = if ($env:VCF_GPU_AUTOSTART) { $env:VCF_GPU_AUTOSTART } else { "1" }
+  $vastMaxDph = if ($env:VCF_VAST_MAX_DPH) { $env:VCF_VAST_MAX_DPH } else { "0.6" }
+  Invoke-Az @("containerapp", "update", "-n", "ca-vcuboidfit", "-g", $rg,
+    "--set-env-vars", "VAST_API_KEY=secretref:vast-api-key", "VCF_GPU_AUTOSTART=$gpuAutostart",
+    "VCF_VAST_MAX_DPH=$vastMaxDph", "-o", "none")
+}
+
 if (-not (Test-AzResource @("containerapp", "job", "show", "-n", "job-vcf-sweep", "-g", $rg, "-o", "none"))) {
   $job = @{
     location   = $Location
