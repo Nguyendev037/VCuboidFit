@@ -49,6 +49,7 @@ class FakeVast:
 def setup(tmp_path, monkeypatch):
     monkeypatch.setenv("VAST_API_KEY", "fake-account-secret")
     monkeypatch.setenv("VCF_GPU_AUTOSTART", "1")
+    monkeypatch.setenv("VCF_VAST_ALLOW_RENT", "1")
     monkeypatch.setenv("VCF_SERVER", "https://example.test/api")
     monkeypatch.delenv("VCF_VAST_MAX_DPH", raising=False)
     monkeypatch.delenv("VCF_VAST_REF", raising=False)
@@ -430,3 +431,14 @@ def test_live_agent_is_ready_even_when_autostart_is_off(setup, monkeypatch, miss
     manager.remote.last_seen = _iso(NOW - 30)
     assert manager.status(warm=True).state == "ready"
     assert fake.calls == []
+
+
+def test_new_rental_needs_owner_opt_in(setup, monkeypatch):
+    manager, fake = setup
+    monkeypatch.delenv("VCF_VAST_ALLOW_RENT")
+    assert manager.status(warm=True).model_dump() == {
+        "state": "idle", "reason": "rent-needs-approval", "since": None}
+    assert fake.created == []
+    fake.existing = [{"id": 50, "label": LABEL, "cur_state": "stopped"}]
+    assert manager.status(warm=True).state == "starting"  # resuming is still allowed
+    assert ("start", 50) in fake.calls and fake.created == []

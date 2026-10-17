@@ -261,6 +261,10 @@ class GpuWarmer:
                              since=record["attemptedAt"])
         if not warm:
             return GpuStatus(state="idle")
+        if os.environ.get("VCF_VAST_ALLOW_RENT") != "1":
+            # Owner rule (2026-10-17): renting a new machine needs their approval.
+            # Without the opt-in only an existing labelled machine is resumed.
+            return GpuStatus(state="idle", reason="rent-needs-approval")
         payload = self._payload()
         try:
             max_dph = float(os.environ.get("VCF_VAST_MAX_DPH", "0.6"))

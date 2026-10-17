@@ -71,7 +71,9 @@ not destroy: disk billing continues, the installed environment is kept) and does
 restart the agent. On the next dashboard visit the worker resumes a stopped
 `vcuboidfit-agent` instance (PUT `{"state": "running"}`, re-sent at most every 10
 minutes) instead of renting a new one; it rents only when no labelled instance exists,
-and only on verified hosts. Other exit codes retain the existing restart loop.
+only on verified hosts, and only when the owner opts in with `VCF_VAST_ALLOW_RENT=1`
+(default off: renting a new machine needs the owner's approval; otherwise warm reports
+`idle` / `rent-needs-approval`). Other exit codes retain the existing restart loop.
 
 Vast injects **`CONTAINER_ID`** and **`CONTAINER_API_KEY`** for instance-scoped control,
 confirmed on 2026-10-16 in its [official Docker environment documentation](https://github.com/vast-ai/docs/blob/main/guides/instances/docker-environment.mdx).
