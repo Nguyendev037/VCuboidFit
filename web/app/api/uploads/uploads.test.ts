@@ -265,6 +265,18 @@ describe("finalize", () => {
     expect(url).toBe("http://worker.test:8001/datasets");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toEqual({ uploadId: id });
+    expect(init.headers["x-vcf-session"]).toBeUndefined();
+  });
+
+  it("forwards the vcf_sid cookie as x-vcf-session (cloud sessions; missing ⇒ worker 404, UI stuck at 100%)", async () => {
+    const id = await newUpload();
+    await put(id, "a.zip", 0, bytes(500), 500);
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const sid = "83b3eae9e68c253ab0c554b2853bd769";
+    const req = new Request("http://x", { method: "POST", headers: { cookie: `other=1; vcf_sid=${sid}` } });
+    await finalize(req, { params: Promise.resolve({ id }) });
+    expect(fetchMock.mock.calls[0][1].headers["x-vcf-session"]).toBe(sid);
   });
 
   it("worker unreachable → 503 worker_down envelope (Vietnamese)", async () => {

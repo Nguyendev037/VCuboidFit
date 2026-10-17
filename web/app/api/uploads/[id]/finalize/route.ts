@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Kiểm tra mọi file đã đủ byte rồi chuyển cho worker `POST /datasets` → DatasetReport. */
-export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await ctx.params;
   if (!isValidUploadId(id)) return errorResponse(400, "bad_upload_id", "Mã phiên upload không hợp lệ.");
   if (!(await uploadExists(id))) return errorResponse(404, "upload_not_found", "Không tìm thấy phiên upload.");
@@ -18,9 +18,11 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     return errorResponse(409, "upload_incomplete", `Còn file chưa tải xong: ${incomplete.join(", ")}.`, { incomplete });
   }
 
+  // Bật phiên (cloud) thì worker chỉ nhận upload của đúng phiên: thiếu header ⇒ 404, UI đứng ở 100%.
+  const sid = req.headers.get("cookie")?.match(/(?:^|;\s*)vcf_sid=([0-9a-f]{32})(?:;|$)/)?.[1];
   const res = await workerFetch("/datasets", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(sid ? { "x-vcf-session": sid } : {}) },
     body: JSON.stringify({ uploadId: id }),
   });
   return new Response(await res.text(), {
