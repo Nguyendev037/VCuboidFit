@@ -8,7 +8,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from c4.config import load_config
+from c4.config import load_config, profile_names
 from c4.contracts import ContractError, read_table, write_table
 from c4.data.index import build_frames, cam_poses
 from c4.data.media import export_lidar, make_thumbs
@@ -21,7 +21,7 @@ def make_parser(description: str) -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=description)
     ap.add_argument("--job-dir", required=True)
     ap.add_argument("--data-root", required=True, help="thư mục chứa v1.0-*/ và samples/")
-    ap.add_argument("--profile", default="local-4060", choices=["local-4060", "cloud"])
+    ap.add_argument("--profile", default="local-4060", choices=profile_names())
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--limit", type=int, default=None, help="chỉ giữ N dòng ảnh đầu tiên")
     ap.add_argument("--device", default="cuda", choices=["cuda", "cpu"])

@@ -205,6 +205,21 @@ def test_cli_run_job_exit_0_on_done_and_stage_code_on_failure(done_job, monkeypa
     assert run_job_cli.main(bad) == 3
 
 
+def test_cli_profile_choices_cover_every_profile_file():
+    """Azure chạy `C4_PROFILE=azure-lite`; choices cứng [local-4060, cloud] làm lidar_index exit 2."""
+    from c4.cli.build_index import make_parser
+    from c4.config import CONFIG_DIR, profile_names
+
+    names = profile_names()
+    assert "azure-lite" in names
+    assert names == sorted(p.stem for p in (CONFIG_DIR / "profiles").glob("*.yaml"))
+    for name in names:
+        args = make_parser("t").parse_args(["--job-dir", "J", "--data-root", "D", "--profile", name])
+        assert args.profile == name
+    with pytest.raises(SystemExit):
+        make_parser("t").parse_args(["--job-dir", "J", "--data-root", "D", "--profile", "nope"])
+
+
 # ---------------------------------------------------------------- bảng lỗi (stub)
 
 @pytest.mark.parametrize("code,needle", [(3, "VRAM"), (4, "thiếu"), (2, "contract")])

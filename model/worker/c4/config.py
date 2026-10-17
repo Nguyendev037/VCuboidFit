@@ -13,6 +13,11 @@ def _merge(base: dict, over: dict) -> dict:
     return out
 
 
+def profile_names() -> list[str]:
+    """Tên các profile có file `configs/profiles/<tên>.yaml` — nguồn duy nhất cho `--profile` của CLI."""
+    return sorted(p.stem for p in (CONFIG_DIR / "profiles").glob("*.yaml"))
+
+
 def load_config(profile: str | None = None, profiles_dir: Path | None = None) -> SimpleNamespace:
     """base.yaml trộn với profiles/<profile>.yaml. Truy cập: cfg.budget, cfg.mmr["lambda"]."""
     data = yaml.safe_load((CONFIG_DIR / "base.yaml").read_text(encoding="utf-8"))

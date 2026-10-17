@@ -6,6 +6,7 @@ Mã thoát: 0 job done · mã của stage lỗi (2 contract · 3 hết VRAM · 4
 import argparse
 import sys
 
+from c4.config import profile_names
 from c4.jobs.runner import run_job
 
 
@@ -13,7 +14,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data-root", required=True, help="thư mục chứa v1.0-*/ và samples/")
     ap.add_argument("--job-dir", required=True)
-    ap.add_argument("--profile", default="local-4060", choices=["local-4060", "cloud"])
+    ap.add_argument("--profile", default="local-4060", choices=profile_names())
     args = ap.parse_args(argv)
     try:
         st = run_job(args.job_dir, args.data_root, args.profile)
