@@ -328,6 +328,18 @@ def test_vast_search_rest_contract():
     assert body["order"] == [["dph_total", "asc"]]
 
 
+def test_vast_instances_use_v1_listing():
+    # GET /api/v0/instances/ answers 410 deprecated_endpoint (measured 2026-10-17).
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json={"instances": [{"id": 1, "label": "x"}]})
+
+    assert VastClient("secret", httpx.MockTransport(handler)).instances() == [{"id": 1, "label": "x"}]
+    assert calls[0].method == "GET" and calls[0].url.path == "/api/v1/instances/"
+
+
 def test_routes_mounted_session_required_and_remote_next_updates_seen(tmp_path, monkeypatch):
     monkeypatch.delenv("VAST_API_KEY", raising=False)
     settings = Settings(workspace=tmp_path, sessions=True, remote_token="agent-secret")

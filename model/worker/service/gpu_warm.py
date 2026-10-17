@@ -3,7 +3,8 @@
 Official Vast REST references, checked 2026-10-16 (documentation only):
 https://docs.vast.ai/api-reference/creating-instances-with-api
 https://docs.vast.ai/api-reference/search/search-offers
-https://vast.ai/developers/api (v0 instances listing)
+https://vast.ai/developers/api (instances listing: v0 returns 410
+deprecated_endpoint since 2026-10; use v1, same {"instances": [...]} shape)
 
 D29: only read/search calls retry. An ambiguous create PUT stays starting for
 20 minutes, then reports create-unknown without unlocking another rental.
@@ -54,7 +55,7 @@ class VastClient:
             try:
                 with httpx.Client(timeout=10.0, transport=self._transport) as client:
                     response = client.request(
-                        method, "https://console.vast.ai/api/v0/" + path,
+                        method, "https://console.vast.ai/api/" + path,
                         headers={"Authorization": "Bearer " + self._api_key}, json=body)
                 if response.status_code in (401, 403):
                     raise VastError("vast-auth")
@@ -77,13 +78,13 @@ class VastClient:
         raise VastError()
 
     def instances(self):
-        result = self._request("GET", "instances/").get("instances")
+        result = self._request("GET", "v1/instances/").get("instances")
         if not isinstance(result, list) or not all(isinstance(x, dict) for x in result):
             raise VastError()
         return result
 
     def offers(self, max_dph):
-        result = self._request("POST", "bundles/", {
+        result = self._request("POST", "v0/bundles/", {
             "gpu_name": {"in": list(GPU_NAMES)}, "num_gpus": {"eq": 1},
             "cuda_max_good": {"gte": 11.8}, "reliability": {"gt": 0.98},
             "dph_total": {"lte": max_dph}, "disk_space": {"gte": 40},
@@ -96,7 +97,7 @@ class VastClient:
         return result
 
     def create(self, offer_id, payload):
-        result = self._request("PUT", f"asks/{int(offer_id)}/", payload, retry=False)
+        result = self._request("PUT", f"v0/asks/{int(offer_id)}/", payload, retry=False)
         instance_id = result.get("new_contract")
         if not isinstance(instance_id, int) or isinstance(instance_id, bool):
             raise VastError()
