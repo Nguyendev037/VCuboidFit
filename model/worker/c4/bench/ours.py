@@ -14,7 +14,8 @@ FROZEN_SHA = "e4cdde328dff3efa0cd5049d9761dd68b582914a42ede8d64164687fe427a783"
 
 
 def select_ours(method: str, job: Path, root: Path, final_config: Path,
-                pool_tokens: list[str]) -> dict:
+                pool_tokens: list[str], pool_split: str = "T", ref_split: str = "V") -> dict:
+    """pool_split/ref_split = "V"/"V" chỉ dùng cho select CAL exploratory (power, in-sample)."""
     start = time.monotonic()
     digest = sha256(require(Path(final_config)))
     if digest != FROZEN_SHA:
@@ -46,7 +47,7 @@ def select_ours(method: str, job: Path, root: Path, final_config: Path,
             out = isolated / "out/selections" / result["selectionId"]
             selected = read_table(out / "selected.csv", "lidar_selected")
             tokens = selected.loc[selected.method == "hybrid"].sort_values("rank").sample_token.tolist()
-            used_dir = job / "bench" / "engine" / "M1"
+            used_dir = job / "bench" / "engine" / ("M1" if pool_split == "T" else f"M1_{pool_split}")
             used_dir.mkdir(parents=True, exist_ok=True)
             used = used_dir / "config_used.json"
             used.write_text(json.dumps(result["params"], sort_keys=True, indent=1), encoding="utf-8")
@@ -54,7 +55,7 @@ def select_ours(method: str, job: Path, root: Path, final_config: Path,
         from c4.rare.pipeline import run_rare_v24
 
         result = run_rare_v24(job, root, profile="multisensor" if method == "OURS" else "lidar_only",
-                              pool_split="T", ref_split="V", budget_frac=0.10, scoring=scoring)
+                              pool_split=pool_split, ref_split=ref_split, budget_frac=0.10, scoring=scoring)
         tokens = result["ranking"][:bmax]
         used = Path(result["selection_dir"]) / "config_used.json"
     else:

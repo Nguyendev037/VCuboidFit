@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 import importlib
 import io
 import json
+import math
+import os
 from pathlib import Path
 import re
 import sys
@@ -20,6 +22,11 @@ from c4.bench.registry import assert_independent
 from c4.bench.split import plan_bench_split
 from c4.contracts import ContractError, _git_sha, read_table, write_table
 from c4.rare.eval import budget, random_selector
+
+
+def _repo_sha():
+    # Colab chạy từ git archive (không có .git) ⇒ notebook đặt VCF_REPO_SHA.
+    return os.environ.get("VCF_REPO_SHA") or _git_sha()
 
 
 def _late(name):
@@ -131,19 +138,8 @@ def _third_party(method, module, job, pool, bmax, external=None):
     return dict(tokens=tokens, short=len(tokens) < bmax, source=external or method)
 
 
-def _select(args):
-    job, bench = args.job_dir, args.job_dir / "bench"
-    digest = require(bench / "prereg_sha256.txt").read_text().strip()
-    check_prereg(job, args.expected_sha or digest)
-    if (bench / "selections.json").exists() or (bench / "pool_opened.json").exists() or list(
-            (bench / "judge").glob("judge_*_pool*")):
-        raise BenchGateError("ORDER_VIOLATION", "selection must precede judging")
-    split_hash = sha256(require(bench / "bench_split.parquet"))
-    if split_hash != require(bench / "split_sha256.txt").read_text().strip():
-        raise BenchGateError("ORDER_VIOLATION", "split hash mismatch")
-    pool = _frames(job, "POOL").sample_token.tolist()
-    if not pool:
-        raise BenchGateError("MISSING_INPUT", "empty POOL")
+def _run_methods(args, job, pool, engine_split="T"):
+    """Mọi bên chọn trên cùng `pool`; engine_split = split engine của pool (T, hoặc V khi chọn CAL)."""
     entries = args.methods.split(",")
     ids = [entry.split("=", 1)[0] for entry in entries]
     required = {"OURS", "M1", "M2", "X0", "X1", "X2", "X3", "N1", "N2"}
@@ -158,15 +154,89 @@ def _select(args):
         if method in {"OURS", "M1", "M2"}:
             if args.data_root is None or args.final_config is None:
                 raise BenchGateError("MISSING_INPUT", "--data-root and --final-config")
-            methods[method] = select_ours(method, job, args.data_root, args.final_config, pool)
+            methods[method] = select_ours(method, job, args.data_root, args.final_config, pool,
+                                          pool_split=engine_split, ref_split="V")
         elif method == "X0":
             methods[method] = {"seeds": {str(s): random_selector(s)(pool, bmax) for s in range(100)}}
         else:
             external = entry.split("=", 1)[1] if "=" in entry else None
             methods[method] = _third_party(method, thirdparty, job, pool, bmax, external)
         methods[method]["elapsed_s"] = time.monotonic() - start
+    return methods
+
+
+def _power(job, sels, st, cal, n_boot, seed):
+    """SPEC-P04 §4: MDE = 2.8 · SE(D_JA) trên CAL · sqrt(n_scenes_CAL / n_scenes_POOL). Chỉ quyết định câu chữ."""
+    from c4.bench.metrics import struggle_frames, sy
+    from c4.rare.eval import bootstrap_fixed
+
+    tf = struggle_frames(st)
+    b = budget(len(cal), 0.05)
+    fixed = {}
+    for name, entry in sels["methods"].items():
+        if name == "X0":
+            fixed.update({f"X0_s{k}": list(v[:b]) for k, v in entry["seeds"].items()})
+        else:
+            fixed[name] = list(entry["tokens"][:b])
+    frame = cal[["sample_token", "scene_token"]].drop_duplicates()
+    boot = bootstrap_fixed(fixed, frame, tf, n_boot=n_boot, seed=seed, capture="any")
+    rivals = [m for m in ("X1", "X2", "X3", "Xext") if m in fixed]
+    d = boot["OURS"] - boot[rivals].max(axis=1)
+    se = float(d.std(ddof=1)) if len(d) > 1 else 0.0
+    n_cal, n_pool = int(frame.scene_token.nunique()), int(_frames(job, "POOL").scene_token.nunique())
+    x0 = float(np.mean([sy(v, tf) for m, v in fixed.items() if m.startswith("X0_s")]))
+    mde = 2.8 * se * math.sqrt(n_cal / n_pool)
+    return dict(schema="bench-power/1", judge="JA", label="exploratory", ours_in_sample=True,
+                se_D_JA=se, mde=mde, n_scenes_cal=n_cal, n_scenes_pool=n_pool, B_cal=b,
+                n_boot=n_boot, seed=seed, sy_x0_mean_cal=x0,
+                D_JA_cal=sy(fixed["OURS"], tf) - max(sy(fixed[m], tf) for m in rivals),
+                sy_cal={m: sy(v, tf) for m, v in fixed.items() if not m.startswith("X0_s")},
+                underpowered=bool(mde > 0.5 * x0), repo_sha=_repo_sha(),
+                created_at=datetime.now(timezone.utc).isoformat())
+
+
+def _select_cal(args):
+    """select --split cal --exploratory: chọn trên CAL (OURS in-sample, ref = CAL) ⇒ power.json trước POOL."""
+    job, bench = args.job_dir, args.job_dir / "bench"
+    digest = require(bench / "prereg_sha256.txt").read_text().strip()
+    check_prereg(job, args.expected_sha or digest)
+    if (bench / "pool_opened.json").exists() or list((bench / "judge").glob("judge_*_pool*")):
+        raise BenchGateError("ORDER_VIOLATION", "power must be written before POOL opens")
+    cal = _frames(job, "CAL")
+    if cal.empty:
+        raise BenchGateError("MISSING_INPUT", "empty CAL")
+    sels = dict(schema="bench-selections-cal/1", dataset=args.dataset, prereg_sha256=digest,
+                label="exploratory", repo_sha=_repo_sha(), n_cal=len(cal), B=budget(len(cal), 0.05),
+                methods=_run_methods(args, job, cal.sample_token.tolist(), "V"),
+                created_at=datetime.now(timezone.utc).isoformat())
+    _json(bench / "cal/selections_cal.json", sels)
+    result = dict(n_cal=len(cal), B_cal=sels["B"], power=None)
+    st = bench / "judge/judge_struggle_JA_cal.parquet"
+    if st.is_file():
+        power = _power(job, sels, read_table(st, "judge_struggle"), cal, args.n_boot, args.seed)
+        _json(bench / "power.json", power)
+        result["power"] = {k: power[k] for k in ("se_D_JA", "mde", "sy_x0_mean_cal", "underpowered")}
+    return result
+
+
+def _select(args):
+    if args.split == "cal" and args.exploratory:
+        return _select_cal(args)
+    job, bench = args.job_dir, args.job_dir / "bench"
+    digest = require(bench / "prereg_sha256.txt").read_text().strip()
+    check_prereg(job, args.expected_sha or digest)
+    if (bench / "selections.json").exists() or (bench / "pool_opened.json").exists() or list(
+            (bench / "judge").glob("judge_*_pool*")):
+        raise BenchGateError("ORDER_VIOLATION", "selection must precede judging")
+    split_hash = sha256(require(bench / "bench_split.parquet"))
+    if split_hash != require(bench / "split_sha256.txt").read_text().strip():
+        raise BenchGateError("ORDER_VIOLATION", "split hash mismatch")
+    pool = _frames(job, "POOL").sample_token.tolist()
+    if not pool:
+        raise BenchGateError("MISSING_INPUT", "empty POOL")
+    methods = _run_methods(args, job, pool)
     sels = dict(schema="bench-selections/1", dataset=args.dataset, prereg_sha256=digest,
-                split_sha256=sha256(require(bench / "bench_split.parquet")), repo_sha=_git_sha(),
+                split_sha256=sha256(require(bench / "bench_split.parquet")), repo_sha=_repo_sha(),
                 B=budget(len(pool), 0.05), n_pool=len(pool), methods=methods,
                 created_at=datetime.now(timezone.utc).isoformat())
     return dict(selections_sha256=freeze_selections(job, sels), B=sels["B"], n_pool=len(pool))
@@ -196,7 +266,7 @@ def _open(args, what):
             raise
         # Giữ marker lần đầu; đánh dấu mọi report từ lần chạy này là exploratory.
         _json(args.job_dir / "bench" / f"{what}_exploratory.json",
-              dict(created_at=datetime.now(timezone.utc).isoformat(), repo_sha=_git_sha()))
+              dict(created_at=datetime.now(timezone.utc).isoformat(), repo_sha=_repo_sha()))
 
 
 def _judge(args):
