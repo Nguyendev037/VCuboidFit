@@ -107,3 +107,28 @@ def test_av2_wrong_yaw_rejected_by_shared_axis_gate(tmp_path):
         av2.adapt(src, tmp_path / "out")
     assert error.value.code == "PROJ_FAIL" and error.value.exit_code == 3
     assert not (tmp_path / "out").exists()
+
+
+def test_pooled_axis_tolerates_one_partial_view_sequence():
+    from c4.data.adapters.common import pooled_axis_check
+    weak = dict(angles_deg=[30.] * 3 + [1.] * 7, aligned_ratio=.7)
+    good = dict(angles_deg=[1.] * 20, aligned_ratio=1.)
+    got = pooled_axis_check({"a": weak, "b": good})
+    assert got["aligned_ratio"] == pytest.approx(27 / 30) and got["sequences_below_80"] == ["a"]
+    with pytest.raises(AdapterError) as error:
+        pooled_axis_check({"a": weak, "b": weak})
+    assert error.value.code == "PROJ_FAIL"
+
+
+@pytest.mark.parametrize("yaw,fails", [(0., False), (math.pi, False), (math.pi / 2, True)])
+def test_motion_heading_catches_rotated_boxes(yaw, fails):
+    from c4.data.adapters.common import motion_heading_check
+    tracks = pd.DataFrame(dict(uuid="t", ts_ns=[k * 500_000_000 for k in range(6)],
+                               x=[2.5 * k for k in range(6)], y=0., yaw=yaw))
+    if fails:
+        with pytest.raises(AdapterError) as error:
+            motion_heading_check(tracks)
+        assert error.value.code == "PROJ_FAIL"
+    else:
+        assert motion_heading_check(tracks)["median_deg"] == pytest.approx(0, abs=1e-9)
+    assert motion_heading_check(tracks.assign(x=0.))["n"] == 0

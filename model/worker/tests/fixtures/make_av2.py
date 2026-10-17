@@ -38,7 +38,7 @@ def make_av2(root: Path, n_sequences=2, n_frames=10):
         pd.DataFrame(extr).to_feather(folder / "calibration/egovehicle_SE3_sensor.feather")
         poses, anns = [], []
         for i, ts in enumerate(times):
-            ego = pose([i, 100*s, 0], yaw_q(.3))
+            ego = pose([i * math.cos(.3), 100*s + i * math.sin(.3), 0], yaw_q(.3))  # chạy theo mũi xe
             poses.append(dict(timestamp_ns=ts, city_name="PIT", **pose_row(ego)))
             points = np.array([(x+12, y, z+1) for x in np.linspace(-1.6, 1.6, 9)
                                for y in np.linspace(-.6, .6, 5) for z in [-.3, 0., .3]])

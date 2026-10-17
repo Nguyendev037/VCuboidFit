@@ -8,7 +8,8 @@ import math
 import numpy as np
 import pandas as pd
 
-from .common import (AdapterError, Writer, box_axis_check, nearest, pose, qmul, require, transform)
+from .common import (AdapterError, Writer, box_axis_check, motion_heading_check, nearest, pooled_axis_check,
+                     pose, qmul, require, transform)
 from c4.data.geometry import global_to_ego, quat_to_mat
 
 SLOTS = [("CAM_FRONT", 0), ("CAM_FRONT_LEFT", 55), ("CAM_FRONT_RIGHT", -55),
@@ -57,10 +58,10 @@ def adapt(src, out, logs=None, limit=None, workers=8):
         raise AdapterError("SOURCE_LAYOUT", f"no logs: {base}", 2)
     w = Writer("av2", out)
     w.report.update(license_source="Argoverse 2 Sensor: CC BY-NC-SA 4.0 (source distribution)",
-                    workers=workers, camera_assignment={}, box_axis_checks={})
+                    workers=workers, camera_assignment={}, box_axis_checks={}, motion_heading_checks={})
     for name in names:
         folder = require(base / name)
-        axis_clouds, axis_boxes = [], []
+        axis_clouds, axis_boxes, tracks = [], [], []
         intr = feather(folder / "calibration/intrinsics.feather").set_index("sensor_name")
         extr = feather(folder / "calibration/egovehicle_SE3_sensor.feather")
         calib = {row["sensor_name"]: row_pose(row) for row in extr.to_dict("records")}
@@ -120,8 +121,15 @@ def adapt(src, out, logs=None, limit=None, workers=8):
                 w.report["source_labels"].append(label)
                 center = transform([[box[f"t{a}_m"] for a in "xyz"]], ego)[0]
                 rotation = qmul(ego["rotation"], [box[f"q{a}"] for a in "wxyz"])
+                if CATEGORIES.get(label) == "vehicle.car":
+                    w_, x_, y_, z_ = rotation
+                    tracks.append((box["track_uuid"], ts, center[0], center[1],
+                                   math.atan2(2 * (w_ * z_ + x_ * y_), 1 - 2 * (y_ * y_ + z_ * z_))))
                 w.annotation(name, sample, box["track_uuid"], CATEGORIES.get(label, f"other.{label}"),
                     center, [box["width_m"], box["length_m"], box["height_m"]], rotation,
                     box["num_interior_pts"])
-        w.report["box_axis_checks"][name] = box_axis_check(axis_clouds, axis_boxes)
+        w.report["box_axis_checks"][name] = box_axis_check(axis_clouds, axis_boxes, strict=False)
+        w.report["motion_heading_checks"][name] = motion_heading_check(
+            pd.DataFrame(tracks, columns=["uuid", "ts_ns", "x", "y", "yaw"]))
+    w.report["box_axis_pooled"] = pooled_axis_check(w.report["box_axis_checks"])
     return w.finish()

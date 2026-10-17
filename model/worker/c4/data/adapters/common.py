@@ -108,7 +108,7 @@ def box_axis_angles(points, boxes):
     return angles
 
 
-def box_axis_check(points, boxes) -> dict:
+def box_axis_check(points, boxes, strict: bool = True) -> dict:
     """Check source-frame points against boxes in that same frame; fail exit 3.
 
     Accept one N x 3 cloud and its boxes, or matched lists of clouds/box lists
@@ -123,8 +123,47 @@ def box_axis_check(points, boxes) -> dict:
     result = dict(eligible_boxes=len(angles), angles_deg=angles,
                   median_deg=float(np.median(angles)) if angles else None,
                   aligned_ratio=sum(a < 20 for a in angles) / len(angles) if angles else None)
-    if angles and result["aligned_ratio"] < .8:
+    if strict and angles and result["aligned_ratio"] < .8:
         raise AdapterError("PROJ_FAIL", f"PCA/length alignment: {result}")
+    return result
+
+
+def pooled_axis_check(checks: dict) -> dict:
+    """SPEC-P01 §6.6 trên CẢ BỘ: >= 80 % hộp car (mọi chuỗi gộp lại) có góc PCA–trục dài < 20°.
+
+    Từng chuỗi vẫn được ghi (`box_axis_checks`); một chuỗi thấp hơn 80 % không tự làm hỏng bộ,
+    vì PCA lệch khi LiDAR chỉ thấy một mặt xe. Lỗi hệ thống (đảo dài/rộng, sai yaw) làm tụt cả bộ.
+    """
+    angles = [a for c in checks.values() for a in c["angles_deg"]]
+    result = dict(eligible_boxes=len(angles), median_deg=float(np.median(angles)) if angles else None,
+                  aligned_ratio=sum(a < 20 for a in angles) / len(angles) if angles else None,
+                  sequences_below_80=sorted(k for k, c in checks.items()
+                                            if c["aligned_ratio"] is not None and c["aligned_ratio"] < .8))
+    if angles and result["aligned_ratio"] < .8:
+        raise AdapterError("PROJ_FAIL", f"PCA/length alignment (pooled): {result}")
+    return result
+
+
+def motion_heading_check(tracks: pd.DataFrame, min_speed: float = 2.0, max_dt: float = 0.6,
+                         max_median_deg: float = 10.0) -> dict:
+    """Hướng hộp so với hướng di chuyển của chính track (hệ global), mod π, độc lập với điểm LiDAR.
+
+    tracks: uuid, ts_ns, x, y, yaw (global). Bắt lỗi thô (xoay 90°, đảo trục) mà PCA không phân xử được.
+    Không có xe nào chạy > min_speed ⇒ n=0, không kết luận (không fail).
+    """
+    err = []
+    for _, g in tracks.sort_values(["uuid", "ts_ns"]).groupby("uuid"):
+        if len(g) < 2:
+            continue
+        dt = np.diff(g.ts_ns.to_numpy()) / 1e9
+        dx, dy = np.diff(g.x.to_numpy()), np.diff(g.y.to_numpy())
+        speed = np.hypot(dx, dy) / np.maximum(dt, 1e-9)
+        d = np.abs((np.arctan2(dy, dx) - g.yaw.to_numpy()[1:] + np.pi / 2) % np.pi - np.pi / 2)
+        err += list(np.degrees(d[(speed > min_speed) & (dt < max_dt)]))
+    result = dict(n=len(err), median_deg=float(np.median(err)) if err else None,
+                  p95_deg=float(np.percentile(err, 95)) if err else None)
+    if err and result["median_deg"] >= max_median_deg:
+        raise AdapterError("PROJ_FAIL", f"box yaw vs track motion: {result}")
     return result
 
 
