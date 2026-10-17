@@ -130,6 +130,7 @@ def test_creation_payload_cheapest_eligible_and_no_key_persisted(setup, monkeypa
         "VCF_SERVER": "https://example.test/api", "VCF_REMOTE_TOKEN": "fake-remote-secret",
         "VCF_IDLE_MIN": "15", "VCF_VAST_REF": "feature/gpu"}
     assert "/feature/gpu/deploy/vast/onstart.sh" in payload["onstart"]
+    assert "curl" not in payload["onstart"] and payload["onstart"].startswith("python3 -c ")
     assert "fake-account-secret" not in str(payload)
     assert "secret" not in manager.path.read_text()
 

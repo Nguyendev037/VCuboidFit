@@ -170,8 +170,10 @@ class GpuWarmer:
             "image": IMAGE, "disk": 40, "label": LABEL, "runtype": "ssh_direct",
             "env": {"VCF_SERVER": server, "VCF_REMOTE_TOKEN": self.settings.remote_token,
                     "VCF_IDLE_MIN": "15", "VCF_VAST_REF": ref},
-            "onstart": "curl -fsSL " + shlex.quote(url)
-                       + " -o /tmp/vcf-onstart.sh && bash /tmp/vcf-onstart.sh",
+            # The pytorch image has no curl; fetch with Python like onstart.sh does.
+            "onstart": "python3 -c " + shlex.quote(
+                f"import urllib.request as u; u.urlretrieve({url!r}, '/tmp/vcf-onstart.sh')")
+                       + " && bash /tmp/vcf-onstart.sh",
         }
 
     def status(self, *, warm=False):
