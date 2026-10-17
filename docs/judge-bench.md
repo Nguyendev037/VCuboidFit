@@ -105,13 +105,15 @@ Connector Google Drive của agent đăng nhập tài khoản khác nên agent k
 | `selections.json.repo_sha` rỗng | CLI đọc git, mà `code_<sha>.zip` không có `.git` | ô 2 đặt `VCF_REPO_SHA`; CLI đọc biến này trước |
 | AV2 150 log: `adapt` exit 3 `PROJ_FAIL` sau 198 s | log `15ec0778…` chỉ 73,9 % hộp xe thẳng trục (ngưỡng §6.6 ≥ 80 %). Đo cả 150 log (`model/scripts/diag_av2_axis.py`, 5,5 phút): 6 log < 80 %, nhưng hướng hộp khớp hướng di chuyển của chính xe (trung vị 1,34°, log tệ nhất 4,3°) và ở bước này điểm + hộp đều là hệ ego gốc AV2 ⇒ PCA lệch do chỉ thấy một mặt xe, adapter không sai | `f92cb68`: §6.6 tính trên cả bộ đúng chữ SPEC (gộp 92,5 % / 67 995 hộp), ghi từng log; thêm §6.8 hướng hộp vs hướng di chuyển < 10°/log. Ngưỡng 80 % giữ nguyên, không bỏ log |
 | AV2 log `04994d08` lấy `ring_rear_right` làm `CAM_BACK` | quy tắc chọn camera theo yaw đo từ calib từng log | đúng SPEC-P01 §4, không phải lỗi |
+| AV2 ô 5 `select` chạy ~4 h | `novelty_knn` (`c4/mining/novelty.py`) O(N²) numpy CPU trên 951 663 crop; `select --split cal --exploratory` chạy lại một lần nữa | chấp nhận, KHÔNG sửa engine giữa benchmark (config/sha đóng băng) |
+| AV2 ô 6 exit 4 `JUDGE_INVALID ['JA','JB']` (2026-10-18) | V1: recall vật dễ 0,845 / 0,866 < 0,90 dù τ ở sàn 0,05, IoU 0,3; V2 2,79 / 2,43, κ 0,72 đạt. ~95 % vật dễ bị sót là người đi bộ, khung gần nhất cao 32–46 % hộp GT, cặp khớp lệch tâm ≈ 0 ⇒ không phải lỗi chiếu; nghi che khuất (định nghĩa "dễ" không xét) | đúng luật SPEC-P03 §8: benchmark dừng, POOL KHÔNG mở, không đổi τ/IoU/định nghĩa. Muốn chạy tiếp ⇒ hồ sơ mới, đăng ký lại trước POOL |
 
-## 6. Trạng thái (2026-10-17 23:00)
-- ✅ Thiết kế + prereg, ✅ code + 126 test (commit `fa2e8d3`…`6e477bd`); sửa notebook `94be150`, script `subset_nusc.py`/`pack_judge_job.py` `2f0e971`.
-- G2 pilot: gói đã dựng + người đã upload lên Drive; ⬜ chưa chạy Colab (`REPO_SHA=94be150`).
-- G5 AV2: 3 log thử đạt (chiếu 97,3 %, dài>rộng 100 %, thẳng trục 87–92 %, tất định 14/14 file); 150 log ĐỎ `PROJ_FAIL`.
+## 6. Trạng thái (2026-10-18 06:40)
+- ✅ Thiết kế + prereg, ✅ code + test; notebook ô 4b `9b2bd4c`, power `394f70a`, adapter AV2 `f92cb68`, LF `661876f`.
+- G2 pilot nuScenes: chạy hết tới bundle (nhãn chạy khô, không kết luận); ⬜ thẩm định CPU.
+- G6 AV2 150 log: adapt + chuẩn bị + select (`04dbbd1c…`, B 132 / POOL 2 630) xong; ⛔ dừng ở cổng giám khảo `JUDGE_INVALID` (calib `9fe4dd6e…`). POOL chưa mở ⇒ chưa có số D/SY trên AV2.
 - ⬜ PandaSet · ⬜ Pha 4 · ⬜ thẩm định đối kháng.
-- Chưa có con số benchmark nào. Mọi con số sau này phải đi kèm sha prereg/selections và output của notebook thẩm định.
+- Mọi con số phải đi kèm sha prereg/selections và output của notebook thẩm định.
 
 Slide trình bày (10 trang): [slides/judge-bench.pptx](slides/judge-bench.pptx).
 
