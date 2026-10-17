@@ -326,6 +326,7 @@ def test_vast_search_rest_contract():
     assert body["num_gpus"] == {"eq": 1}
     assert body["reliability"] == {"gt": 0.98}
     assert body["order"] == [["dph_total", "asc"]]
+    assert body["gpu_name"] == {"in": ["RTX 3060", "RTX 3090", "RTX 4090", "RTX A5000"]}
 
 
 def test_vast_instances_use_v1_listing():

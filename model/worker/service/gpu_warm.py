@@ -85,7 +85,8 @@ class VastClient:
 
     def offers(self, max_dph):
         result = self._request("POST", "v0/bundles/", {
-            "gpu_name": {"in": list(GPU_NAMES)}, "num_gpus": {"eq": 1},
+            # The search API matches display names ("RTX 3060"); underscores match nothing.
+            "gpu_name": {"in": [name.replace("_", " ") for name in GPU_NAMES]}, "num_gpus": {"eq": 1},
             "cuda_max_good": {"gte": 11.8}, "reliability": {"gt": 0.98},
             "dph_total": {"lte": max_dph}, "disk_space": {"gte": 40},
             "rentable": {"eq": True}, "rented": {"eq": False},
