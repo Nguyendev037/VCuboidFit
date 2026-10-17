@@ -45,7 +45,8 @@ def sha256(path):
 
 def dump(path, value):
     Path(path).write_text(json.dumps(value, sort_keys=True, indent=1,
-                                    ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8")
+                                    ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8",
+                          newline="\n")  # LF trên mọi OS: output trùng byte giữa Windows và Colab
 
 
 def qmul(a, b):

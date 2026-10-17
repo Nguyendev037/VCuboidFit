@@ -132,3 +132,9 @@ def test_motion_heading_catches_rotated_boxes(yaw, fails):
     else:
         assert motion_heading_check(tracks)["median_deg"] == pytest.approx(0, abs=1e-9)
     assert motion_heading_check(tracks.assign(x=0.))["n"] == 0
+
+
+def test_adapter_json_is_lf_on_every_os(tmp_path):
+    from c4.data.adapters.common import dump
+    dump(tmp_path / "a.json", {"k": [1, 2]})
+    assert b"\r\n" not in (tmp_path / "a.json").read_bytes()
