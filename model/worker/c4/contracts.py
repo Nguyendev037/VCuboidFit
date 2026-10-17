@@ -162,6 +162,30 @@ SPEC = dict(  # tên -> (schema, khóa chính)
     lidar_calib=(LIDAR_CALIB, ["sample_token"]))
 
 
+# ---- Bench judge (planning/21) ----
+BENCH_SPLIT = dict(scene_token="string", scene_name="string", bench_split="string",
+                   engine_split="string", n_frames="int32")
+MEDIA_MANIFEST = dict(sample_token="string", cam="string", img_path="string", sha256="string",
+                      w="int16", h="int16")
+JUDGE_DET = dict(judge="string", sample_token="string", cam="string", coco_label="int16",
+                 group="string", score="float32", x1="float32", y1="float32",
+                 x2="float32", y2="float32")
+AEB_OBJECTS = dict(sample_token="string", cam="string", ann_token="string",
+                   instance_token="string", scene_token="string", category="string",
+                   group="string", x1="float32", y1="float32", x2="float32", y2="float32",
+                   dist_m="float32", in_corridor="bool", num_lidar_pts="int32")
+JUDGE_STRUGGLE = dict(judge="string", sample_token="string", ann_token="string",
+                      instance_token="string", scene_token="string", group="string",
+                      best_iou="float32", best_score="float32", struggle="bool", unc="float32")
+TABLES = SPEC
+TABLES.update(
+    bench_split=(BENCH_SPLIT, ["scene_token"]),
+    media_manifest=(MEDIA_MANIFEST, ["sample_token", "cam"]),
+    judge_det=(JUDGE_DET, []),
+    aeb_objects=(AEB_OBJECTS, ["sample_token", "ann_token"]),
+    judge_struggle=(JUDGE_STRUGGLE, ["judge", "sample_token", "ann_token"]))
+
+
 class ContractError(Exception):
     pass
 
@@ -171,7 +195,7 @@ def validate(df: pd.DataFrame, name: str) -> pd.DataFrame:
     missing = [c for c in schema if c not in df.columns]
     if missing:
         raise ContractError(f"{name}: thiếu cột {missing}")
-    if df.duplicated(key).any():
+    if key and df.duplicated(key).any():  # bảng không khoá (judge_det) ⇒ bỏ kiểm trùng
         raise ContractError(f"{name}: trùng khóa {key}")
     num = [c for c, t in schema.items() if t.startswith(("float", "int"))]
     if num and df[num].isna().any().any():
