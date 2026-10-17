@@ -93,13 +93,16 @@ Connector Google Drive của agent đăng nhập tài khoản khác nên agent k
 ### 5.4. Chạy trên Colab
 1. Nối Colab MCP theo [colab-mcp.md](colab-mcp.md) §3; chép notebook repo (bản đã sửa) lên `benchmark_2`.
 2. Ô 1: `DATASET`, `REPO_SHA=<sha>` (phải có `code_<sha>.zip` trên Drive), giữ `RUN_POOL=False`.
-3. Chạy ô 0–6 ⇒ select (băm `selections_sha256`) + giám khảo CAL + `power.json`. **Commit `selections_sha256` + `judge_calib.json` vào BuildLab TRƯỚC** khi bật `RUN_POOL=True` và chạy ô 7–11.
+3. Chạy ô 0–6 (ô 4b chuẩn bị đầu vào: trọng số, extract_clip, context cv/fit/run, rare lidar_only → crops, DINO, YOLO; giống chuỗi `prepare` của lần chạy T pitch-v2, cluster_only) ⇒ select (băm `selections_sha256`) + giám khảo CAL + `power.json`. **Commit `selections_sha256` + `judge_calib.json` vào BuildLab TRƯỚC** khi bật `RUN_POOL=True` và chạy ô 7–11.
 4. Kéo `results_bundle.zip` về, chạy notebook thẩm định trên CPU.
 
 ### 5.5. Lỗi đã gặp
 | Hiện tượng | Nguyên nhân | Đã xử lý |
 |---|---|---|
 | Ô 5 chắc chắn dừng `MISSING_INPUT` | notebook không truyền `--data-root/--final-config/--dataset` cho select/judge/report | sửa `94be150`: ô 1 thêm `DATA_ROOT`, `FINAL_CONFIG` |
+| Ô 5 (sau `94be150`) dừng `MISSING_INPUT: cache/context_frame.parquet, cache/rare_crops.npy …` (đo 2026-10-17 trên A100) | gói chỉ có `lidar/ index/ gt/ media/`; OURS (multisensor) cần cache bối cảnh + crop OpenCLIP, X1/N1/N2 cần DINO, X2/X3 cần YOLO, mà notebook không có bước sinh | thêm ô 4b vào notebook; lần đầu ô 4b còn lỗi exit 4 thiếu trọng số OpenCLIP ⇒ ô 4b gọi `model/scripts/fetch_weights.py` trước |
+| Ô 6: `select --split cal --exploratory` ⇒ `ORDER_VIOLATION` exit 3 (đo 2026-10-17) | lệnh chưa được cài: `select` bỏ qua `--split`, không code nào ghi `power.json` | cài nhánh CAL: chọn đủ 9 bên trên CAL (OURS/M2 `pool_split=V`, in-sample, nhãn exploratory) ⇒ `bench/cal/selections_cal.json` + `power.json` (MDE = 2,8·SE(D_JA)·√(scene CAL/scene POOL)); POOL đã mở ⇒ từ chối; `selections.json` không bị chạm. Test `tests/bench/test_bench_power.py` |
+| `selections.json.repo_sha` rỗng | CLI đọc git, mà `code_<sha>.zip` không có `.git` | ô 2 đặt `VCF_REPO_SHA`; CLI đọc biến này trước |
 | AV2 150 log: `adapt` exit 3 `PROJ_FAIL` sau 198 s | một log chỉ 73,9 % hộp xe thẳng trục (ngưỡng §6.6 ≥ 80 %), góc dồn hai cụm ~10° và ~30° | **chưa sửa**; CẤM nới ngưỡng/bỏ log — phải tìm lỗi yaw/trục |
 | AV2 log `04994d08` lấy `ring_rear_right` làm `CAM_BACK` | quy tắc chọn camera theo yaw đo từ calib từng log | đúng SPEC-P01 §4, không phải lỗi |
 
