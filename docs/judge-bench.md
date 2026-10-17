@@ -52,9 +52,62 @@ Thứ tự bắt buộc (CLI từ chối nếu sai, mã thoát 3): `adapt → li
 
 Mã thoát: 0 ok · 2 thiếu đầu vào · 3 vi phạm thứ tự/hash/đã mở · 4 giám khảo không hợp lệ · 5 hết VRAM.
 
-## 5. Trạng thái (2026-10-17)
-- ✅ Thiết kế + prereg, ✅ code + 126 test (commit `fa2e8d3`…`6e477bd`).
-- ⬜ Chạy khô trên nuScenes 602 kf (Colab) · ⬜ PandaSet · ⬜ Argoverse 2 · ⬜ Pha 4 · ⬜ thẩm định đối kháng.
+## 5. Quy trình chạy thật (đã đo 2026-10-17)
+
+### 5.1. Lấy dữ liệu
+| Bộ | Cách lấy | Kết quả đo |
+|---|---|---|
+| nuScenes pilot (P1) | `python -I model/scripts/subset_nusc.py --src E:/nuscenes_trainval --version v1.0-trainval --scenes scene-1059..scene-1073 --out F:/vcf_ext/nusc_pilot/root` | 15 scene VAL, 602 kf, ảnh 6 camera + LiDAR keyframe + 5 267 sweep LiDAR, 4,87 GB, 49 s |
+| Argoverse 2 Sensor VAL (P3) | `python -I model/scripts/fetch_av2_val.py --out F:/vcf_ext/av2/src --workers 32` (S3 công khai, tải tiếp được) | 150 log, 57 783 file, 35,65 GB (đầy đủ 166 GB; chỉ lấy LiDAR + 7 camera gần keyframe 2 Hz + nhãn + calib), 68 phút ở ~8,6 MB/s |
+| PandaSet (P2) | trang chính thức cần form; bản Kaggle chưa kiểm | chưa có |
+
+### 5.2. Chuẩn bị job ở máy (OPERATIONS §3 bước 1–6)
+```bash
+W=model/worker; PY=$W/.venv/Scripts/python.exe; R=F:/vcf_ext/nusc_pilot/root; J=F:/vcf_ext/nusc_pilot/job
+$PY -m c4.cli.adapt --dataset av2 --src F:/vcf_ext/av2/src --out F:/vcf_ext/av2/root   # chỉ AV2/PandaSet
+$PY -m c4.cli.lidar_index --data-root $R --job-dir $J
+$PY -m c4.cli.bench_judge split --job-dir $J --seed 20261017 --dataset nuscenes-pilot
+# thêm TẠM `override_file: $J/bench/engine_split_override.parquet` dưới `splits:` trong
+# model/worker/configs/lidar.yaml, chạy lại lidar_index, rồi TRẢ file về nguyên trạng (không commit)
+$PY -m c4.cli.lidar_index --data-root $R --job-dir $J
+$PY -m c4.cli.bench_judge prereg --job-dir $J --file <planning/21_…/specs/SPEC-P04-PREREG-STATS.md>
+$PY -m c4.cli.lidar_t0 --data-root $R --job-dir $J
+python -I model/scripts/pack_judge_job.py --dataset nuscenes-pilot --job $J --root $R \
+  --final-config <planning/11_…/evidence/M8/final_config.json> --repo-sha <sha> --out F:/vcf_pack/judge_bench/nuscenes-pilot
+git archive --format=zip -o F:/vcf_pack/judge_bench/code_<sha>.zip <sha>
+```
+Pilot đo được: CAL (V) 120 kf · POOL (T) 321 kf · EVAL (P) 161 kf; split `8bbee0bf…`; prereg khớp `4b8ef249…`; `lidar_t0` 602/602; gói 3 part, 5,07 GB, sha `f86d658f…`, 14 337 file.
+
+Bố cục gói (giải nén vào `JOB_DIR` trên Colab): nội dung job (`bench/ gt/ index/ lidar/ media/`) + `data_root/` + `final_config.json`. ZIP lưu thẳng (STORED), cắt theo byte thành `pack_part_NNN.bin` ≤ 1,9 GB; `manifest.json` ghi `parts`, sha từng part, sha cả gói, `prereg_sha256`, `split_sha256`, `repo_sha`.
+
+### 5.3. Đưa lên Drive (người làm, tài khoản Colab authuser=2)
+```text
+MyDrive/vcf_judge/
+├── code_<sha>.zip
+└── <DATASET>/            (nuscenes-pilot | pandaset | av2)
+    ├── manifest.json
+    └── pack_part_*.bin
+```
+Connector Google Drive của agent đăng nhập tài khoản khác nên agent không tự upload được. Phương án tự động: `rclone` + đăng nhập một lần (chưa cài).
+
+### 5.4. Chạy trên Colab
+1. Nối Colab MCP theo [colab-mcp.md](colab-mcp.md) §3; chép notebook repo (bản đã sửa) lên `benchmark_2`.
+2. Ô 1: `DATASET`, `REPO_SHA=<sha>` (phải có `code_<sha>.zip` trên Drive), giữ `RUN_POOL=False`.
+3. Chạy ô 0–6 ⇒ select (băm `selections_sha256`) + giám khảo CAL + `power.json`. **Commit `selections_sha256` + `judge_calib.json` vào BuildLab TRƯỚC** khi bật `RUN_POOL=True` và chạy ô 7–11.
+4. Kéo `results_bundle.zip` về, chạy notebook thẩm định trên CPU.
+
+### 5.5. Lỗi đã gặp
+| Hiện tượng | Nguyên nhân | Đã xử lý |
+|---|---|---|
+| Ô 5 chắc chắn dừng `MISSING_INPUT` | notebook không truyền `--data-root/--final-config/--dataset` cho select/judge/report | sửa `94be150`: ô 1 thêm `DATA_ROOT`, `FINAL_CONFIG` |
+| AV2 150 log: `adapt` exit 3 `PROJ_FAIL` sau 198 s | một log chỉ 73,9 % hộp xe thẳng trục (ngưỡng §6.6 ≥ 80 %), góc dồn hai cụm ~10° và ~30° | **chưa sửa**; CẤM nới ngưỡng/bỏ log — phải tìm lỗi yaw/trục |
+| AV2 log `04994d08` lấy `ring_rear_right` làm `CAM_BACK` | quy tắc chọn camera theo yaw đo từ calib từng log | đúng SPEC-P01 §4, không phải lỗi |
+
+## 6. Trạng thái (2026-10-17 23:00)
+- ✅ Thiết kế + prereg, ✅ code + 126 test (commit `fa2e8d3`…`6e477bd`); sửa notebook `94be150`, script `subset_nusc.py`/`pack_judge_job.py` `2f0e971`.
+- G2 pilot: gói đã dựng + người đã upload lên Drive; ⬜ chưa chạy Colab (`REPO_SHA=94be150`).
+- G5 AV2: 3 log thử đạt (chiếu 97,3 %, dài>rộng 100 %, thẳng trục 87–92 %, tất định 14/14 file); 150 log ĐỎ `PROJ_FAIL`.
+- ⬜ PandaSet · ⬜ Pha 4 · ⬜ thẩm định đối kháng.
 - Chưa có con số benchmark nào. Mọi con số sau này phải đi kèm sha prereg/selections và output của notebook thẩm định.
 
 Slide trình bày (10 trang): [slides/judge-bench.pptx](slides/judge-bench.pptx).

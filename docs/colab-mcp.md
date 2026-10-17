@@ -41,7 +41,7 @@ Hệ quả:
 5. **Agent:** nạp lại schema tool (`ToolSearch select:mcp__colab-mcp__get_cells,…`), rồi gọi `get_cells`. **Chỉ ghi khi nội dung đúng notebook mong muốn** (notebook mới thì có 1 ô trống).
 6. **Agent:** báo ID ô đầu tiên cho người để đối chiếu, rồi mới `add_*_cell`.
 
-Mất mã TOKEN? Cổng xem được bằng lệnh dưới đây; mã thì **chỉ có trên URL của tab** (không ghi log). Không tìm lại được thì mở lại Claude Code để sinh mã mới, rồi làm lại bước 3.
+Mất mã TOKEN? Cổng xem được bằng lệnh dưới đây; mã thì **chỉ có trên URL của tab** (không ghi log). Cách lấy lại mà không cần người chép URL (đo 2026-10-17): trình duyệt lưu cả đoạn `#…` trong lịch sử ⇒ chép file `History` của Chrome/Edge (`%LOCALAPPDATA%\…\User Data\<profile>\History`) ra thư mục nháp rồi `select url from urls where url like '%mcpProxyPort=<PORT>%' order by last_visit_time desc`, thay ID notebook trong URL đó và gửi người mở. Link người gửi lại mà cổng không khớp tiến trình nào đang nghe ⇒ link cũ (N4), đừng thử nối. Không tìm lại được thì mở lại Claude Code để sinh mã mới, rồi làm lại bước 3.
 ```powershell
 $p = (Get-CimInstance Win32_Process | ? { $_.CommandLine -match 'colab-mcp' }).ProcessId
 netstat -ano | Select-String 'LISTENING' | Select-String ($p -join '|')
