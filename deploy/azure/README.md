@@ -114,6 +114,35 @@ docker run --rm --gpus all -e VCF_REMOTE_TOKEN=<token> -v E:\vcf_agent:/work `
 | Revision stuck `Activating`, console `set: pipefail\r: invalid option` | `start.sh` checked out with CRLF before the `*.sh eol=lf` rule | Dockerfile strips `\r` from `start.sh` |
 | `AADSTS530035 … blocked by security defaults` | cached token expired; tenant requires interactive MFA | `az login --tenant <tenant-id>` (browser) |
 
+## API, sessions and the GPU agent: incidents on 2026-10-17
+
+With `VCF_SESSIONS=1` every worker call must carry the caller's session. The browser holds the
+cookie `vcf_sid` (32 hex chars, set by `web/proxy.ts`); **every Next server route that calls the
+worker must copy it into the `x-vcf-session` header**. Without it the worker answers
+`404 not_found` ("Không tìm thấy tài nguyên") even though the resource exists. Routes that call
+the worker: `app/api/[...path]` (catch-all proxy), `app/api/media/[jobId]/[...path]` (ownership
+check), `app/api/uploads/[id]/finalize` (`POST /datasets`). Local mode has sessions off, so a
+missing header only fails on Azure. Add a test for the header with every new server route.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Upload reaches "100% đã tải" and nothing happens; worker log `POST /datasets 404` | `finalize` route called the worker without `x-vcf-session` | `f97bcf8` forwards the cookie; test in `web/app/api/uploads/uploads.test.ts` |
+| Vast machine running, `/api/health` → `remoteAgent.lastSeen: null`, `gpu/status` stays `starting` | `deploy/vast/onstart.sh` cached the code by ref **name** (`main`), so the machine kept its first copy; its `colab_setup.sh` step 4/5 still resolved `worker[service,dev]` and died with pip `ResolutionTooDeep`, so the agent never started | `86f78f3` compares the commit SHA; see [deploy/vast/README.md](../vast/README.md#agent-never-connects) |
+| `deploy_run21` failed in `docker build`: pip `Read timed out` | PyPI network timeout (transient) | rerun `deploy.ps1` (run22 passed) |
+| `docker build` cannot reach `dockerDesktopLinuxEngine` | Docker Desktop not running | start Docker Desktop, wait for `docker info` |
+
+Diagnose an API 404 or a stuck step in this order (read-only):
+
+```powershell
+az containerapp logs show -n ca-vcuboidfit -g rg-vcuboidfit-demo --type console --tail 120   # worker access log: method, path, status
+curl.exe -s https://$fqdn/api/health                                                          # remoteAgent.lastSeen = GPU agent heartbeat
+$key = az storage account keys list -g rg-vcuboidfit-demo -n <stvcf…> --query "[0].value" -o tsv
+az storage file list --account-name <stvcf…> --account-key $key -s workspace -p uploads -o table   # uploads/<id>/session.json = owner
+```
+
+Reproduce with one session: `GET /dashboard` (cookie jar) → `POST /api/uploads` → `POST /api/uploads/<id>/finalize`.
+An empty upload must answer `409 no_files`, never `404`.
+
 ## Teardown
 
 `powershell -ExecutionPolicy Bypass -File deploy\azure\teardown.ps1` on 2026-11-01, or earlier if

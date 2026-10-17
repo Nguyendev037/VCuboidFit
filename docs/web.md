@@ -56,6 +56,20 @@ gửi; cảnh báo dung lượng giải nén chỉ là cảnh báo. Việc chia 
 chunk 50 MB vẫn là cơ chế truyền nội bộ để hỗ trợ resume và proxy, không phải
 yêu cầu người dùng phải chia file.
 
+### Route server gọi worker phải mang theo phiên (bản cloud)
+
+Trên Azure bật `VCF_SESSIONS=1`: mỗi người dùng có cookie `vcf_sid` (32 ký tự hex, do
+`web/proxy.ts` cấp) và worker chỉ trả dữ liệu của đúng phiên đó. Vì vậy **mọi route server
+của Next gọi worker phải chép `vcf_sid` sang header `x-vcf-session`**. Thiếu header, worker
+trả `404 not_found` ("Không tìm thấy tài nguyên") dù tài nguyên có thật. Bản local tắt phiên
+nên lỗi chỉ lộ ra trên cloud. Ba route đang gọi worker: `app/api/[...path]` (proxy chung),
+`app/api/media/[jobId]/[...path]` (kiểm quyền), `app/api/uploads/[id]/finalize`
+(`POST /datasets`). Thêm route mới thì thêm test kiểm header.
+
+Sự cố 17/10/2026: route `finalize` quên header ⇒ mọi lần tải dữ liệu lên Azure dừng ở
+"100% đã tải" (log worker `POST /datasets 404`). Sửa ở `f97bcf8`. Cách chẩn đoán và các sự
+cố API/GPU khác: [deploy/azure/README.md](../deploy/azure/README.md).
+
 Xoá lịch sử v0.6.7: backend chấp nhận cả ID tự sinh và tên job hợp lệ như `night_v24`, `m2_mini`, `full_mini` (1–128 ký tự ASCII chữ/số/`_`/`-`, bắt đầu bằng chữ/số). Bản cũ chỉ chấp nhận hex 12 ký tự khi xoá, nên ba job có tên còn lại sau “Xoá tất cả”. Kiểm đường dẫn được resolve nằm trực tiếp dưới `jobs/`, không nhận symlink/đường dẫn thoát. Job queued/running vẫn được bảo vệ; chỉ xoá thư mục kết quả của job, giữ dataset và trọng số. Sau xoá, frontend refetch danh sách; demo/review cần tạo lại job nếu lịch sử demo đã bị người dùng xoá. Đã kiểm 15 test backend xoá lịch sử và thao tác browser thật: 3 job xoá, 0 còn lại.
 
 ```powershell

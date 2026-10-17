@@ -36,6 +36,34 @@ vastai destroy instance <instance_id>   # billing stops only on destroy (stop st
 
 Log lines: `khong co viec` = idle · `nhan viec` = started · `da gui ket qua` = done.
 
+## Agent never connects
+
+The machine borrows the Colab setup scripts (`model/scripts/colab_setup.sh`,
+`colab_agent.py`) only to build the Tier 1 environment; Google Colab itself is not involved.
+`onstart.sh` downloads `model/` from GitHub, runs `colab_setup.sh` (5 steps, `set -e`), then
+starts the agent. Any failing setup step means **no agent and no heartbeat**.
+
+Measured 2026-10-17 on instance 56291050: the code on the machine dated from 2026-10-16 because
+`onstart.sh` re-downloaded only when the ref *name* changed (`main` never changes). Step 4/5 still
+ran `pip install -e worker[service,dev]` and died with `ResolutionTooDeep`, so Azure showed
+`lastSeen: null`. Since `86f78f3` the script compares the commit SHA of the ref
+(`/root/vcf/VCuboidFit/.sha`) and downloads that exact commit.
+
+Checks, in order:
+
+1. Azure: `GET /api/health` → `remoteAgent.lastSeen`; `GET /api/gpu/status` (needs `vcf_sid`).
+2. Vast API: instance `actual_status`, `extra_env` has `VCF_SERVER` + `VCF_REMOTE_TOKEN` (compare
+   the token with the Container App secret `remote-token` by hash, never print it).
+3. Instance log: `PUT /api/v0/instances/request_logs/<id>/` → download URL; look for `== [n/5]`,
+   `SETUP OK`, `khong co viec`.
+4. SSH (`ssh -p <port> root@sshN.vast.ai`): `cat /root/vcf/VCuboidFit/.sha`,
+   `ps -eo pid,etime,cmd | grep -E "colab_setup|pip|colab_agent"`, `tail /root/vcf/agent.log`.
+
+Re-run setup without stopping the machine (a stopped machine can lose its GPU to another renter):
+kill the stuck PIDs **by number** (`pkill -f <text>` also matches your own SSH command line and
+kills the session), export `VCF_*` and `CONTAINER_*` from `/proc/1/environ` (SSH shells do not
+inherit the template env), then run the current `onstart.sh`.
+
 ## Dashboard autostart (H04 / SPEC-P05)
 
 The online dashboard sends one warm request on mount; its 4-second overlay only sends the
