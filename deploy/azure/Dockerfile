@@ -16,12 +16,16 @@ FROM python:3.12-slim-bookworm
 WORKDIR /app
 COPY --from=web /usr/local/bin/node /usr/local/bin/node
 COPY model/worker/pyproject.toml model/worker/
+# Dependencies before code: a code-only change keeps this layer cached locally and
+# "already exists" in ACR, instead of re-downloading/re-pushing ~300 MB each deploy.
+RUN python -c "import tomllib; p = tomllib.load(open('model/worker/pyproject.toml', 'rb'))['project']; print('\n'.join(p['dependencies'] + p['optional-dependencies']['service']))" > /tmp/requirements.txt \
+    && pip install --no-cache-dir "setuptools>=68" -r /tmp/requirements.txt
+RUN python -c "import urllib.request,tarfile,io; d=urllib.request.urlopen('https://github.com/ip7z/7zip/releases/download/24.09/7z2409-linux-x64.tar.xz').read(); tarfile.open(fileobj=io.BytesIO(d),mode='r:xz').extract('7zz','/usr/local/bin')" \
+    && chmod +x /usr/local/bin/7zz && ln -s /usr/local/bin/7zz /usr/local/bin/7z
 COPY model/worker/c4 model/worker/c4
 COPY model/worker/service model/worker/service
 COPY model/worker/configs model/worker/configs
-RUN pip install --no-cache-dir -e "./model/worker[service]"
-RUN python -c "import urllib.request,tarfile,io; d=urllib.request.urlopen('https://github.com/ip7z/7zip/releases/download/24.09/7z2409-linux-x64.tar.xz').read(); tarfile.open(fileobj=io.BytesIO(d),mode='r:xz').extract('7zz','/usr/local/bin')" \
-    && chmod +x /usr/local/bin/7zz && ln -s /usr/local/bin/7zz /usr/local/bin/7z
+RUN pip install --no-cache-dir --no-deps --no-build-isolation -e ./model/worker
 COPY --from=web /src/web/.next/standalone /app/web
 COPY --from=web /src/web/.next/static /app/web/.next/static
 COPY --from=web /src/web/public /app/web/public
