@@ -130,6 +130,7 @@ missing header only fails on Azure. Add a test for the header with every new ser
 | Vast machine running, `/api/health` → `remoteAgent.lastSeen: null`, `gpu/status` stays `starting` | `deploy/vast/onstart.sh` cached the code by ref **name** (`main`), so the machine kept its first copy; its `colab_setup.sh` step 4/5 still resolved `worker[service,dev]` and died with pip `ResolutionTooDeep`, so the agent never started | `86f78f3` compares the commit SHA; see [deploy/vast/README.md](../vast/README.md#agent-never-connects) |
 | `deploy_run21` failed in `docker build`: pip `Read timed out` | PyPI network timeout (transient) | rerun `deploy.ps1` (run22 passed) |
 | `docker build` cannot reach `dockerDesktopLinuxEngine` | Docker Desktop not running | start Docker Desktop, wait for `docker info` |
+| Every LiDAR job fails at step 1 "Chỉ mục LiDAR" (`failed · lidar_index · 0/1`), console log shows nothing | image sets `C4_PROFILE=azure-lite` but the stage CLI hard-coded `--profile` choices `[local-4060, cloud]`; argparse exits 2 | `c74a859` takes choices from `configs/profiles/*.yaml`. Stage errors live only in `jobs/<id>/logs/<stage>.log` on the share: `az storage file download-batch -s workspace --pattern "jobs/<id>/*"` |
 
 Diagnose an API 404 or a stuck step in this order (read-only):
 
