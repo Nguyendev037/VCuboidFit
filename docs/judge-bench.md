@@ -57,4 +57,6 @@ Mã thoát: 0 ok · 2 thiếu đầu vào · 3 vi phạm thứ tự/hash/đã m�
 - ⬜ Chạy khô trên nuScenes 602 kf (Colab) · ⬜ PandaSet · ⬜ Argoverse 2 · ⬜ Pha 4 · ⬜ thẩm định đối kháng.
 - Chưa có con số benchmark nào. Mọi con số sau này phải đi kèm sha prereg/selections và output của notebook thẩm định.
 
+Slide trình bày (10 trang): [slides/judge-bench.pptx](slides/judge-bench.pptx).
+
 Liên quan: [colab-mcp.md](colab-mcp.md) (điều khiển notebook bằng agent) · [colab-dev-setup.md](colab-dev-setup.md).
