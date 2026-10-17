@@ -66,6 +66,9 @@ class VastClient:
                 if response.is_error:
                     raise VastError()
                 result = response.json()
+                if isinstance(result, dict) and result.get("error") == "resources_unavailable":
+                    # A stopped machine's GPU was rented by someone else; Vast queues the start.
+                    raise VastError("machine-busy")
                 if not isinstance(result, dict) or result.get("success") is False:
                     raise VastError()
                 return result
@@ -219,11 +222,20 @@ class GpuWarmer:
             resumed = _timestamp(record.get("resumedAt"))
             if (record.get("resumedId") != target.get("id") or resumed is None
                     or now - resumed >= 10 * 60):
-                client.start(target["id"])
+                busy = False
+                try:
+                    client.start(target["id"])
+                except VastError as exc:
+                    if exc.reason != "machine-busy":
+                        raise
+                    busy = True
                 since = _iso(now)
                 record = {"createdAt": since, "resumedAt": since, "resumedId": target["id"],
-                          "instanceId": target["id"], "ambiguous": False}
+                          "instanceId": target["id"], "ambiguous": False, "busy": busy}
                 self._save(record)
+            if record.get("busy"):
+                # Start is queued at Vast until the host's GPU frees; never rent instead.
+                return GpuStatus(state="error", reason="machine-busy", since=record.get("createdAt"))
             return GpuStatus(state="starting", since=record.get("createdAt"))
         if instances:
             if created is None or record.get("ambiguous"):

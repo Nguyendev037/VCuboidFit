@@ -184,6 +184,28 @@ def test_stopped_agent_machine_is_resumed_instead_of_renting(setup):
     assert json.loads(manager.path.read_text())["resumedId"] == 50
 
 
+def test_busy_stopped_machine_reports_machine_busy_and_never_rents(setup):
+    manager, fake = setup
+    fake.existing = [{"id": 50, "label": LABEL, "cur_state": "stopped"}]
+
+    def busy(_instance_id):
+        fake.calls.append(("start", 50))
+        raise VastError("machine-busy")
+
+    fake.start = busy
+    assert manager.status(warm=True).reason == "machine-busy"
+    assert manager.status(warm=True).reason == "machine-busy"  # not re-sent within 10 minutes
+    assert fake.calls.count(("start", 50)) == 1 and fake.created == []
+
+
+def test_vast_resources_unavailable_maps_to_machine_busy():
+    def handler(request):
+        return httpx.Response(200, json={"success": False, "error": "resources_unavailable"})
+
+    with pytest.raises(VastError, match="^machine-busy$"):
+        VastClient("secret", httpx.MockTransport(handler)).start(50)
+
+
 def test_vast_start_puts_running_state():
     calls = []
 
