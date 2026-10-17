@@ -17,6 +17,8 @@ Planning record: BuildLab `planning/20_2026-10-15_azure-deploy-lite/`. No creden
 | Names | `deploy/azure/.names.json` (git-ignored): ACR `acrvcf…`, storage `stvcf…` |
 | Environment | `cae-vcuboidfit`, `environmentMode: WorkloadProfiles` (Consumption profile), storage `vcfws` |
 | App | `ca-vcuboidfit`, ingress external :3000, min 0 / max 1, FQDN `ca-vcuboidfit.graymeadow-7a5b88aa.japaneast.azurecontainerapps.io` |
+| Image | `vcf:c74a859` (revision `ca-vcuboidfit--0000019`, 2026-10-17) |
+| Access | **Public, no demo password** (owner decision 2026-10-17, BuildLab plan 20 D29). `VCF_DEMO_PASSWORD` is not set, so `web/proxy.ts` skips Basic Auth; per-visitor sessions (`vcf_sid`) stay on |
 | Job | `job-vcf-sweep`, cron `0 * * * *`, 0.5 vCPU / 1 GiB |
 
 ## Prerequisites (operator machine)
@@ -48,7 +50,7 @@ What the script does (idempotent; reruns reuse `.names.json`):
 4. Storage account + share `workspace` (100 GiB); environment `cae-vcuboidfit` created by ARM PUT
    (api `2026-07-01`) with `environmentMode: WorkloadProfiles` — the script refuses to continue on an
    `Express` environment — then storage `vcfws`.
-5. First run only: prompts **Demo password** (hidden) and prints the **remote-token once** — copy it
+5. First run only: prompts **Demo password** (hidden; the live app runs without one, see *Access*) and prints the **remote-token once** — copy it
    somewhere outside the repo. Creates `ca-vcuboidfit` and `job-vcf-sweep` by ARM PUT (body in a temp
    file, deleted). Later runs: `containerapp update --image` for app and job.
 6. Prints the FQDN.
@@ -57,7 +59,8 @@ Flags: `-Tag <sha>` (default HEAD), `-AcrLocation <region>`, `-SkipBuild` (image
 pushed), `-DeferDemoPassword` (unattended first create: the app is locked with a random password nobody
 sees and the remote-token is written to `%USERPROFILE%\.vcuboidfit\remote-token.txt`, outside the repo).
 
-Set or rotate the demo password at any time (hidden prompt, restarts the revision):
+The live app is public on purpose. The password gate is optional: to turn it back on (or rotate it), run
+(hidden prompt, restarts the revision):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File deploy\azure\set-demo-password.ps1
@@ -65,14 +68,18 @@ powershell -ExecutionPolicy Bypass -File deploy\azure\set-demo-password.ps1
 
 Avoid spaces and `" & | < > ^ % !` in the password (`az.cmd` passes it through cmd.exe).
 
+Public access has a cost path: opening `/dashboard` asks the server to rent a vast.ai GPU. What bounds it is
+`VCF_VAST_MAX_DPH` (price cap), at most one machine, the agent deleting the machine after 15 idle minutes,
+and the 100 USD budget alerts.
+
 Commit before deploying so the image tag matches the code.
 
 ## Checks after deploy
 
 ```powershell
 $fqdn = az containerapp show -n ca-vcuboidfit -g rg-vcuboidfit-demo --query properties.configuration.ingress.fqdn -o tsv
-curl.exe -s -o NUL -w "%{http_code}`n" https://$fqdn/          # 401 without password
-curl.exe -s -u demo:<password> https://$fqdn/api/health          # ok:true, sets vcf_sid
+curl.exe -s -o NUL -w "%{http_code}`n" https://$fqdn/          # 200 (public; 401 only if a demo password is set)
+curl.exe -s https://$fqdn/api/health                            # ok:true, sets vcf_sid
 az containerapp revision list -n ca-vcuboidfit -g rg-vcuboidfit-demo -o table
 az containerapp logs show -n ca-vcuboidfit -g rg-vcuboidfit-demo --tail 100
 ```
