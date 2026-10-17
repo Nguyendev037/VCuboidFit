@@ -66,13 +66,17 @@ attempt; do not retry a rental or clear `warm.json` while its outcome is unknown
 `colab_agent.py --idle-exit-min N` exits successfully with `het viec - tu tat` after N
 minutes without receiving a task. The environment default is `VCF_IDLE_MIN` (0 disables
 idle exit); `onstart.sh` passes 15 by default. A running task resets the idle timer when
-it ends. A normal idle exit triggers one DELETE request for this instance and does not
-restart the agent. Other exit codes retain the existing restart loop.
+it ends. A normal idle exit sends one PUT `{"state": "stopped"}` for this instance (stop,
+not destroy: disk billing continues, the installed environment is kept) and does not
+restart the agent. On the next dashboard visit the worker resumes a stopped
+`vcuboidfit-agent` instance (PUT `{"state": "running"}`, re-sent at most every 10
+minutes) instead of renting a new one; it rents only when no labelled instance exists,
+and only on verified hosts. Other exit codes retain the existing restart loop.
 
 Vast injects **`CONTAINER_ID`** and **`CONTAINER_API_KEY`** for instance-scoped control,
 confirmed on 2026-10-16 in its [official Docker environment documentation](https://github.com/vast-ai/docs/blob/main/guides/instances/docker-environment.mdx).
-Self-destruction uses these values, not the account key, with the
-[destroy-instance REST endpoint](https://vast.ai/developers/api).
-If either variable is absent, or destruction fails, the script prints a warning and
-stops the loop. **The instance may still be billed: the operator must destroy it manually.**
+Self-stop uses these values, not the account key, with the
+[manage-instance REST endpoint](https://vast.ai/developers/api).
+If either variable is absent, or the stop fails, the script prints a warning and
+stops the loop. **The instance may still be billed for GPU time: stop it manually.**
 The script never logs credentials.

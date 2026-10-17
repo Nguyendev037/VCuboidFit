@@ -41,6 +41,9 @@ class FakeVast:
         self.created.append((offer_id, payload))
         return 123
 
+    def start(self, instance_id):
+        self.calls.append(("start", instance_id))
+
 
 @pytest.fixture
 def setup(tmp_path, monkeypatch):
@@ -145,13 +148,62 @@ def test_no_eligible_offer_returns_no_offer(setup):
 def test_creation_time_survives_restart_and_timeout_does_not_delete(setup):
     manager, fake = setup
     assert manager.status(warm=True).state == "starting"
+    fake.existing = [{"id": 123, "label": LABEL}]  # the stuck machine is still listed
     later = GpuWarmer(manager.settings, manager.remote, lambda _key: fake,
                       clock=lambda: NOW + 25 * 60)
     assert later.status().model_dump() == {
         "state": "error", "reason": "agent-timeout", "since": _iso(NOW)}
     assert len(fake.created) == 1
     assert later.status(warm=True).reason == "agent-timeout"
-    assert len(fake.created) == 1
+
+
+def test_removed_stuck_instance_allows_a_new_rental(setup):
+    manager, fake = setup
+    assert manager.status(warm=True).state == "starting"
+    fake.existing = []  # the stuck machine was destroyed by hand
+    later = GpuWarmer(manager.settings, manager.remote, lambda _key: fake,
+                      clock=lambda: NOW + 30 * 60)
+    assert later.status().state == "idle"
+    assert later.status(warm=True).state == "starting"
+    assert len(fake.created) == 2
+
+
+def test_stopped_agent_machine_is_resumed_instead_of_renting(setup):
+    manager, fake = setup
+    fake.existing = [{"id": 50, "label": LABEL, "cur_state": "stopped"}]
+    assert manager.status().state == "idle"  # status never resumes
+    assert manager.status(warm=True).state == "starting"
+    assert manager.status(warm=True).state == "starting"  # no repeat within 10 minutes
+    assert fake.created == []
+    assert fake.calls.count(("start", 50)) == 1
+    later = GpuWarmer(manager.settings, manager.remote, lambda _key: fake,
+                      clock=lambda: NOW + 10 * 60)
+    assert later.status(warm=True).state == "starting"
+    assert fake.calls.count(("start", 50)) == 2
+    assert json.loads(manager.path.read_text())["resumedId"] == 50
+
+
+def test_vast_start_puts_running_state():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json={"success": True})
+
+    VastClient("secret", httpx.MockTransport(handler)).start(50)
+    assert calls[0].method == "PUT" and calls[0].url.path == "/api/v0/instances/50/"
+    assert json.loads(calls[0].content) == {"state": "running"}
+
+
+def test_vast_search_requires_verified_hosts():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json={"offers": []})
+
+    VastClient("secret", httpx.MockTransport(handler)).offers(0.6)
+    assert json.loads(calls[0].content)["verified"] == {"eq": True}
 
 
 def test_completed_agent_does_not_permanently_block_future_warm(setup):

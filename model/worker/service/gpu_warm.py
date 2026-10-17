@@ -90,6 +90,8 @@ class VastClient:
             "cuda_max_good": {"gte": 11.8}, "reliability": {"gt": 0.98},
             "dph_total": {"lte": max_dph}, "disk_space": {"gte": 40},
             "rentable": {"eq": True}, "rented": {"eq": False},
+            # An unverified host sat in "Creating..." for 40+ minutes (2026-10-17).
+            "verified": {"eq": True},
             "type": "ondemand", "allocated_storage": 40,
             "order": [["dph_total", "asc"]],
         }).get("offers")
@@ -103,6 +105,10 @@ class VastClient:
         if not isinstance(instance_id, int) or isinstance(instance_id, bool):
             raise VastError()
         return instance_id
+
+    def start(self, instance_id):
+        # Resume a stopped instance; same endpoint the agent uses to stop itself.
+        self._request("PUT", f"v0/instances/{int(instance_id)}/", {"state": "running"}, retry=False)
 
 
 def _iso(ts):
@@ -204,6 +210,21 @@ class GpuWarmer:
         instances = [x for x in client.instances() if x.get("label") == LABEL]
         seen = _timestamp(self.remote.last_seen)
         contacted = created is not None and seen is not None and seen >= created
+        if instances and all(x.get("cur_state") == "stopped" for x in instances):
+            # Idle agents stop (not destroy) themselves: resume one instead of renting.
+            # Its environment is already installed, so it is ready much sooner.
+            if not warm:
+                return GpuStatus(state="idle")
+            target = instances[0]
+            resumed = _timestamp(record.get("resumedAt"))
+            if (record.get("resumedId") != target.get("id") or resumed is None
+                    or now - resumed >= 10 * 60):
+                client.start(target["id"])
+                since = _iso(now)
+                record = {"createdAt": since, "resumedAt": since, "resumedId": target["id"],
+                          "instanceId": target["id"], "ambiguous": False}
+                self._save(record)
+            return GpuStatus(state="starting", since=record.get("createdAt"))
         if instances:
             if created is None or record.get("ambiguous"):
                 # External/manual instance: remember when first observed, never rent another.
@@ -221,9 +242,10 @@ class GpuWarmer:
                 return GpuStatus(state="starting", since=record["attemptedAt"])
             return GpuStatus(state="error", reason="create-unknown",
                              since=record.get("attemptedAt"))
-        if contacted:
-            # A previously healthy agent has self-destroyed after idle. Allow
-            # another dashboard visit to warm a fresh instance, retaining cooldown.
+        if contacted or (created is not None and now - created >= 20 * 60):
+            # A previously healthy agent has self-destroyed after idle, or a stuck
+            # instance was removed by hand. Allow another dashboard visit to warm a
+            # fresh instance, retaining cooldown.
             record.pop("createdAt", None)
             record.pop("instanceId", None)
             self._save(record)

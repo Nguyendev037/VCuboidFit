@@ -40,19 +40,22 @@ while true; do
     # Official credentials: https://github.com/vast-ai/docs/blob/main/guides/instances/docker-environment.mdx
     # Verified 2026-10-16. Never use the account-wide VAST_API_KEY here.
     if [ -z "${CONTAINER_ID:-}" ] || [ -z "${CONTAINER_API_KEY:-}" ]; then
-      echo "WARNING: missing CONTAINER_ID/CONTAINER_API_KEY; idle agent will not restart; destroy manually"
+      echo "WARNING: missing CONTAINER_ID/CONTAINER_API_KEY; idle agent will not restart; stop manually"
       break
     fi
+    # Stop, not destroy: the web resumes this machine next time (environment kept).
     python3 - <<'PYEOF'
-import os, urllib.request
+import json, os, urllib.request
 request = urllib.request.Request(
     "https://console.vast.ai/api/v0/instances/" + str(int(os.environ["CONTAINER_ID"])) + "/",
-    headers={"Authorization": "Bearer " + os.environ["CONTAINER_API_KEY"]}, method="DELETE")
+    data=json.dumps({"state": "stopped"}).encode(), method="PUT",
+    headers={"Authorization": "Bearer " + os.environ["CONTAINER_API_KEY"],
+             "Content-Type": "application/json"})
 try:
     with urllib.request.urlopen(request, timeout=10) as response:
-        print("idle instance destroy requested")
+        print("idle instance stop requested")
 except Exception:
-    print("WARNING: instance destroy failed; destroy manually")
+    print("WARNING: instance stop failed; stop manually")
 PYEOF
     break
   fi
