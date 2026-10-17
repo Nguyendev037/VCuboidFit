@@ -54,7 +54,7 @@ describe("online tier card controls", () => {
     try {
       const props = { children: null };
       const text = renderToStaticMarkup(React.createElement(GpuWarmup, props)).replace(/<[^>]*>/g, "");
-      expect(text).toContain("Đang khởi động model…");
+      expect(text).toContain("Đang khởi động model, vui lòng đợi ít phút…");
       expect(text).not.toMatch(/GPU|vast|gpu-unreachable/);
     } finally { vi.unstubAllEnvs(); }
   });

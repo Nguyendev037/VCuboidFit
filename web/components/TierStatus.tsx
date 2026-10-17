@@ -126,7 +126,7 @@ function Tier1Card({ tier1, runBusy, runError, onRunTier1 }: Omit<TierStatusProp
 /** Thẻ trạng thái hai tầng của một lần chạy LiDAR (plan 09 §8). */
 export function TierStatus(props: TierStatusProps) {
   return (
-    <div data-testid="tier-status" className="grid grid-cols-1 gap-2">
+    <div data-testid="tier-status" className="grid grid-cols-1 gap-2 text-xs">
       <Tier0Card tier0={props.tier0} />
       <Tier1Card tier1={props.tier1} runBusy={props.runBusy} runError={props.runError} onRunTier1={props.onRunTier1} />
     </div>

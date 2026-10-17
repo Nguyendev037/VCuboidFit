@@ -8,7 +8,7 @@ import { TIER1_LABEL, formatSeconds } from "@/lib/tierStatus";
 const NO_OFFER_HELP = "Chạy Tầng 0 hoặc thử lại sau.";
 function gpuLabel(state: string) {
   return state === "ready" ? "Model nâng cao sẵn sàng"
-    : state === "starting" ? "Model nâng cao đang khởi động, thường mất vài phút"
+    : state === "starting" ? "Model nâng cao đang khởi động, vui lòng đợi ít phút…"
     : state === "idle" || state === "disabled" ? "Model nâng cao chưa bật — bạn vẫn dùng được Tầng 0"
     : "Model nâng cao tạm chưa sẵn sàng — bạn vẫn dùng được Tầng 0";
 }
@@ -103,7 +103,12 @@ function Tier1Card({ tier1, runBusy, runError, onRunTier1 }: Omit<TierStatusProp
             : "Đã có đủ tín hiệu. Chọn “Nâng cao” ở trên để dùng."}
         </p>
       )}
-      <p role="status" aria-live="polite" data-reason={gpu.reason ?? undefined}>{gpuLabel(gpu.state)}</p>
+      <p role="status" aria-live="polite" data-reason={gpu.reason ?? undefined}
+        className={`flex items-start gap-1.5 ${gpu.state === "ready" ? "text-emerald-700" : gpu.state === "starting" ? "text-blue-700" : "text-slate-600"}`}>
+        {gpu.state === "starting" && <Loader2 className="mt-px h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />}
+        {gpu.state === "ready" && <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+        {gpuLabel(gpu.state)}
+      </p>
       {gpu.state === "error" && gpu.reason === "no-offer" && <p>{NO_OFFER_HELP}</p>}
       {tier1?.reason && state === "failed" && (
         <p data-reason={tier1.reason} className="flex items-start gap-1.5 text-amber-800">
@@ -130,7 +135,7 @@ function Tier1Card({ tier1, runBusy, runError, onRunTier1 }: Omit<TierStatusProp
 /** Thẻ trạng thái hai tầng của một lần chạy LiDAR (plan 09 §8). */
 export function OnlineTierStatus(props: TierStatusProps) {
   return (
-    <div data-testid="tier-status" className="grid grid-cols-1 gap-2">
+    <div data-testid="tier-status" className="grid grid-cols-1 gap-2 text-xs">
       <Tier0Card tier0={props.tier0} />
       <Tier1Card tier1={props.tier1} runBusy={props.runBusy} runError={props.runError} onRunTier1={props.onRunTier1} />
     </div>

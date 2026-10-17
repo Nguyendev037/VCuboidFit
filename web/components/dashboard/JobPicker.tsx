@@ -1,5 +1,5 @@
 import { FolderOpen, RefreshCw, Trash2 } from "lucide-react";
-import { DataError, EmptyState, LoadingState } from "@/components/ui/DataState";
+import { DataError, LoadingState } from "@/components/ui/DataState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDuration } from './dashboardState';
 import type { DashboardState } from './useDashboard';
@@ -36,7 +36,7 @@ export function JobPicker(state: Pick<
       </div>
       {recentJobs.isPending&&<LoadingState />}
       {recentJobs.error&&<DataError error={recentJobs.error} onRetry={() => void recentJobs.refetch()} />}
-      {recentJobs.data?.length===0&&<EmptyState message="Chưa có lần chạy. Nạp dữ liệu ở Bước 1 hoặc mở dữ liệu mẫu." />}
+      {recentJobs.data?.length===0&&<p role="status" className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">Chưa có lần chạy. Nạp dữ liệu ở Bước 1 hoặc bấm “Chạy thử dữ liệu mẫu” ở Bước 2.</p>}
       <div role="list" className="max-h-48 overflow-auto divide-y divide-slate-200">
         {recentJobs.data?.map((item) => <div role="listitem" key={item.jobId} className="flex items-center justify-between gap-3 py-2 text-xs">
           <div className="min-w-0"><p className="font-medium break-all">{item.version||item.datasetId} · {item.frames} frame · {item.pipeline==="lidar"? "LiDAR":"Camera"}{item.createdAt&&item.finishedAt? ` · ${formatDuration(Math.max(0, (new Date(item.finishedAt).getTime()-new Date(item.createdAt).getTime())/1000))}`:""}</p><p className="text-slate-500 break-all">{item.jobId} · {item.state==="done"? "Hoàn tất":item.state==="running"? "Đang chạy":item.state==="queued"? "Đang chờ":item.state==="failed"? "Lỗi":"Đã huỷ"}{item.createdAt? ` · ${new Date(item.createdAt).toLocaleString("vi-VN")}`:""}</p></div>
