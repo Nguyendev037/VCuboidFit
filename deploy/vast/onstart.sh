@@ -12,9 +12,19 @@ mkdir -p "$VCF_HOME"
 exec > >(tee -a "$VCF_HOME/agent.log") 2>&1
 
 # Lay ma nguon qua HTTPS tarball (image khong chac co git); khong keo LFS.
-if [ ! -f "$REPO/.ref" ] || [ "$(cat "$REPO/.ref")" != "$REF" ]; then
+# So COMMIT, khong so ten nhanh: REF=main khong doi ten nen ban cu tung bi giu mai, ban sua
+# (vd d26bd2f, pip --no-deps) khong bao gio toi may da cai (do 2026-10-17). API loi => tai lai.
+SHA=$(python3 - "$REF" <<'PYEOF' || true
+import sys, urllib.request
+req = urllib.request.Request("https://api.github.com/repos/Nguyendev037/VCuboidFit/commits/" + sys.argv[1],
+                             headers={"Accept": "application/vnd.github.sha"})
+print(urllib.request.urlopen(req, timeout=30).read().decode().strip())
+PYEOF
+)
+echo "ma nguon: ref=$REF commit=${SHA:-khong-ro} (tren may: $(cat "$REPO/.sha" 2>/dev/null || echo chua-co))"
+if [ -z "$SHA" ] || [ ! -f "$REPO/.sha" ] || [ "$(cat "$REPO/.sha")" != "$SHA" ]; then
   rm -rf "$REPO" && mkdir -p "$REPO"
-  python3 - "$REF" "$REPO" <<'PYEOF'
+  python3 - "${SHA:-$REF}" "$REPO" <<'PYEOF'
 import io, sys, tarfile, urllib.request
 ref, dst = sys.argv[1], sys.argv[2]
 data = urllib.request.urlopen(f"https://codeload.github.com/Nguyendev037/VCuboidFit/tar.gz/{ref}").read()
@@ -26,6 +36,7 @@ with tarfile.open(fileobj=io.BytesIO(data)) as t:
             t.extract(m, dst)
 PYEOF
   echo "$REF" > "$REPO/.ref"
+  if [ -n "$SHA" ]; then echo "$SHA" > "$REPO/.sha"; fi
 fi
 
 bash "$REPO/model/scripts/colab_setup.sh"
