@@ -3,6 +3,8 @@
 Có 2 cách. **Cách 1** là cách chính: máy bạn chạy web, Colab chỉ làm phần nặng (Tầng 1, cần GPU).
 Ngoài ra có notebook benchmark nghiên cứu và notebook huấn luyện PointPillars trainval lớn (>50 GB, A100) ở cuối tài liệu. T đã hoàn tất trên A100; đó là luồng riêng, không chứng minh cầu nối Tầng 1 từ xa đã đạt gate Colab thật. Không mở lại tập T để thử hướng dẫn này. [Số đo và gate còn lại](project-status.md).
 
+Điều khiển notebook bằng agent qua MCP (hay nối nhầm notebook/tài khoản): xem [colab-mcp.md](colab-mcp.md).
+
 | Cách | Dùng khi | Notebook |
 |---|---|---|
 | **1. Colab chạy Tầng 1 cho máy bạn** | Máy bạn chạy web + worker nhưng không có GPU | [vcf_colab_agent.ipynb](../model/notebooks/vcf_colab_agent.ipynb) |
