@@ -40,10 +40,3 @@ deploy/*
 
 # Azure deploy: generated resource names (deploy/azure/deploy.ps1)
 deploy/azure/.names.json
-
-# Benchmark giám khảo (hồ sơ 21): tài liệu + notebook chỉ giữ local, KHÔNG đẩy lên (người dùng 2026-10-18)
-docs/judge-bench.md
-docs/slides/judge-bench.pptx
-model/notebooks/vcf_judge_bench_colab.ipynb
-model/notebooks/vcf_judge_bench_review.ipynb
-docs/judge-bench-script.md
