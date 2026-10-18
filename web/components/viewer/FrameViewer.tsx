@@ -182,7 +182,6 @@ export function FrameViewer({
       className="fixed inset-0 z-50 bg-[#0B0F17] text-slate-100 flex flex-col font-sans select-none overflow-hidden"
       data-testid="frame-overlay"
     >
-      <div data-presentation-banner className="bg-black/60 py-2 text-center text-sm text-white">Demo · dữ liệu nuScenes</div>
       {/* 1. Header điều khiển */}
       <header className="min-h-12 border-b border-white/10 px-2 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 bg-black/40 backdrop-blur-sm z-30 shrink-0">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
