@@ -16,7 +16,7 @@ const landingSans = Be_Vietnam_Pro({ variable: "--font-landing-sans", subsets: [
 const landingSerif = Newsreader({ variable: "--font-landing-serif", subsets: ["latin", "vietnamese"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: "VCuboidFIT — Demo UI",
+  title: "VCuboidFIT",
   description: "Hệ thống lọc 5% frame đáng giá từ dataset nuScenes",
 };
 

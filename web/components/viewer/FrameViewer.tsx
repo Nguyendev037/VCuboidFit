@@ -631,7 +631,7 @@ export function FrameViewer({
           <span>·</span>
           <span>R Đặt lại 3D</span>
         </div>
-        {isSampleMode && <div className="hidden md:block text-slate-400">VCuboidFIT Demo UI</div>}
+        {isSampleMode && <div className="hidden md:block text-slate-400">VCuboidFIT</div>}
       </footer>
     </div>
   );
