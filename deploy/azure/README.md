@@ -17,7 +17,7 @@ Planning record: BuildLab `planning/20_2026-10-15_azure-deploy-lite/`. No creden
 | Names | `deploy/azure/.names.json` (git-ignored): ACR `acrvcf…`, storage `stvcf…` |
 | Environment | `cae-vcuboidfit`, `environmentMode: WorkloadProfiles` (Consumption profile), storage `vcfws` |
 | App | `ca-vcuboidfit`, ingress external :3000, min 0 / max 1, FQDN `ca-vcuboidfit.graymeadow-7a5b88aa.japaneast.azurecontainerapps.io` |
-| Image | `vcf:c74a859` (revision `ca-vcuboidfit--0000019`, 2026-10-17) |
+| Image | `vcf:8f0c52c` (revision `ca-vcuboidfit--0000020`, 2026-10-18; overlay on `vcf:c74a859`, see pitfalls) |
 | Access | **Public, no demo password** (owner decision 2026-10-17, BuildLab plan 20 D29). `VCF_DEMO_PASSWORD` is not set, so `web/proxy.ts` skips Basic Auth; per-visitor sessions (`vcf_sid`) stay on |
 | Job | `job-vcf-sweep`, cron `0 * * * *`, 0.5 vCPU / 1 GiB |
 
@@ -120,6 +120,7 @@ docker run --rm --gpus all -e VCF_REMOTE_TOKEN=<token> -v E:\vcf_agent:/work `
 | 400 `could not be converted to System.Boolean. Path: $` on `containerapp create --yaml` | CLI (api 2025-07-01) sends an envelope full of nulls | ARM PUT, api `2026-07-01`, minimal body |
 | Revision stuck `Activating`, console `set: pipefail\r: invalid option` | `start.sh` checked out with CRLF before the `*.sh eol=lf` rule | Dockerfile strips `\r` from `start.sh` |
 | `AADSTS530035 … blocked by security defaults` | cached token expired; tenant requires interactive MFA | `az login --tenant <tenant-id>` (browser) |
+| Push of `vcf:<sha>` crawls for an hour after a version bump | `COPY model/worker/pyproject.toml` precedes `pip install`, so changing only `version` rebuilds the ~580 MB dependency layer and re-pushes it (130 KB/s uplink on 2026-10-18) | if dependencies are unchanged, build a one-off overlay `FROM <acr>/vcf:<previous sha>` that re-copies `model/worker/{pyproject.toml,c4,service,configs}` + web standalone, push, then `deploy.ps1 -SkipBuild -Tag <sha>` (done for `8f0c52c`, ~60 MB pushed) |
 
 ## API, sessions and the GPU agent: incidents on 2026-10-17
 
