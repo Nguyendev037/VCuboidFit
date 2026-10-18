@@ -180,6 +180,11 @@ def bench_report(sels: dict, st: dict[str, pd.DataFrame], objs: pd.DataFrame,
            for n in ("N1", "N2") for j in st):
         text += " Độ khó trong lô chủ yếu đến từ chất lượng ảnh; engine chưa thêm giá trị so với heuristic rẻ."
     out["verdict"] = dict(win=bool(win), text=text)
+    deviation = sels.get("prereg_deviation")
+    if deviation:
+        out["prereg_deviation"] = deviation
+        out["verdict"]["text"] += (f" Lệch prereg: {deviation['field']} {deviation['prereg']} → "
+                                   f"{deviation['used']} sau khi xem CAL ⇒ exploratory.")
     out["power"] = sels.get("power")
     if out["power"] is not None:
         out["verdict"]["text"] += f" MDE: {out['power'].get('mde')}."

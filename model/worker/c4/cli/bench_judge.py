@@ -36,6 +36,9 @@ def _late(name):
         raise BenchGateError("MISSING_INPUT", f"c4.bench.{name}: {exc}") from exc
 
 
+PREREG_TARGET_RECALL_EASY = 0.90  # SPEC-P03 §4, băm trong prereg
+
+
 def _json(path, payload):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=1,
@@ -294,11 +297,17 @@ def _judge(args):
         calib = {}
     out = bench / "judge"
     out.mkdir(exist_ok=True)
+    target = float(getattr(args, "target_recall_easy", PREREG_TARGET_RECALL_EASY))
+    if args.split == "cal" and target != PREREG_TARGET_RECALL_EASY:
+        # Lệch prereg phải để lại dấu: report đọc file này và tự hạ nhãn xuống exploratory.
+        _json(bench / "prereg_deviation.json",
+              dict(field="judge.target_recall_easy", prereg=PREREG_TARGET_RECALL_EASY, used=target,
+                   created_at=datetime.now(timezone.utc).isoformat(), repo_sha=_repo_sha()))
     invalid, tables = [], {}
     for judge in args.judges.split(","):
         det = module.run_judge(judge, frames, device=args.device, batch=args.batch)
         if args.split == "cal":
-            calibration = module.calibrate_tau(det, objects)
+            calibration = module.calibrate_tau(det, objects, target_recall_easy=target)
             struggle = module.struggle_table(det, objects, calibration["tau"],
                                              calibration.get("iou_thr", 0.5), judge=judge)
             calibration["validity"] = module.validity(struggle, objs=objects,
@@ -338,6 +347,10 @@ def _report(args):
     sels["judges"] = json.loads(require(bench / "judge/judge_calib.json").read_text(encoding="utf-8"))
     sels["selections_sha256"] = sha256(bench / "selections.json")
     sels["exploratory"] = (bench / "pool_exploratory.json").exists()
+    deviation = bench / "prereg_deviation.json"
+    if deviation.is_file():
+        sels["exploratory"] = True
+        sels["prereg_deviation"] = json.loads(deviation.read_text(encoding="utf-8"))
     power = bench / "power.json"
     if power.is_file():
         sels["power"] = json.loads(power.read_text(encoding="utf-8"))
@@ -409,6 +422,7 @@ def main(argv=None):
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--n-boot", type=int, default=2000)
     parser.add_argument("--exploratory", action="store_true")
+    parser.add_argument("--target-recall-easy", type=float, default=PREREG_TARGET_RECALL_EASY)
     parser.add_argument("--seeds", default="0,1,2")
     args, result, code = None, None, 0
     try:
