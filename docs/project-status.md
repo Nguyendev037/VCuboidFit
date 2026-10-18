@@ -1,117 +1,104 @@
 # Tiến độ VCuboidFIT và bằng chứng
 
-**0.9.0 (15/10/2026) — panel Tinh chỉnh gọn + tải lên không giới hạn mỗi file.** Panel chỉ còn ba câu: *Lấy bao nhiêu frame · Ưu tiên tìm gì · Trải đều nhiều cảnh*; Engine, Profile, tầng, k, λ, tối đa/cảnh và trọng số chuyển vào **Chế độ chuyên gia** (đóng mặc định). Thanh **Công thức** chỉ xem, trọng số lấy từ trường mới `presets` của `params-schema` (một nguồn là `configs/lidar.yaml`). Mọi điều khiển có tooltip lời thường (`web/lib/glossary.ts`). Bỏ chữ "phải chia 50 MB": web gọi `GET /api/uploads/limits`, chặn khi tổng vượt `MAX_UPLOAD_GB`, cảnh báo khi ổ thiếu chỗ; chunk 50 MB vẫn là cơ chế truyền nội bộ. `vcf-pack` 0.2 mặc định ra một file (`--part-size` để chia). Mặc định gửi request y hệt bản cũ (không đổi kết quả chọn); mở lại lần chạy cũ giữ nguyên `diversity` đã lưu. "Ưu tiên VRU" chưa đưa ra vì engine `rare_v24` chưa cài. Đo: tsc 0 · vitest 265/265 · pytest lidar 118 · pytest vcf-pack 15 · e2e panel 2/2 · lint 0 lỗi. Số 0.7.0/0.8.0 đã giữ cho hồ sơ 11/12.
+Cập nhật **18/10/2026**. Phiên bản đã push **0.11.0** (`web/package.json`, `model/worker/pyproject.toml`); bản local **0.11.1** (gỡ banner trình chiếu) chưa commit. Tag gần nhất `v0.6.5`. Nguồn hiện trạng là code trong repo và JSON/report được commit; SPEC, evidence máy và nhật ký quyết định nằm ở hồ sơ quản trị BuildLab `planning/`. Push code không đồng nghĩa nghiệm thu nghiên cứu.
 
-Hotfix 0.6.9: sửa lỗi máy clone không tải được ảnh/LiDAR mô phỏng trang chủ. Sáu fixture dùng 46 file media minh hoạ được đóng gói trong Git thay vì thư mục mock-media ignored; có nguồn/giấy phép và manifest. Không đổi engine, dữ liệu job hoặc benchmark T.
+## 1. Tóm tắt một trang
 
-Cập nhật **15/10/2026** · phiên bản cấu hình **0.9.0** (trước đó 0.6.9 docs + hotfix showcase) · tag gần nhất `v0.6.5`. Nguồn hiện trạng là code trong repo và JSON benchmark được commit; các hồ sơ kế hoạch/evidence quản trị nằm ngoài repo sản phẩm. Không coi việc push code là nghiệm thu toàn bộ nghiên cứu.
+**VCuboidFIT** chọn ra khoảng 5 % keyframe đáng gán nhãn nhất cho hệ phanh khẩn cấp AEB (Autonomous Emergency Braking), ưu tiên người đi bộ, xe đạp, xe máy (VRU). Người duyệt xem LiDAR, hộp 3D, sáu camera và lý do chọn trên web rồi xuất danh sách/ZIP.
 
-## 1. Nội dung dùng để báo cáo tiến độ
+| Mảng | Hiện trạng 18/10 |
+|---|---|
+| Engine | `c4_legacy` (mặc định, Tầng 0 CPU + PointPillars tuỳ chọn); `rare_v24` hai profile `lidar_only` và `multisensor` (OpenCV 13 đặc trưng + OpenCLIP), không VLM |
+| Tầng 1 PointPillars | Train từ đầu trên nuScenes trainval (A100), bản dùng **e12/20: mAP 0,220 · NDS 0,343** trên 602 frame VAL; e6 lưu Git LFS `model/weights/pointpillars-trainval-e6/` |
+| Web | Next.js 16: trang chủ, `/dashboard` (panel 3 câu + Chế độ chuyên gia), `/review/**` viewer 3D kiểu CVAT + 6 camera, `/vi-sao`, `/huong-dan` |
+| Triển khai | Azure Container Apps public (không mật khẩu demo, phiên `vcf_sid`); GPU thuê Vast có warm-up, tự tắt máy rảnh, chủ dự án phải đồng ý trước khi thuê máy mới |
+| Bằng chứng | (1) benchmark T nuScenes `pitch-v2`: **chưa chứng minh** M2 hơn M1; (2) benchmark giám khảo độc lập Argoverse 2: lô OURS **đứng đầu nhưng chưa vượt chắc** bên thứ 3, nhãn **thăm dò** |
 
-**Đã hoàn thành về triển khai:** pipeline LiDAR trên CPU, Tầng 1 PointPillars local, engine `rare_v24` hai profile, backend FastAPI, frontend Next.js, Deep Review/viewer 3D cùng sáu camera, xuất ZIP, trang giải thích phương pháp và số đo. Đợt mới sửa hệ toạ độ box PointPillars, loại ứng viên trên thân xe, lọc score thấp, cải thiện viewer/review/trang chủ và xoá được lịch sử job có tên.
-
-**Đã có thực nghiệm:** benchmark T prereg `pitch-v2` trên Colab A100; kết quả và khoảng tin cậy được công khai. **Chưa chứng minh engine mới vượt baseline.** Thay đổi PointPillars sau benchmark đã chạy local nhưng chưa được xác nhận bằng phép đánh giá hiệu quả mới.
-
-**Việc tiếp theo:** chuẩn bị lại job demo sau khi người dùng xoá lịch sử, tập dượt và đóng băng demo; thẩm định tổng thể hồ sơ UI/engine; lập phép thử mới cho cải thiện bắt ứng viên, bổ sung dữ liệu đêm/mưa và kiểm chứng cầu nối Tầng 1 Colab thật. Không mở lại T cũ hoặc sửa kết luận âm để trình bày tiến độ.
-
-## 2. Sản phẩm và các commit đã đưa lên GitHub
+## 2. Thành phần sản phẩm
 
 | Thành phần | Hiện trạng | Giới hạn |
 |---|---|---|
-| `c4_legacy` | Mặc định của service; Tầng 0 hình học CPU, PointPillars tùy chọn | Hiệu quả hybrid phụ thuộc chất lượng seed |
-| `rare_v24` | Candidates → track/gate → điểm object/frame → chọn ngân sách/MMR | Không chứng minh hơn M1 trên T hiện có |
-| Profile `lidar_only` | Không cần camera cho chấm rare; bộ cụm hình học chạy CPU | Detector PointPillars vẫn cần chuẩn bị tín hiệu GPU khi dùng |
-| Profile `multisensor` | OpenCV/OpenCLIP bổ sung chất lượng và bối cảnh ảnh, không VLM | Cần ảnh, cache và trọng số; không tự có sau clone |
-| Backend | Jobs/datasets/select/media/export, queue và xoá lịch sử | File-based; dữ liệu chạy local không nằm trong Git |
-| Frontend | `/`, `/dashboard`, `/vi-sao`, `/huong-dan`, `/review/**`, viewer 3D | Mock media phải dựng local; Review cần job đã chạy |
-| GPU local | PointPillars mini-e80 và OpenCLIP đã chạy trên RTX 4060 8 GB | Kết quả local không thay benchmark T đã freeze |
-| Colab | T đã chạy trên A100; notebook Drive và bridge đã có code | Bridge Tầng 1 từ xa và GPU tùy chọn của notebook Drive còn gate môi trường thật |
+| `c4_legacy` | Mặc định của service; Tầng 0 hình học CPU, PointPillars tuỳ chọn | Hiệu quả hybrid phụ thuộc chất lượng seed |
+| `rare_v24` | Ứng viên → track/gate → điểm vật/khung (0,70 vật · 0,15 VRU · 0,15 bối cảnh) → chọn ngân sách/MMR | Chưa chứng minh hơn M1 trên T; trên AV2 chưa vượt chắc bên thứ 3 |
+| Profile `multisensor` | OpenCV đo 13 đặc trưng chất lượng ảnh → 4 cờ (đêm, chói, mờ, màn mờ); OpenCLIP 4 trục bối cảnh + độ lạ crop vật | Cần ảnh, cache và trọng số; web chưa tự sinh cache bối cảnh |
+| Backend FastAPI | Jobs/datasets/select/media/export, queue, xoá lịch sử, `/api/uploads/limits` | File-based (Parquet/JSON/CSV/NPY), không DB |
+| Frontend | Panel Tinh chỉnh 3 câu, tooltip `web/lib/glossary.ts`, viewer 3D, chế độ trình chiếu `?present=1` (lưu `sessionStorage`) | Review cần job đã chạy |
+| GPU | Local RTX 4060 8 GB; Colab A100 cho train/benchmark; Vast cho bản online | Bridge Tầng 1 Colab còn gate môi trường thật |
 
-| Commit | Nội dung |
-|---|---|
-| `1d2a13a` | PointPillars sensor → ego, loại ứng viên ego, ngưỡng score; cấu hình tách `candidates_v1.yaml` |
-| `b8eca3e` | Viewer kiểu CVAT: vùng LiDAR lớn, layer toggle, dải camera thu gọn, hộp ego đúng kích thước |
-| `87389ef` | Căn toolbar, lưới và panel Deep Review |
-| `519af50` | Trang chủ và `/vi-sao`, typography, giải thích phương pháp, docs/web và hướng dẫn agent |
-| `d6639f9` | Sửa xoá named job ID, bảo vệ đường dẫn/active job, cập nhật v0.6.7 |
-
-Trang chủ hiện dùng góc nhìn sử dụng; số T nằm ở `/vi-sao#bang-chung`, phần phương pháp ở `/vi-sao#phuong-phap`. Review là tiêu chí đánh giá trải nghiệm, không phải testimonial có nguồn từ khách hàng.
+Chi tiết tầng camera và điểm S: [camera-layer](camera-layer/README.md). Kỹ thuật toàn hệ: [system-reference](system-reference.md) (local, chưa commit).
 
 ## 3. Kết quả thực nghiệm
 
-Nguồn công khai: [bench_pitch.json](../web/public/demo/bench_pitch.json). Run `20261013-192329-49de1480`, code thử nghiệm `78ed904` + vá `dd5989d`, prereg `pitch-v2`. T được mở và hoàn tất trong phiên đêm 13–14/10/2026 trên A100; timestamp run không đồng nghĩa ngày hoàn tất theo giờ Việt Nam.
+### 3.1. Benchmark T nuScenes (`pitch-v2`, 13–14/10, A100)
+Nguồn công khai: [bench_pitch.json](../web/public/demo/bench_pitch.json). Pool T **1 389 frame / 35 scene**, B = **70**, **42 instance đích**, bootstrap theo scene 1 000 lần, random TB 100 lần.
 
-Pool T **1.389 frame / 35 scene**, B = **70**, capture chính **B (`rare_form`)**, **42 instance đích**, bootstrap theo scene 1.000 lần. Random lấy trung bình 100 lần. JSON/report có mã băm để đối chiếu.
+| Phương pháp | IY | CI95 | Reach trong 1 m |
+|---|---:|---|---|
+| M0 Random | 0,073 | [0,020; 0,156] | — |
+| M1 Legacy | 0,114 | [0,000; 0,291] | — |
+| M2 `lidar_only` | 0,100 | [0,000; 0,257] | 14/42 |
+| M3 `multisensor` | 0,057 | [0,000; 0,171] | 14/42 |
 
-| Phương pháp | IY | CI95 | NY | Reach trong 1 m |
-|---|---:|---|---:|---|
-| M0 Random | 0,073 | [0,020; 0,156] | 0,000 | — |
-| M1 Legacy | 0,114 | [0,000; 0,291] | 0,079 | — |
-| M2 `lidar_only` | 0,100 | [0,000; 0,257] | 0,052 | 14/42 |
-| M3 `multisensor` | 0,057 | [0,000; 0,171] | −0,030 | 14/42 |
+**M2 − M1 = −0,014; CI95 [−0,164; 0,084] → chưa chứng minh.** Trần reach 14/42 cho thấy khó khăn chính là bắt ứng viên. T không mở lại. Report SHA256 `0df8bd66…`.
 
-Phép so sánh chính **M2 − M1 = −0,014; CI95 [−0,164; 0,084] → `not shown / underpowered`**. Khoảng của chênh lệch chứa 0, chưa xác nhận lợi ích. Không nhầm CI95 của từng phương pháp với CI95 của chênh lệch.
+### 3.2. Benchmark giám khảo độc lập Argoverse 2 (hồ sơ 21, 18/10, A100)
+Chấm trên **Argoverse 2 Sensor VAL** (xe, cảm biến, thành phố khác nuScenes; engine giữ nguyên config nuScenes). 150 log · 4 806 khung · 345 259 hộp 3D; chia CAL 960 / POOL 2 630 / EVAL 1 216 khung; B = 132. Hai giám khảo công khai JA Faster R-CNN v2 và JB RT-DETR đếm vật thật bị bỏ sót (SY@B).
 
-Trần reach 14/42 (33,3%) chỉ ra vấn đề bắt ứng viên của cấu hình thử nghiệm cụm hình học. Đây là chẩn đoán cho lần thử đó, không phải số hiệu quả đã đo của PointPillars mới. Pool T này không có ca đêm/mưa để kết luận về những bối cảnh đó.
+| | OURS | X0 ngẫu nhiên | X3 đông người | X1 k-center | X2 YOLO phân vân | N2 tối | N1 mờ |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| JA | **0,970** | 0,921 | 0,909 | 0,803 | 0,455 | 0,280 | 0,212 |
+| JB | **1,000** | 0,943 | 0,932 | 0,765 | 0,492 | 0,273 | 0,197 |
 
-Report gốc SHA256: `0df8bd669634704a885324fe0156ab2267a248647933c4a8043540eb0ea52007`. JSON cũng lưu SHA prereg và final config. Ảnh nguồn: [IY theo ngân sách](../web/public/demo/fig_iy_budget.png), [context](../web/public/demo/fig_context.png), [ví dụ](../web/public/demo/fig_examples.png).
+- D (OURS − mạnh nhất X1..X3): JA +0,061 [−0,210; +0,268] · JB +0,068 [−0,258; +0,336] ⇒ **chưa chứng minh vượt bên thứ 3**.
+- Chắc chắn: OURS hơn N1, N2, X2 với cả hai giám khảo (p_Holm ≤ 0,006) ⇒ độ khó đến từ vật thật, không từ ảnh xấu.
+- **Nhãn thăm dò:** recall vật dễ của giám khảo chỉ ~0,84 (đăng ký trước 0,90, vì người đi bộ bị che); người quyết hạ ngưỡng sau khi xem CAL, lệch được ghi tự động trong report `533d6a16…`.
 
-Các số bổ sung từ evidence quản trị: M2 ~140 s, M3 ~1.035 s, toàn lượt ~1.236 s trên A100. Camera `night_v24` từng có đêm macro-F1 0,968 / mưa 0,48 trên job minh hoạ và ngưỡng fit V; **không phải kết quả T**, không chứng minh tổng quát mọi thời tiết. Job này đã bị xoá khỏi máy local; số lịch sử không bị thay đổi.
+Quy trình, lỗi đã gặp, vá GPU trên Colab, việc cho V2: [judge-bench](judge-bench.md). Kịch bản trình bày: [judge-bench-script](judge-bench-script.md), [demoday-script](demoday-script.md) (slide 9–14 Demo Day).
 
-### Số đo legacy/hiệu năng tham khảo
+### 3.3. PointPillars
+| Bản | mAP | NDS | Ghi chú |
+|---|---:|---:|---|
+| mini-e80 (seed mặc định local) | 0,027 | 0,103 | 404 khung, chỉ thử quy trình |
+| trainval e12/20 (A100) | **0,220** | **0,343** | 602 frame VAL; ô tô 0,790 · người đi bộ 0,132 · xe đạp 0,012 |
 
-| Đã đo trước đây | Số đo | Phạm vi |
+Chưa gắn PointPillars mới vào benchmark T hay AV2.
+
+## 4. Kiểm thử gần nhất có bằng chứng
+
+| Phép đo | Kết quả | Ngày / phạm vi |
 |---|---|---|
-| Tầng 0 | ~15 s | nuScenes-mini, máy dev |
-| PointPillars train seed | ~350 s / 20 epoch; ~1.340 s / 80 epoch | mini, GPU local |
-| Infer Tầng 1 | ~3,5 phút / 404 frame | mini |
-| Rare recall legacy | T0 MMR 0,133; hybrid mini-e80 0,067 | V 120 frame, B=7; nhiễu lớn, không dùng khẳng định hơn/kém tổng quát |
-| Descriptor/MMR quy mô 28.130 | rarity 11,7 s; MMR 0,6 s | dữ liệu giả lập, không phải trainval thật |
+| pytest benchmark + adapter | 126/126 | 17/10, `tests/bench`, `test_adapt_*`, `test_splits_override` |
+| vitest | 265/265; bản 0.11.1: 38/38 (3 file) | 15/10; 18/10 |
+| tsc / lint | 0 / 0 lỗi | 18/10 (0.11.1) |
+| pytest lidar · vcf-pack | 118 · 15 | 15/10 |
+| e2e panel | 2/2 | 15/10 |
+| Full pytest worker | 488 pass / 3 fail / 3 skip | snapshot cũ; không công bố toàn repo xanh |
 
-## 4. Kiểm thử và trạng thái chạy
+## 5. Việc còn lại
 
-| Phép đo | Kết quả gần nhất có bằng chứng | Ghi chú |
-|---|---|---|
-| Vitest frontend | 235 pass / 0 fail / 0 skip | 24 file, phiên frontend 14/10; mock media local đã dựng |
-| Typecheck/build frontend | Exit 0 | Build mặc định Turbopack |
-| ESLint | Exit 0, 0 lỗi / 1 cảnh báo `FrameGrid useVirtualizer` | Cảnh báo React Compiler ở code đã có |
-| Test backend xoá lịch sử | 15 pass / 0 fail / 0 skip | Gồm named IDs, active và đường dẫn thoát; 4 regression từng đỏ trước sửa |
-| E2E thật | A2/A3/A4/A5/A7: 5 pass | Trước khi xoá job: Dashboard, LiDAR + 6 camera, context, ZIP, present |
-| Browser xoá lịch sử | Xoá 3 named job, skipped 0, còn 0 | Sau e2e; dataset/model giữ nguyên |
-| Toàn bộ pytest worker ở snapshot lượt 1 | 488 pass / 3 fail / 3 skip | Số lịch sử do điều phối đo; có lỗi nền, không công bố là toàn bộ test xanh |
-
-Ba fail của snapshot cũ: `test_perf` dao động khi máy bận, `test_make_mocks` mismatch 31/15 endpoint và test runner rerun LiDAR; hai lỗi sau được ghi nhận đỏ cả trên code gốc khi môi trường có torch. Không che lỗi bằng đổi test hoặc lấy số của snapshot khác.
-
-Backend local có health HTTP 200, GPU true, profile `local-4060`, seed `mini-e80`; frontend 3000/proxy API đã hoạt động. **Đây là trạng thái máy dev tại lúc kiểm**, không phải thứ đi kèm clone. `night_v24`, `m2_mini`, `full_mini` đã được người dùng xoá; muốn demo Review/e2e dựa vào chúng phải tạo lại.
-
-## 5. Việc còn lại và cổng nghiệm thu
-
-| Việc | Trạng thái / điều kiện |
+| Việc | Trạng thái |
 |---|---|
-| Thẩm định tổng thể hồ sơ 13 | Còn gate độc lập; code đã push không tự đóng hồ sơ |
-| Chuẩn bị demo 15:00 ngày 15/10/2026 | Tạo lại job demo, kiểm media, tập dượt; freeze dự kiến 13:00 |
-| Hồ sơ 11/12 và mốc 0.7.0/0.8.0 | Chưa sign-off toàn bộ; đây là mốc kế hoạch, không mô tả là đã phát hành |
-| PointPillars trong rare_v24 | Code/local đã có; cần kế hoạch đánh giá mới trên dữ liệu đủ lớn |
-| Bridge Tầng 1 Colab | Cần kiểm end-to-end môi trường thật riêng; T A100 không thay gate bridge |
-| Đêm/mưa và tính tổng quát | Cần đủ dữ liệu/ca kiểm; không suy từ T ban ngày hoặc mini |
-| Lỗi nền pytest | Xử lý riêng và đo lại trước khi tuyên bố toàn repo xanh |
+| Commit bản 0.11.1 (gỡ banner, giữ Chế độ chuyên gia, chọn lại sau Tầng 1) | Phiên web còn thay đổi chưa commit |
+| Judge-bench: thẩm định CPU độc lập, PandaSet, Pha 4 train-on-selection | Chưa chạy |
+| Judge-bench V2: GPU novelty trong engine có cờ; định nghĩa vật dễ có che khuất; sao lưu Drive | Để kỳ sau |
+| PointPillars e12 trong `rare_v24` | Cần phép đánh giá mới trên dữ liệu đủ lớn |
+| Azure: A10 Tầng 1 end-to-end; sign-off hồ sơ 20 | Còn gate |
+| Hồ sơ 11/12/13 | Còn sign-off |
 
-Không mở lại T cũ, không đổi freeze/prereg để cải thiện số báo cáo. Không tự chạy lại benchmark hoặc tải dataset trong đợt rà docs.
+Không mở lại T, không đổi freeze/prereg để cải thiện số báo cáo.
 
 ## 6. Cách kiểm lại
 
 Đọc [getting-started](getting-started.md) để cài môi trường, [web](web.md) để dựng mock media. Từ root repo:
 
 ```powershell
-model\worker\.venv\Scripts\python -m pytest -q model/worker/tests/service/test_jobs_delete.py
-model\worker\.venv\Scripts\python -m ruff check model/worker/service/jobs.py model/worker/tests/service/test_jobs_delete.py
+model\worker\.venv\Scripts\python -m pytest -q model/worker/tests/bench model/worker/tests/test_splits_override.py
 cd web
 node node_modules/typescript/bin/tsc --noEmit
 node node_modules/eslint/bin/eslint.js
 node node_modules/vitest/vitest.mjs run
-node node_modules/next/dist/bin/next build
 ```
 
-E2E job thật cần backend và job phù hợp. `demo-flow` A6 chủ động dừng worker; không chạy khi cần giữ dịch vụ. Không dùng test có fixture route để khẳng định GPU/model thật đã đạt hiệu quả.
+E2E job thật cần backend và job phù hợp; `demo-flow` A6 chủ động dừng worker.
 
-Đọc tiếp: [README](../README.md), [model-workflow](model-workflow.md), [Colab](colab-dev-setup.md), [GPU thuê](gpu-rental.md).
+Đọc tiếp: [README](../README.md) · [model-workflow](model-workflow.md) · [Colab](colab-dev-setup.md) · [GPU thuê](gpu-rental.md) · [judge-bench](judge-bench.md).
