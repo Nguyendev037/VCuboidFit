@@ -12,13 +12,17 @@
 | `/review/**` | Deep Review, phân tích và xem frame 3D | Job/selection từ worker |
 | `/huong-dan` | Hướng dẫn và thuật ngữ | Nội dung tĩnh |
 
-`/vi-sao#phuong-phap` giải thích M0 Random, M1 Legacy Tầng 0, M2 `rare_v24` LiDAR và M3 đa cảm biến. Phần này mô tả giá trị vận hành: lý do chọn đi cùng frame, người gán nhãn đối chiếu 3D/camera rồi xuất lô đã kiểm tra. Phép kiểm chứng dùng cùng pool/ngân sách B, IY theo capture B và khoảng tin cậy CI95 từ bootstrap theo scene.
+`/vi-sao#phuong-phap` (0.11.2, hồ sơ 23) trình bày benchmark giám khảo độc lập trên Argoverse 2 VAL theo deck "Benchmark model giám khảo độc lập" bản `_3`: cách đo 4 bước, chia CAL/POOL/EVAL, 6 bước của P_our (`rare_v24 multisensor`), hai giám khảo JA Faster R-CNN v2 / JB RT-DETR và bảng kiểm hợp lệ, 6 cách chọn đối chứng, biểu đồ vật bị bỏ sót dựng bằng HTML, ba câu hỏi – ba câu trả lời và bốn khoá chống tự chấm. Số liệu nằm ở `components/why/copy.ts` khối `methods`, chép đúng slide, giữ nhãn thăm dò và câu "Chưa chứng minh vượt bên thứ 3 ở cỡ mẫu này". Chi tiết: `docs/judge-bench.md`.
+
+Chế độ chuyên gia ở dashboard (0.11.2) chỉ còn cấu hình đầy đủ: Rare v2.4 · LiDAR + camera · PointPillars tự dùng khi Tầng 1 xong; không còn bộ chọn engine/cảm biến/Cơ bản–Nâng cao, và các thanh trượt Rare v2.4 không dùng bị ẩn. State cũ được ép về `rare_v24`/`multisensor`. Job chưa có cache camera (`cache/context_frame.parquet` + crop) thì worker chạy `lidar_only` và trả cảnh báo `CAMERA_CACHE_MISSING` (`service/engines.py::_run_rare_with_fallback`).
 
 `/vi-sao#bang-chung` hiển thị số nguồn và kết luận chính. Kết quả T hiện tại **chưa chứng minh lợi ích hơn baseline**; không suy diễn giá trị vận hành thành thắng benchmark. JSON thiếu/hỏng hiển thị trạng thái rỗng; hình không có thì bỏ hình. Không gõ cứng lại các số T trong component.
 
 Trang chủ dùng `ReviewPerspective` thay khối benchmark. Ba góc nhìn là **tiêu chí đánh giá trải nghiệm**, chưa phải lời chứng thực. Không thêm tên khách hàng, điểm sao hoặc lời khen chưa có nguồn.
 
 ## Font và bố cục
+
+PATCH 0.11.1: bỏ thanh “Demo · dữ liệu nuScenes” ở layout và Frame Viewer. Chế độ `?present=1` vẫn phóng chữ và ẩn tham số nâng cao.
 
 Next.js 16 App Router, React 19, Tailwind 4 qua loader Turbopack. Font Be Vietnam Pro cho phần giới thiệu, Newsreader cho tiêu đề mục, Inter cho giao diện ứng dụng; khai báo ở `web/app/layout.tsx`. Chữ trong các thẻ `/vi-sao` 16–18 px, tiêu đề thẻ khoảng 20 px, tiêu đề mục 30–48 px theo viewport. Nhãn phụ và hash nhỏ hơn; hash dài phải ngắt được trên mobile.
 

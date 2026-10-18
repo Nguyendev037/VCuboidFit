@@ -165,8 +165,8 @@ export function useDashboard() {
   }
 
   // ---- Bước 3: Tinh chỉnh & Kết quả ----
-  const [engineVersion, setEngineVersion]=useState("c4_legacy");
-  const [profile, setProfile]=useState<"lidar_only"|"multisensor">("lidar_only");
+  const [engineVersion, setEngineVersion]=useState("rare_v24");
+  const [profile, setProfile]=useState<"lidar_only"|"multisensor">("multisensor");
   const [strategy, setStrategy]=useState<"balanced"|"vru_priority"|"diversity">("balanced");
   const [budget, setBudget]=useState(0.05);
   const [preset, setPreset]=useState<Preset>("balanced");
@@ -251,8 +251,10 @@ export function useDashboard() {
       const params=saved? recoveryParams(saved.params as SelectParams, summary.pipeline):recoveryParams({ budget: 0.05 }, summary.pipeline);
       if(summary.pipeline==="lidar") delete params.queries;
       else params.queries??=DEFAULT_QUERIES;
-      setEngineVersion(params.engineVersion??"c4_legacy");
-      setProfile(params.profile??"lidar_only");
+      params.engineVersion="rare_v24";
+      params.profile="multisensor";
+      setEngineVersion("rare_v24");
+      setProfile("multisensor");
       setStrategy(params.strategy??"balanced");
       setBudget(params.budget);
       setPreset(params.preset??"balanced");
@@ -337,7 +339,8 @@ export function useDashboard() {
 
   const selectParams=activePipeline==="lidar"? sanitizeSelectParams(debounced, uiSchema):debounced;
   const selection=useQuery({
-    queryKey: ["select", jobId, selectParams, demo],
+    // tier1 state in the key: when Tầng 1 finishes, the same params resolve to tier 1 ⇒ select again
+    queryKey: ["select", jobId, selectParams, demo, activePipeline==="lidar"? tier1JobState??null:null],
     queryFn: () => restored&&paramsEqual(debounced, restored.params)
       ? getSelection(jobId!, restored.id):select(jobId!, selectParams),
     enabled: !!jobId&&done&&!restoring&&(activePipeline!=="lidar"||!paramsSchema.isPending),
@@ -524,11 +527,9 @@ export function useDashboard() {
     setBudget,
     setDataset,
     setDeleteTarget,
-    setEngineVersion,
     setError,
     setItems,
     setNewTagInput,
-    setProfile,
     setSpread,
     setStrategy,
     showAdvanced,

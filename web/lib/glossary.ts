@@ -19,6 +19,7 @@ type PanelHelpKey =
   | "expert"
   | "engine"
   | "profile"
+  | "fullConfig"
   | "tierLock"
   | "preset.balanced"
   | "preset.rare_first"
@@ -87,11 +88,15 @@ export const PANEL_HELP: Record<PanelHelpKey, HelpItem> = {
   },
   engine: {
     label: "Bộ máy chọn frame",
-    tooltip: "C4 hiện tại là bản mặc định đã kiểm chứng. Rare v2.4 là bản thử nghiệm, kết quả có thể khác.",
+    tooltip: "Rare v2.4 là bộ máy chọn frame mới nhất: chấm độ hiếm từng vật trong LiDAR, thêm bối cảnh camera, rồi chọn lô vừa hiếm vừa đa dạng.",
   },
   profile: {
     label: "Cảm biến dùng để chấm",
-    tooltip: "Chỉ áp dụng cho Rare v2.4. Chọn LiDAR + camera khi dữ liệu có đủ ảnh camera; nếu không, giữ Chỉ LiDAR.",
+    tooltip: "LiDAR + camera: LiDAR tìm và chấm vật, camera (OpenCV + OpenCLIP) đọc đêm, mưa, chói. Job chưa có dữ liệu camera đã xử lý thì tự chấm bằng LiDAR và báo cảnh báo.",
+  },
+  fullConfig: {
+    label: "Cấu hình đầy đủ",
+    tooltip: "Đây là cấu hình được benchmark giám khảo độc lập trên Argoverse 2; nếu job chưa có cache camera hệ thống tự chấm bằng LiDAR và báo cảnh báo.",
   },
 };
 
@@ -347,9 +352,10 @@ export const PRED_TAG_LABELS: Record<string, string> = { R: "Hiếm", R1: "Hình
 export const CONTEXT_AXES: Record<string, string> = { illum: "Chiếu sáng", glare: "Chói", lens: "Ống kính", weather: "Thời tiết" };
 export const CONTEXT_CLASSES: Record<string, string> = { day: "Ban ngày", lowlight: "Ánh sáng yếu", night: "Ban đêm", none: "Không chói", headlight: "Đèn xe", sun: "Mặt trời", clean: "Sạch", droplets: "Giọt nước", blurred: "Mờ", dry: "Khô", rain: "Mưa", fog: "Sương" };
 export const WARNING_LABELS: Record<string, string> = {
- ELIGIBLE_LT_B: "Frame đủ điều kiện ít hơn ngân sách; không trộn ứng viên đáng ngờ.",
- CONTEXT_NOT_FROZEN: "Ngưỡng bối cảnh chưa đóng băng; chưa xác nhận thẻ bối cảnh.",
- STRATEGY_NOT_IMPLEMENTED: "Chiến lược chưa hỗ trợ; engine dùng chiến lược cân bằng.",
+  ELIGIBLE_LT_B: "Frame đủ điều kiện ít hơn ngân sách; không trộn ứng viên đáng ngờ.",
+  CONTEXT_NOT_FROZEN: "Ngưỡng bối cảnh chưa đóng băng; chưa xác nhận thẻ bối cảnh.",
+  STRATEGY_NOT_IMPLEMENTED: "Chiến lược chưa hỗ trợ; engine dùng chiến lược cân bằng.",
+  CAMERA_CACHE_MISSING: "Job chưa có dữ liệu camera đã xử lý; lần chọn này chấm bằng LiDAR. Chạy bước bối cảnh camera để dùng đủ LiDAR + camera.",
 };
 export const warningLabel = (code: string) => WARNING_LABELS[code] ?? `Cảnh báo chưa có diễn giải: ${code}`;
 export const CV_FLAG_LABELS: Record<string, string> = { NIGHT_CV: "Ảnh tối", GLARE_CV: "Vùng chói", BLUR_CV: "Ảnh mờ", VEIL_CV: "Màn sương / loá" };

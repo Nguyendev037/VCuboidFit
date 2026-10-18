@@ -81,12 +81,16 @@ def rare_select(job: Path, params: SelectParamsIn) -> SelectionResult:
     app = APP.get()
     meta = json.loads((job / "job.json").read_text(encoding="utf-8"))
     root = app.state.settings.datasets / meta["datasetId"] / "data"
-    result = run_rare_v24(job, root, profile=params.profile or "lidar_only",
-                          budget_frac=params.budget, pool_split="all", ref_split="all")
+    requested_profile = params.profile or "lidar_only"
+    result, fallback_warnings = _run_rare_with_fallback(
+        job, root, requested_profile, params.budget)
     source = result["selection_dir"]
     manifest = json.loads((source / "config_used.json").read_text(encoding="utf-8"))
     manifest["strategy"] = params.strategy or "balanced"
-    warnings = list(result["warnings"])
+    if requested_profile == "multisensor":
+        # planning 23 D5: keep the requested profile visible when camera cache is absent.
+        manifest["profile_requested"] = "multisensor"
+    warnings = list(result["warnings"]) + fallback_warnings
     if manifest["strategy"] != "balanced":
         warnings.append("STRATEGY_NOT_IMPLEMENTED")
     manifest["warnings"] = warnings
@@ -149,6 +153,21 @@ def rare_select(job: Path, params: SelectParamsIn) -> SelectionResult:
     write_table(selected, out / "selected.csv", "lidar_selected", selection_id=sid)
     _save_json(out / "result.json", response)
     return to_selection_result(job.name, job, response)
+
+
+def _run_rare_with_fallback(
+    job: Path, root: Path, profile: str, budget: float
+) -> tuple[dict, list[str]]:
+    try:
+        return (run_rare_v24(job, root, profile=profile, budget_frac=budget,
+                             pool_split="all", ref_split="all"), [])
+    except FileNotFoundError as exc:
+        message = str(exc).replace("\\", "/")
+        if profile != "multisensor" or "cache/" not in message or "lidar/" in message:
+            raise
+        result = run_rare_v24(job, root, profile="lidar_only", budget_frac=budget,
+                              pool_split="all", ref_split="all")
+        return result, ["CAMERA_CACHE_MISSING"]
 
 
 def _save_json(path: Path, data: dict) -> None:

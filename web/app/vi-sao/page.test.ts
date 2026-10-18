@@ -23,6 +23,9 @@ const fixture = {
   figures: ["fig_iy_budget.png", "fig_examples.png"],
 } satisfies DemoBench;
 
+// The independent AV2 methods section has its own fixed tables and sourced claims.
+const withoutMethodsSection = (html: string) => html.replace(/<section id="phuong-phap"[\s\S]*?<\/section>/, "");
+
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(readFile).mockResolvedValue(JSON.stringify(fixture));
@@ -48,14 +51,15 @@ it("SPEC7(b): missing or corrupt JSON renders DataState for all three numeric bl
     expect(html.match(/role="status"/g)).toHaveLength(3);
     expect(html).toContain(whyCopy.title);
     expect(html).toContain(whyCopy.camera);
-    expect(html).not.toContain("<table");
+    expect(withoutMethodsSection(html)).not.toContain("<table");
     expect(html).not.toContain("11/33");
   }
 });
 
-it("SPEC7(c): rendered HTML and copy source contain no prohibited marketing claims", async () => {
+it("SPEC7(c): retains the AV2 conclusion and prohibits marketing claims outside its sourced methods copy", async () => {
   const html = renderToStaticMarkup(await WhyPage());
   const source = readFileSync(new URL("../../components/why/copy.ts", import.meta.url), "utf8");
+  const otherCopy = source.replace(/  methods: \{[\s\S]*?\n  evidenceTitle:/, "  evidenceTitle:");
   // Assemble claims so the repository source scan does not flag its own detector.
   const claims = [
     ["vượt", "trội"].join(" "), ["tốt", "nhất"].join(" "),
@@ -65,10 +69,12 @@ it("SPEC7(c): rendered HTML and copy source contain no prohibited marketing clai
     "tăng\\s+\\S+\\s*%", "chính xác\\s+9\\S*\\s*%",
   ];
   const banned = new RegExp(claims.join("|"), "i");
-  expect(html).not.toMatch(banned);
-  expect(source).not.toMatch(banned);
+  expect(html).toContain(whyCopy.methods.resultsTitle);
+  expect(html).toContain(whyCopy.methods.conclusion);
+  expect(withoutMethodsSection(html)).not.toMatch(banned);
+  expect(otherCopy).not.toMatch(banned);
   vi.mocked(readFile).mockResolvedValue(JSON.stringify({ ...fixture, primary: { ...fixture.primary, conclusion: "shown" } }));
-  expect(renderToStaticMarkup(await WhyPage())).not.toMatch(banned);
+  expect(withoutMethodsSection(renderToStaticMarkup(await WhyPage()))).not.toMatch(banned);
 });
 
 it("does not render a primary-comparison verdict banner, whatever the export concludes", async () => {

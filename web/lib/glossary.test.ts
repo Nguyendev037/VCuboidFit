@@ -60,6 +60,7 @@ describe("panel and upload help", () => {
       "engine",
       "expert",
       "formula",
+      "fullConfig",
       "preset.balanced",
       "preset.hard_for_model",
       "preset.rare_first",

@@ -4,7 +4,7 @@ import { PRESETS } from "@/lib/api/types";
 import { AdvancedParamsPanel, ColabBox } from "@/components/AdvancedParamsPanel";
 import { TierStatus } from "@/components/TierStatus";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { PANEL_HELP } from "@/lib/glossary";
+import { PANEL_HELP, WARNING_LABELS } from "@/lib/glossary";
 import { effectiveWeights, minScenes } from "@/lib/panelParams";
 import { pct, setAdvancedPanelOpen } from "./dashboardState";
 import type { DashboardState } from "./useDashboard";
@@ -32,14 +32,11 @@ export function FilterBar(state: Pick<
   | "noTier1"
   | "paramsSchema"
   | "preset"
-  | "profile"
   | "queryTags"
   | "result"
   | "setAdvancedDraft"
   | "setBudget"
-  | "setEngineVersion"
   | "setNewTagInput"
-  | "setProfile"
   | "showAdvanced"
   | "spread"
   | "t1Local"
@@ -69,14 +66,11 @@ export function FilterBar(state: Pick<
     noTier1,
     paramsSchema,
     preset,
-    profile,
     queryTags,
     result,
     setAdvancedDraft,
     setBudget,
-    setEngineVersion,
     setNewTagInput,
-    setProfile,
     showAdvanced,
     spread,
     t1Local,
@@ -391,37 +385,18 @@ export function FilterBar(state: Pick<
               </span>
               <span className="font-mono text-slate-400">{showAdvanced ? "▲" : "▼"}</span>
             </summary>
-            <div className="mt-3 flex flex-wrap gap-3 text-xs border-t border-slate-100 pt-3">
-              <label className="flex items-center gap-1.5">
-                <span className="font-semibold text-slate-700 flex items-center gap-1">
-                  <span>{PANEL_HELP.engine.label}</span>
-                  <Tooltip label={PANEL_HELP.engine.label} content={PANEL_HELP.engine.tooltip} />
-                </span>
-                <select
-                  aria-label="Engine"
-                  value={engineVersion}
-                  onChange={(e) => setEngineVersion(e.target.value)}
-                  className="text-xs border border-slate-200 rounded px-1.5 py-1 text-slate-700 bg-white"
-                >
-                  <option value="c4_legacy">C4 hiện tại</option>
-                  <option value="rare_v24">Rare v2.4</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-1.5">
-                <span className="font-semibold text-slate-700 flex items-center gap-1">
-                  <span>{PANEL_HELP.profile.label}</span>
-                  <Tooltip label={PANEL_HELP.profile.label} content={PANEL_HELP.profile.tooltip} />
-                </span>
-                <select
-                  aria-label="Profile"
-                  value={profile}
-                  onChange={(e) => setProfile(e.target.value as "lidar_only" | "multisensor")}
-                  className="text-xs border border-slate-200 rounded px-1.5 py-1 text-slate-700 bg-white"
-                >
-                  <option value="lidar_only">Chỉ LiDAR</option>
-                  <option value="multisensor">LiDAR + camera</option>
-                </select>
-              </label>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs border-t border-slate-100 pt-3">
+              <span className="font-semibold text-slate-700 flex items-center gap-1">
+                <span>{PANEL_HELP.fullConfig.label}</span>
+                <Tooltip label={PANEL_HELP.fullConfig.label} content={PANEL_HELP.fullConfig.tooltip} />
+              </span>
+              <span className="inline-flex flex-wrap items-center gap-1.5 text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs">
+                <span className="font-medium text-slate-800">Rare v2.4</span>
+                <span className="text-slate-400">·</span>
+                <span className="font-medium text-slate-800">LiDAR + camera</span>
+                <span className="text-slate-400">·</span>
+                <span>PointPillars (Tầng 1) tự dùng khi đã chạy xong</span>
+              </span>
             </div>
             <AdvancedParamsPanel
               open={true}
@@ -433,6 +408,7 @@ export function FilterBar(state: Pick<
               onReset={handleResetAdvanced}
               schemaError={paramsSchema.isError ? (paramsSchema.error instanceof Error ? paramsSchema.error.message : "Hãy thử lại.") : null}
               onRetrySchema={() => void paramsSchema.refetch()}
+              frozenEngine={engineVersion === "rare_v24"}
             />
           </details>
         </div>
@@ -446,7 +422,7 @@ export function FilterBar(state: Pick<
             <span className="text-amber-600 font-bold text-sm leading-none mt-0.5">⚠️</span>
             <div>
               {result.warnings.map((w) => (
-                <p key={w}>{w}</p>
+                <p key={w}>{WARNING_LABELS[w] ?? w}</p>
               ))}
             </div>
           </div>

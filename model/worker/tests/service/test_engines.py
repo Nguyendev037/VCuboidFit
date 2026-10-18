@@ -3,6 +3,7 @@ import copy
 import json
 import math
 
+import pytest
 from fastapi.testclient import TestClient
 
 from c4.cli import lidar_index, lidar_t0
@@ -14,6 +15,48 @@ from service.models import SelectParamsIn
 from service.settings import Settings
 from tests.fixtures.make_nuscenes import make_nuscenes
 from tests.service.test_select import make_job
+
+
+def test_rare_camera_cache_fallback_uses_lidar_only(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_run(job, root, **kwargs):
+        calls.append(kwargs["profile"])
+        if kwargs["profile"] == "multisensor":
+            raise FileNotFoundError("cache/context_frame.parquet, cache/cam_front.parquet")
+        return {"fallback": True}
+
+    monkeypatch.setattr(engines, "run_rare_v24", fake_run)
+    result, warnings = engines._run_rare_with_fallback(
+        tmp_path / "job", tmp_path / "root", "multisensor", 0.05)
+
+    assert result == {"fallback": True}
+    assert calls == ["multisensor", "lidar_only"]
+    assert warnings == ["CAMERA_CACHE_MISSING"]
+
+
+def test_rare_lidar_input_error_is_not_fallback(tmp_path, monkeypatch):
+    def fake_run(job, root, **kwargs):
+        raise FileNotFoundError("lidar/index.parquet")
+
+    monkeypatch.setattr(engines, "run_rare_v24", fake_run)
+    with pytest.raises(FileNotFoundError, match="lidar/index.parquet"):
+        engines._run_rare_with_fallback(
+            tmp_path / "job", tmp_path / "root", "multisensor", 0.05)
+
+
+def test_rare_lidar_only_does_not_retry(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_run(job, root, **kwargs):
+        calls.append(kwargs["profile"])
+        raise FileNotFoundError("cache/context_frame.parquet")
+
+    monkeypatch.setattr(engines, "run_rare_v24", fake_run)
+    with pytest.raises(FileNotFoundError, match="cache/context_frame.parquet"):
+        engines._run_rare_with_fallback(
+            tmp_path / "job", tmp_path / "root", "lidar_only", 0.05)
+    assert calls == ["lidar_only"]
 
 
 def test_default_route_preserves_legacy_fields(tmp_path, monkeypatch):

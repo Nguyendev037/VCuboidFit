@@ -23,6 +23,8 @@ export interface AdvancedParamsPanelProps {
   colab?: { enabled: boolean; task: RemoteTask | null; busy: boolean; error?: string | null; onRun: () => void };
   /** Plan 09 §8: trạng thái Tầng 0/Tầng 1 của job (không truyền ⇒ ẩn, ví dụ worker cũ). */
   tierStatus?: TierStatusProps;
+  /** WP2: khi engine là rare_v24, ẩn bộ chọn tầng và thanh trượt bị bỏ qua */
+  frozenEngine?: boolean;
 }
 
 const COLAB_STATE_TEXT: Record<string, string> = {
@@ -82,6 +84,7 @@ export function AdvancedParamsPanel({
   onRetrySchema,
   colab: _colab,
   tierStatus,
+  frozenEngine,
 }: AdvancedParamsPanelProps) {
   const field = (key: string) => schema?.fields.find((f) => f.key === key);
   const numberField = (key: string, fallback: { min: number; max: number; step: number }) => {
@@ -155,6 +158,12 @@ export function AdvancedParamsPanel({
               )}
             </div>
           )}
+      {frozenEngine ? (
+        <p className="text-xs text-slate-600 leading-relaxed">
+          Rare v2.4 dùng cấu hình đã đóng băng khi benchmark: λ = 0,7, mỗi cảnh một frame ở lượt đầu.
+        </p>
+      ) : (
+        <>
           <div className="flex flex-col gap-1.5">
             <span className="flex flex-wrap items-center font-semibold text-slate-700">
               {labelOf("tier", "Tầng chọn")}
@@ -285,6 +294,8 @@ export function AdvancedParamsPanel({
               Về mặc định
             </button>
           </div>
+        </>
+      )}
         </div>
   );
 }
