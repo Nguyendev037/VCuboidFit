@@ -96,6 +96,7 @@ Dữ liệu lưu theo file, không cần DB. [Model workflow](docs/model-workflo
 
 | Cần tìm | Tài liệu |
 |---|---|
+| Toàn bộ hệ thống theo code: pipeline, mô hình, xử lý ảnh, API, nơi chạy, lỗi đã biết | [system-reference](docs/system-reference.md) |
 | Tiến độ, số đo, giới hạn, bước tiếp | [project-status](docs/project-status.md) |
 | Bắt đầu sau clone | [getting-started](docs/getting-started.md) |
 | Backend, web và GPU local | [run-local](docs/run-local.md) |
