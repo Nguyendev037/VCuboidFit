@@ -1,6 +1,10 @@
 # VCuboidFIT
 
-**Tuyển chọn keyframe LiDAR đáng gán nhãn cho bài toán phát hiện người đi bộ, xe đạp và xe máy (VRU) phục vụ phanh khẩn cấp AEB trên nuScenes.** Hệ thống chọn lô theo ngân sách, thường là 5%, rồi cho người gán nhãn kiểm tra lý do chọn, point cloud, hộp 3D và camera trước khi xuất kết quả.
+**VCuboidFIT | Less Labeling, More Valuable Data.**
+
+Từ hàng nghìn frame LiDAR, đâu là những tình huống thực sự đáng để gán nhãn?
+
+VCuboidFIT chọn lọc 1–10% keyframe có giá trị cao từ nuScenes, tập trung vào các đối tượng tham gia giao thông dễ bị tổn thương (VRU) phục vụ bài toán AEB. Mỗi lựa chọn đều có lý do, có thể kiểm chứng qua LiDAR 3D kết hợp 6 camera và xuất trực tiếp thành danh sách phục vụ gán nhãn.
 
 Phiên bản cấu hình **0.11.0** · cập nhật **15/10/2026** · [báo cáo tiến độ và bằng chứng](docs/project-status.md).
 
