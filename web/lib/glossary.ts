@@ -355,7 +355,9 @@ export const WARNING_LABELS: Record<string, string> = {
   ELIGIBLE_LT_B: "Frame đủ điều kiện ít hơn ngân sách; không trộn ứng viên đáng ngờ.",
   CONTEXT_NOT_FROZEN: "Ngưỡng bối cảnh chưa đóng băng; chưa xác nhận thẻ bối cảnh.",
   STRATEGY_NOT_IMPLEMENTED: "Chiến lược chưa hỗ trợ; engine dùng chiến lược cân bằng.",
-  CAMERA_CACHE_MISSING: "Job chưa có dữ liệu camera đã xử lý; lần chọn này chấm bằng LiDAR. Chạy bước bối cảnh camera để dùng đủ LiDAR + camera.",
 };
+// Kept in the API for traceability but not shown: the owner chose the silent LiDAR fallback (BuildLab plan 23).
+const HIDDEN_WARNINGS = new Set(["CAMERA_CACHE_MISSING"]);
+export const visibleWarnings = (codes: readonly string[]) => codes.filter((code) => !HIDDEN_WARNINGS.has(code));
 export const warningLabel = (code: string) => WARNING_LABELS[code] ?? `Cảnh báo chưa có diễn giải: ${code}`;
 export const CV_FLAG_LABELS: Record<string, string> = { NIGHT_CV: "Ảnh tối", GLARE_CV: "Vùng chói", BLUR_CV: "Ảnh mờ", VEIL_CV: "Màn sương / loá" };

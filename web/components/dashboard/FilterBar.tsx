@@ -4,7 +4,7 @@ import { PRESETS } from "@/lib/api/types";
 import { AdvancedParamsPanel, ColabBox } from "@/components/AdvancedParamsPanel";
 import { TierStatus } from "@/components/TierStatus";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { PANEL_HELP, WARNING_LABELS } from "@/lib/glossary";
+import { PANEL_HELP, WARNING_LABELS, visibleWarnings } from "@/lib/glossary";
 import { effectiveWeights, minScenes } from "@/lib/panelParams";
 import { pct, setAdvancedPanelOpen } from "./dashboardState";
 import type { DashboardState } from "./useDashboard";
@@ -414,14 +414,14 @@ export function FilterBar(state: Pick<
         </div>
 
         {/* Cảnh báo hoặc ghi chú chân trang */}
-        {result?.warnings && result.warnings.length > 0 ? (
+        {result?.warnings && visibleWarnings(result.warnings).length > 0 ? (
           <div
             data-testid="warning"
             className="p-3.5 bg-amber-50/90 border border-amber-200 text-amber-900 rounded-xl flex items-start gap-2 text-xs leading-relaxed"
           >
             <span className="text-amber-600 font-bold text-sm leading-none mt-0.5">⚠️</span>
             <div>
-              {result.warnings.map((w) => (
+              {visibleWarnings(result.warnings).map((w) => (
                 <p key={w}>{WARNING_LABELS[w] ?? w}</p>
               ))}
             </div>

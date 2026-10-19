@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { recallRows, stageLabel } from "@/lib/constants";
 import { ExportImages } from "@/components/review/ExportImages";
-import { warningLabel } from "@/lib/glossary";
+import { visibleWarnings, warningLabel } from "@/lib/glossary";
 import { DataError, LoadingState } from "@/components/ui/DataState";
 import { METRICS, RARITY_COMPARISON, SETTINGS, gtTagLabel, reasonText } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -116,7 +116,7 @@ export function SelectionTable(state: Pick<
           ["Cần xem lại", result.contextSummary?.review??"Chưa có"],
         ].map(([label, value]) => <div key={label} className="rounded-xl border bg-slate-50 p-3"><p>{label}</p><strong>{value}</strong></div>)}</div>
           {result.gateSummary&&<p>Gate toàn pool: hợp lệ {result.gateSummary.valid} · đáng ngờ {result.gateSummary.suspect} · ngoại lệ {result.gateSummary.outlier}</p>}
-          {result.warningCodes?.map(code => <p key={code} role="status" className="text-amber-800">{warningLabel(code)}</p>)}
+          {visibleWarnings(result.warningCodes ?? []).map(code => <p key={code} role="status" className="text-amber-800">{warningLabel(code)}</p>)}
           <ExportImages jobId={jobId!} sid={result.selectionId} budget={debounced.budget} />
           <Link className="text-blue-700 underline" href={`/review/context?job=${encodeURIComponent(jobId!)}&sel=${encodeURIComponent(result.selectionId)}`}>Hàng đợi duyệt bối cảnh</Link></section>}
         {/* 4 Thẻ số theo Figma 02 */}
