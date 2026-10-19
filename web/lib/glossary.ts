@@ -92,11 +92,11 @@ export const PANEL_HELP: Record<PanelHelpKey, HelpItem> = {
   },
   profile: {
     label: "Cảm biến dùng để chấm",
-    tooltip: "LiDAR + camera: LiDAR tìm và chấm vật, camera (OpenCV + OpenCLIP) đọc đêm, mưa, chói. Job chưa có dữ liệu camera đã xử lý thì tự chấm bằng LiDAR và báo cảnh báo.",
+    tooltip: "LiDAR + camera: LiDAR tìm và chấm vật, camera (OpenCV + OpenCLIP) đọc đêm, mưa, chói. Job chưa có dữ liệu camera đã xử lý thì tự chấm bằng LiDAR.",
   },
   fullConfig: {
     label: "Cấu hình đầy đủ",
-    tooltip: "Đây là cấu hình được benchmark giám khảo độc lập trên Argoverse 2; nếu job chưa có cache camera hệ thống tự chấm bằng LiDAR và báo cảnh báo.",
+    tooltip: "Đây là cấu hình được benchmark giám khảo độc lập trên Argoverse 2; nếu job chưa có dữ liệu camera đã xử lý, hệ thống tự chấm bằng LiDAR.",
   },
 };
 
