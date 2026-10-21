@@ -61,10 +61,14 @@ const LOADERS: Record<string, Loader> = {
   "frame-detail-scene2_f8": () => import("@/mocks/frame-detail-scene2_f8.json"),
 };
 
+// public/mock-media/ bị gitignore nên bản deploy không có; ảnh/LiDAR của frame mock-f* đã commit ở
+// public/demo/showcase/ (cùng file với trang chủ). JSON trong web/mocks/ giữ /mock-media/ vì script dựng media đọc nó.
+const SHOWCASE_URL = /"\/mock-media\/((?:thumbs|lidar)\/mock-f\d+\.|images\/mock-f\d+\/)/g;
+
 export async function loadMock<T>(name: string): Promise<T> {
   const load = LOADERS[name];
   if (!load) throw new ApiError("not_found", "Không có dữ liệu mẫu cho yêu cầu này.", 404);
-  return (await load()).default as T;
+  return JSON.parse(JSON.stringify((await load()).default).replace(SHOWCASE_URL, '"/demo/showcase/$1')) as T;
 }
 
 export const mockApi = {

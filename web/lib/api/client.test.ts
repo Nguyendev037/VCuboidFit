@@ -164,7 +164,9 @@ describe("mock mode (NEXT_PUBLIC_MOCK=1)", () => {
   });
 
   it("select picks selection-lidar.json and params-schema for LiDAR mode", async () => {
-    expect(await api.select("j", { ...PARAMS, pipeline: "lidar" })).toEqual(selectionLidar);
+    // Media của frame mock-f* được trỏ sang public/demo/showcase/ (xem loadMock).
+    const showcase = JSON.parse(JSON.stringify(selectionLidar).replaceAll('"/mock-media/', '"/demo/showcase/'));
+    expect(await api.select("j", { ...PARAMS, pipeline: "lidar" })).toEqual(showcase);
     expect(await api.getParamsSchema("j")).toEqual(paramsSchema);
   });
 

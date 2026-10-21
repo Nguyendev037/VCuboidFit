@@ -1,4 +1,8 @@
 // Mock JSON phải khớp 01-CONTRACTS §2/§3 (tên trường cố định). Test này chặn mock lệch kiểu.
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import analysis from "@/mocks/analysis.json";
@@ -18,6 +22,7 @@ const FRAME_SUMMARY_KEYS = [
   "rank", "sampleToken", "sceneName", "frameIdx", "bestCam", "thumbUrl", "S", "rNov", "rUnc",
   "rQry", "qryBest", "reason", "tags", "camsAvailable",
 ];
+const PUBLIC_DIR = fileURLToPath(new URL("../../public", import.meta.url));
 const METRIC_KEYS = ["recall", "uplift", "precision", "coverage", "coverageGain", "redundancy", "byGroup"];
 
 function expectKeys(obj: object, keys: string[]) {
@@ -132,6 +137,19 @@ describe("mock files match the contract", () => {
     expect(details.some((d) => !d.camsAvailable?.includes("CAM_BACK" as Cam))).toBe(true);
     expect(details.some((d) => d.lidar === null)).toBe(true);
     expect(details.some((d) => d.lidar && d.lidar.format === "f16-xyzi")).toBe(true);
+  });
+
+  it("sample run (selection-lidar) only links media committed under public/", async () => {
+    const sel = await loadMock<SelectionResult>("selection-lidar");
+    const docs: unknown[] = [sel];
+    for (const f of sel.preview) docs.push(await loadMock<FrameDetail>(`frame-detail-${f.sampleToken}`));
+    const urls = [...new Set(docs.flatMap((d) => JSON.stringify(d).match(/"\/(?:mock-media|demo)\/[^"]+"/g) ?? []))]
+      .map((u) => u.slice(1, -1));
+    expect(urls.length).toBeGreaterThan(10);
+    for (const u of urls) {
+      expect(u, "public/mock-media/ không có trên bản deploy").not.toMatch(/^\/mock-media\//);
+      expect(existsSync(path.join(PUBLIC_DIR, u)), `thiếu file ${u}`).toBe(true);
+    }
   });
 
   it("every frame in frames-page1 has a detail mock that can be opened", async () => {
