@@ -1,177 +1,462 @@
 {
+  "rareAnalysis": {
+    "version": 1,
+    "pool": {
+      "frames": 121,
+      "scenes": 4,
+      "objects": 6580,
+      "vru": 3930,
+      "taggedRare": 103,
+      "eligible": 121
+    },
+    "selected": {
+      "frames": 7,
+      "scenes": 4,
+      "objects": 377,
+      "vru": 220,
+      "taggedRare": 5
+    },
+    "tagRates": [
+      {
+        "tag": "R1",
+        "selected": 5,
+        "selectedPct": 0.7143,
+        "poolPct": 0.8264,
+        "lift": 0.8643
+      },
+      {
+        "tag": "R2",
+        "selected": 0,
+        "selectedPct": 0,
+        "poolPct": 0.0909,
+        "lift": 0
+      },
+      {
+        "tag": "R3",
+        "selected": 0,
+        "selectedPct": 0,
+        "poolPct": 0,
+        "lift": null
+      },
+      {
+        "tag": "H",
+        "selected": 7,
+        "selectedPct": 1,
+        "poolPct": 1,
+        "lift": 1
+      },
+      {
+        "tag": "C",
+        "selected": 0,
+        "selectedPct": 0,
+        "poolPct": 0,
+        "lift": null
+      },
+      {
+        "tag": "I",
+        "selected": 2,
+        "selectedPct": 0.2857,
+        "poolPct": 0.5785,
+        "lift": 0.4939
+      }
+    ],
+    "reasons": [
+      {
+        "code": "vru",
+        "frames": 7
+      }
+    ],
+    "classMix": [
+      {
+        "cls": "pedestrian",
+        "selected": 83,
+        "pool": 1592
+      },
+      {
+        "cls": "bicycle",
+        "selected": 95,
+        "pool": 1525
+      },
+      {
+        "cls": "motorcycle",
+        "selected": 13,
+        "pool": 248
+      },
+      {
+        "cls": "vru_unknown",
+        "selected": 29,
+        "pool": 565
+      },
+      {
+        "cls": "other",
+        "selected": 157,
+        "pool": 2650
+      }
+    ],
+    "distance": {
+      "edges": [
+        0,
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "selected": [
+        29,
+        103,
+        88,
+        0,
+        0,
+        0
+      ],
+      "pool": [
+        513,
+        2009,
+        1408,
+        0,
+        0,
+        0
+      ]
+    },
+    "scenes": [
+      {
+        "scene": "cc8c0bf57f984915a77078b10eb33198",
+        "order": 1,
+        "pool": 39,
+        "selected": 2
+      },
+      {
+        "scene": "fcbccedd61424f1b85dcbf8f897f9754",
+        "order": 2,
+        "pool": 40,
+        "selected": 2
+      },
+      {
+        "scene": "6f83169d067343658251f72e1dd17dbc",
+        "order": 3,
+        "pool": 41,
+        "selected": 2
+      },
+      {
+        "scene": "bebf5f5b2a674631ab5c88fd1aa9e87a",
+        "order": 4,
+        "pool": 1,
+        "selected": 1
+      }
+    ],
+    "scoreHistogram": {
+      "edges": [
+        0,
+        0.05,
+        0.1,
+        0.15000000000000002,
+        0.2,
+        0.25,
+        0.30000000000000004,
+        0.35000000000000003,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6000000000000001,
+        0.65,
+        0.7000000000000001,
+        0.75,
+        0.8,
+        0.8500000000000001,
+        0.9,
+        0.9500000000000001,
+        1
+      ],
+      "counts": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        7
+      ],
+      "threshold": 0.12396693974733353
+    },
+    "evaluation": {
+      "axis": "r2_combo",
+      "inSample": true,
+      "B": 7,
+      "nTargets": 8,
+      "rows": [
+        {
+          "key": "ours",
+          "iy": 0.8571,
+          "iyStd": null,
+          "nInstances": 6,
+          "irecall": 0.75
+        },
+        {
+          "key": "score_only",
+          "iy": 1.1429,
+          "iyStd": null,
+          "nInstances": 8,
+          "irecall": 1
+        },
+        {
+          "key": "crowd",
+          "iy": 1,
+          "iyStd": null,
+          "nInstances": 7,
+          "irecall": 0.875
+        },
+        {
+          "key": "random",
+          "iy": 0.8343,
+          "iyStd": 0.2505,
+          "nInstances": 5.84,
+          "irecall": 0.73
+        },
+        {
+          "key": "oracle",
+          "iy": 1.1429,
+          "iyStd": null,
+          "nInstances": 8,
+          "irecall": 1
+        }
+      ],
+      "byAxis": [
+        {
+          "axis": "r1_class",
+          "targets": 0,
+          "ours": 0,
+          "randomMean": 0
+        },
+        {
+          "axis": "r2_combo",
+          "targets": 8,
+          "ours": 6,
+          "randomMean": 5.84
+        },
+        {
+          "axis": "r3_behavior",
+          "targets": 0,
+          "ours": 0,
+          "randomMean": 0
+        },
+        {
+          "axis": "i_conflict",
+          "targets": 7,
+          "ours": 7,
+          "randomMean": 6.72
+        },
+        {
+          "axis": "h_hard",
+          "targets": 0,
+          "ours": 0,
+          "randomMean": 0
+        }
+      ]
+    },
+    "evaluationReason": "ok"
+  },
+  "engineVersion": "rare_v24",
+  "gateSummary": {
+    "valid": 121,
+    "suspect": 0,
+    "outlier": 0
+  },
+  "tagSummary": {
+    "R1": 5,
+    "R2": 0,
+    "R3": 0,
+    "H": 7,
+    "C": 0,
+    "I": 2
+  },
+  "evaluationAvailable": false,
+  "warningCodes": [],
+  "contextSummary": {
+    "night": 0,
+    "glare": 0,
+    "rain": 0,
+    "review": 1
+  },
   "selectionId": "sel-lidar",
   "params": {
-    "pipeline": "lidar",
-    "tier": 0,
-    "k": 10,
-    "lam": 0.7,
-    "m": 4,
-    "quotaOff": false,
-    "alpha": 1,
-    "beta": 0,
-    "gamma": 0,
-    "budget": 0.05
+    "engineVersion": "rare_v24",
+    "profile": "multisensor",
+    "budget": 0.05,
+    "preset": "balanced",
+    "diversity": "medium",
+    "quotaOff": false
   },
-  "tierAvailable": [0, 1],
-  "poolSize": 36,
-  "budgetB": 2,
+  "poolSize": 121,
+  "budgetB": 7,
   "warnings": [],
-  "metrics": {
-    "hybrid": {
-      "recall": 0.42,
-      "nRecall": 0.58,
-      "sceneRecall": 0.67,
-      "nBoxes": 94,
-      "uplift": 3.4,
-      "precision": 0.31,
-      "coverage": 0.74,
-      "coverageGain": 0.18,
-      "redundancy": 0.08,
-      "ci95": { "low": 0.34, "high": 0.51 },
-      "byGroup": { "A": 0.62, "B": 0.48, "Bp": 0.38, "C": 0.29 }
-    },
-    "random": {
-      "mean": {
-        "recall": 0.13,
-        "nRecall": 0.18,
-        "sceneRecall": 0.22,
-        "nBoxes": 31,
-        "uplift": 1,
-        "precision": 0.11,
-        "coverage": 0.46,
-        "coverageGain": 0,
-        "redundancy": 0.27,
-        "ci95": null,
-        "byGroup": { "A": 0.14, "B": 0.13, "Bp": 0.12, "C": 0.1 }
-      },
-      "std": {
-        "recall": 0.03,
-        "nRecall": 0.04,
-        "sceneRecall": 0.05,
-        "nBoxes": 5,
-        "uplift": 0.05,
-        "precision": 0.02,
-        "coverage": 0.07,
-        "coverageGain": 0,
-        "redundancy": 0.06,
-        "ci95": null,
-        "byGroup": { "A": 0.03, "B": 0.02, "Bp": 0.02, "C": 0.02 }
-      }
-    },
-    "ablation": {
-      "novelty": {
-        "recall": 0.34,
-        "nRecall": 0.49,
-        "sceneRecall": 0.58,
-        "nBoxes": 78,
-        "uplift": 2.7,
-        "precision": 0.26,
-        "coverage": 0.68,
-        "coverageGain": 0.12,
-        "redundancy": 0.11,
-        "ci95": { "low": 0.27, "high": 0.43 },
-        "byGroup": { "A": 0.55, "B": 0.41, "Bp": 0.32, "C": 0.22 }
-      },
-      "uncertainty": {
-        "recall": 0.29,
-        "nRecall": 0.36,
-        "sceneRecall": 0.47,
-        "nBoxes": 69,
-        "uplift": 2.2,
-        "precision": 0.22,
-        "coverage": 0.61,
-        "coverageGain": 0.08,
-        "redundancy": 0.14,
-        "ci95": { "low": 0.21, "high": 0.37 },
-        "byGroup": { "A": 0.39, "B": 0.36, "Bp": 0.27, "C": 0.19 }
-      },
-      "hybrid_nodiv": {
-        "recall": 0.38,
-        "nRecall": 0.51,
-        "sceneRecall": 0.51,
-        "nBoxes": 82,
-        "uplift": 2.9,
-        "precision": 0.28,
-        "coverage": 0.59,
-        "coverageGain": 0.1,
-        "redundancy": 0.22,
-        "ci95": { "low": 0.3, "high": 0.46 },
-        "byGroup": { "A": 0.57, "B": 0.44, "Bp": 0.31, "C": 0.24 }
-      }
-    }
-  },
+  "metrics": null,
   "preview": [
     {
       "rank": 1,
-      "sampleToken": "mock-f01",
-      "sceneName": "scene-0061",
-      "frameIdx": 0,
+      "sampleToken": "82597244941b4e79aa3e1e9cc6386f8b",
+      "sceneName": "scene-0553",
+      "frameIdx": 9,
       "bestCam": "LIDAR_TOP",
-      "thumbUrl": "/mock-media/thumbs/mock-f01.jpg",
-      "bevUrl": "/mock-media/thumbs/mock-f01.jpg",
-      "S": 0.97,
-      "rRar": 0.92,
-      "rNov": 0.61,
-      "rUnc": 0.36,
+      "thumbUrl": "/demo/sample/thumbs/82597244941b4e79aa3e1e9cc6386f8b_CAM_FRONT.webp",
+      "S": 1,
+      "rNov": 0,
+      "rUnc": 0,
       "rQry": 0,
       "qryBest": "",
-      "reason": "rarity p97",
-      "tags": ["Hiếm", "Rare GT A"],
-      "camsAvailable": ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT", "CAM_BACK_LEFT", "CAM_BACK", "CAM_BACK_RIGHT"]
+      "reason": "rare motorcycle 23m vru27",
+      "tags": [
+        "H",
+        "I"
+      ],
+      "camsAvailable": [],
+      "rRar": 0.9249045848846436,
+      "bevUrl": "/demo/sample/bev/82597244941b4e79aa3e1e9cc6386f8b.png"
     },
     {
       "rank": 2,
-      "sampleToken": "mock-f02",
-      "sceneName": "scene-0062",
-      "frameIdx": 5,
+      "sampleToken": "c59e60042a8643e899008da2e446acca",
+      "sceneName": "scene-0103",
+      "frameIdx": 7,
       "bestCam": "LIDAR_TOP",
-      "thumbUrl": "/mock-media/thumbs/mock-f02.jpg",
-      "bevUrl": "/mock-media/thumbs/mock-f02.jpg",
-      "S": 0.91,
-      "rRar": 0.84,
-      "rNov": 0.58,
-      "rUnc": 0.42,
+      "thumbUrl": "/demo/sample/thumbs/c59e60042a8643e899008da2e446acca_CAM_FRONT.webp",
+      "S": 0.9917355179786682,
+      "rNov": 0,
+      "rUnc": 0,
       "rQry": 0,
       "qryBest": "",
-      "reason": "rarity p91",
-      "tags": ["Hiếm", "Rare GT B"],
-      "camsAvailable": ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT", "CAM_BACK_LEFT", "CAM_BACK"]
+      "reason": "rare motorcycle 18m vru50",
+      "tags": [
+        "R1",
+        "H"
+      ],
+      "camsAvailable": [],
+      "rRar": 0.9135658144950867,
+      "bevUrl": "/demo/sample/bev/c59e60042a8643e899008da2e446acca.png"
     },
     {
       "rank": 3,
-      "sampleToken": "mock-f03",
-      "sceneName": "scene-0104",
-      "frameIdx": 9,
+      "sampleToken": "4246e57f018745c9b2bc68feb3d71b58",
+      "sceneName": "scene-0061",
+      "frameIdx": 26,
       "bestCam": "LIDAR_TOP",
-      "thumbUrl": "/mock-media/thumbs/mock-f03.jpg",
-      "bevUrl": "/mock-media/thumbs/mock-f03.jpg",
-      "S": 0.82,
-      "rRar": 0.78,
-      "rNov": 0.47,
-      "rUnc": 0.31,
+      "thumbUrl": "/demo/sample/thumbs/4246e57f018745c9b2bc68feb3d71b58_CAM_FRONT.webp",
+      "S": 0.9834710955619812,
+      "rNov": 0,
+      "rUnc": 0,
       "rQry": 0,
       "qryBest": "",
-      "reason": "rarity p86",
-      "tags": ["Cảm biến", "Rare GT C"],
-      "camsAvailable": ["CAM_FRONT", "CAM_FRONT_RIGHT", "CAM_BACK_LEFT", "CAM_BACK_RIGHT"]
+      "reason": "rare motorcycle 13m vru39",
+      "tags": [
+        "R1",
+        "H",
+        "I"
+      ],
+      "camsAvailable": [],
+      "rRar": 0.8961368799209595,
+      "bevUrl": "/demo/sample/bev/4246e57f018745c9b2bc68feb3d71b58.png"
     },
     {
       "rank": 4,
-      "sampleToken": "mock-f04",
-      "sceneName": "scene-0110",
-      "frameIdx": 12,
+      "sampleToken": "f40544fd4f5d42abbcfa948eeaf86850",
+      "sceneName": "scene-0103",
+      "frameIdx": 38,
       "bestCam": "LIDAR_TOP",
-      "thumbUrl": "/mock-media/thumbs/mock-f04.jpg",
-      "bevUrl": "/mock-media/thumbs/mock-f04.jpg",
-      "S": 0.76,
-      "rRar": 0.69,
-      "rNov": 0.55,
-      "rUnc": 0.28,
+      "thumbUrl": "/demo/sample/thumbs/f40544fd4f5d42abbcfa948eeaf86850_CAM_FRONT.webp",
+      "S": 0.942148745059967,
+      "rNov": 0,
+      "rUnc": 0,
       "rQry": 0,
       "qryBest": "",
-      "reason": "rarity p79",
-      "tags": ["Lớp trung bình"],
-      "camsAvailable": ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT", "CAM_BACK_LEFT", "CAM_BACK", "CAM_BACK_RIGHT"]
+      "reason": "rare pedestrian 7m vru36",
+      "tags": [
+        "R1",
+        "H"
+      ],
+      "camsAvailable": [],
+      "rRar": 0.8790698647499084,
+      "bevUrl": "/demo/sample/bev/f40544fd4f5d42abbcfa948eeaf86850.png"
+    },
+    {
+      "rank": 5,
+      "sampleToken": "c923fe08b2ff4e27975d2bf30934383b",
+      "sceneName": "scene-0061",
+      "frameIdx": 4,
+      "bestCam": "LIDAR_TOP",
+      "thumbUrl": "/demo/sample/thumbs/c923fe08b2ff4e27975d2bf30934383b_CAM_FRONT.webp",
+      "S": 0.8760330677032471,
+      "rNov": 0,
+      "rUnc": 0,
+      "rQry": 0,
+      "qryBest": "",
+      "reason": "rare bicycle 19m vru34",
+      "tags": [
+        "R1",
+        "H"
+      ],
+      "camsAvailable": [],
+      "rRar": 0.8430355787277222,
+      "bevUrl": "/demo/sample/bev/c923fe08b2ff4e27975d2bf30934383b.png"
+    },
+    {
+      "rank": 6,
+      "sampleToken": "b7f64f73e8a548488e6d85d9b0e13242",
+      "sceneName": "scene-0553",
+      "frameIdx": 7,
+      "bestCam": "LIDAR_TOP",
+      "thumbUrl": "/demo/sample/thumbs/b7f64f73e8a548488e6d85d9b0e13242_CAM_FRONT.webp",
+      "S": 0.9256198406219482,
+      "rNov": 0,
+      "rUnc": 0,
+      "rQry": 0,
+      "qryBest": "",
+      "reason": "rare pedestrian 8m vru21",
+      "tags": [
+        "R1",
+        "H"
+      ],
+      "camsAvailable": [],
+      "rRar": 0.8663496375083923,
+      "bevUrl": "/demo/sample/bev/b7f64f73e8a548488e6d85d9b0e13242.png"
+    },
+    {
+      "rank": 7,
+      "sampleToken": "5991fad3280c4f84b331536c32001a04",
+      "sceneName": "scene-0655",
+      "frameIdx": 0,
+      "bestCam": "LIDAR_TOP",
+      "thumbUrl": "/demo/sample/thumbs/5991fad3280c4f84b331536c32001a04_CAM_FRONT.webp",
+      "S": 0.12396693974733353,
+      "rNov": 0,
+      "rUnc": 0,
+      "rQry": 0,
+      "qryBest": "",
+      "reason": "rare motorcycle 12m vru13",
+      "tags": [
+        "H"
+      ],
+      "camsAvailable": [],
+      "rRar": 0.7339439988136292,
+      "bevUrl": "/demo/sample/bev/5991fad3280c4f84b331536c32001a04.png"
     }
+  ],
+  "pipeline": "lidar",
+  "tierAvailable": [
+    0,
+    1
   ]
 }

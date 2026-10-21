@@ -1,41 +1,52 @@
 {
- "jobId": "6df07dfd8ac0",
- "state": "done",
- "stage": "merge",
- "done": 1,
- "total": 1,
- "etaSec": null,
- "stages": [
-  {
-   "name": "index",
-   "state": "done",
-   "durationSec": 2.016,
-   "peakVramMb": 0
+  "jobId": "mock-job",
+  "state": "done",
+  "stage": "camera",
+  "pipeline": "lidar",
+  "done": 7,
+  "total": 7,
+  "etaSec": null,
+  "stages": [
+    {
+      "name": "lidar_index",
+      "state": "done",
+      "durationSec": 8.047,
+      "peakVramMb": 0,
+      "reason": null
+    },
+    {
+      "name": "t0",
+      "state": "done",
+      "durationSec": 6.157,
+      "peakVramMb": 0,
+      "reason": null
+    },
+    {
+      "name": "t1",
+      "state": "done",
+      "durationSec": 83.687,
+      "peakVramMb": 0,
+      "reason": null
+    },
+    {
+      "name": "camera",
+      "state": "done",
+      "durationSec": 90.984,
+      "peakVramMb": 0,
+      "reason": null
+    }
+  ],
+  "error": null,
+  "tier0": {
+    "state": "done",
+    "nTotal": 121,
+    "nKeep": 121,
+    "durationSec": 6.157
   },
-  {
-   "name": "dino",
-   "state": "done",
-   "durationSec": 5.078,
-   "peakVramMb": 0
-  },
-  {
-   "name": "det",
-   "state": "done",
-   "durationSec": 2.031,
-   "peakVramMb": 0
-  },
-  {
-   "name": "clip",
-   "state": "done",
-   "durationSec": 4.078,
-   "peakVramMb": 0
-  },
-  {
-   "name": "merge",
-   "state": "done",
-   "durationSec": 1.016,
-   "peakVramMb": 0
+  "tier1": {
+    "state": "done",
+    "reason": null,
+    "canRun": false,
+    "novSource": "none"
   }
- ],
- "error": null
 }

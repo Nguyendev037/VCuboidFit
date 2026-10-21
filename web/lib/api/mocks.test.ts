@@ -14,7 +14,7 @@ import jobRunning from "@/mocks/job-running.json";
 import paramsSchema from "@/mocks/params-schema.json";
 import uploadStatus from "@/mocks/upload-status.json";
 
-import { MOCK_FRAME_TOKENS, MOCK_PRESETS, loadMock } from "./mock";
+import { MOCK_FRAME_TOKENS, MOCK_PRESETS, loadMock, mockApi } from "./mock";
 import { CAMS } from "./types";
 import type { Cam, FrameDetail, FrameSummary, SelectionResult } from "./types";
 
@@ -52,7 +52,8 @@ describe("mock files match the contract", () => {
     }
     expect(jobRunning.state).toBe("running");
     expect(jobDone.state).toBe("done");
-    expect(jobDone.stages).toHaveLength(5);
+    // Bộ mẫu = job LiDAR thật (scripts/export-sample-run.mjs): đủ quy trình PointPillars + camera.
+    expect(jobDone.stages.map((s) => s.name)).toEqual(["lidar_index", "t0", "t1", "camera"]);
   });
 
   it("selection-<preset>.json for all four presets", async () => {
@@ -75,10 +76,12 @@ describe("mock files match the contract", () => {
       expect(paramsSchema.fields.some((f) => f.key === key), `thiếu field ${key}`).toBe(true);
     }
     const sel = await loadMock<SelectionResult>("selection-lidar");
-    expect((sel.params as { pipeline?: string }).pipeline).toBe("lidar");
+    expect(sel.pipeline).toBe("lidar");
+    expect(sel.engineVersion).toBe("rare_v24");
+    expect((sel.params as { profile?: string }).profile).toBe("multisensor");
     expect(sel.tierAvailable).toContain(0);
-    expectKeys(sel, ["selectionId", "params", "poolSize", "budgetB", "warnings", "metrics", "preview"]);
-    expect(sel.metrics?.hybrid.nRecall).toBeGreaterThan(0);
+    expectKeys(sel, ["selectionId", "params", "poolSize", "budgetB", "warnings", "preview"]);
+    expect(sel.rareAnalysis?.selected.frames).toBe(sel.budgetB);
     for (const f of sel.preview) {
       expectKeys(f, [...FRAME_SUMMARY_KEYS, "rRar", "bevUrl"]);
       expect(f.bestCam).toBe("LIDAR_TOP");
@@ -117,8 +120,9 @@ describe("mock files match the contract", () => {
     expect(analysis.histogram.counts.length).toBeGreaterThanOrEqual(10);
   });
 
-  it("analysis-lidar.json preserves the selected metrics confidence interval", () => {
-    expect(analysisLidar.selected.metrics?.ci95).toEqual({ low: 0.34, high: 0.51 });
+  it("analysis-lidar.json carries the real score histogram of the sample run", () => {
+    expect(analysisLidar.histogram.counts.reduce((a: number, b: number) => a + b, 0)).toBeGreaterThan(0);
+    expect(analysisLidar.selected.scenesCovered).toBeGreaterThan(0);
   });
 
   it("frame-detail: >= 5 files, one without CAM_BACK, one without LiDAR", async () => {
@@ -142,7 +146,7 @@ describe("mock files match the contract", () => {
   it("sample run (selection-lidar) only links media committed under public/", async () => {
     const sel = await loadMock<SelectionResult>("selection-lidar");
     const docs: unknown[] = [sel];
-    for (const f of sel.preview) docs.push(await loadMock<FrameDetail>(`frame-detail-${f.sampleToken}`));
+    for (const f of sel.preview) docs.push(await mockApi.getFrame("mock-job", f.sampleToken, sel.selectionId));
     const urls = [...new Set(docs.flatMap((d) => JSON.stringify(d).match(/"\/(?:mock-media|demo)\/[^"]+"/g) ?? []))]
       .map((u) => u.slice(1, -1));
     expect(urls.length).toBeGreaterThan(10);

@@ -59,6 +59,8 @@ const LOADERS: Record<string, Loader> = {
   "frame-detail-scene1_f5": () => import("@/mocks/frame-detail-scene1_f5.json"),
   "frame-detail-scene1_f11": () => import("@/mocks/frame-detail-scene1_f11.json"),
   "frame-detail-scene2_f8": () => import("@/mocks/frame-detail-scene2_f8.json"),
+  // Chi tiết frame của bộ mẫu LiDAR thật (scripts/export-sample-run.mjs), khoá theo sample_token.
+  "sample-frame-details": () => import("@/mocks/sample-frame-details.json"),
 };
 
 // public/mock-media/ bị gitignore nên bản deploy không có; ảnh/LiDAR của frame mock-f* đã commit ở
@@ -100,7 +102,11 @@ export const mockApi = {
     const res = await loadMock<FramesPage | FrameSummary[]>("frames-page1");
     return Array.isArray(res) ? res : res.items;
   },
-  getFrame: (_jobId: string, token: string, _sid?: string) =>
-    loadMock<FrameDetail>(`frame-detail-${token}`),
+  getFrame: async (_jobId: string, token: string, _sid?: string) => {
+    if (LOADERS[`frame-detail-${token}`]) return loadMock<FrameDetail>(`frame-detail-${token}`);
+    const sample = await loadMock<Record<string, FrameDetail>>("sample-frame-details");
+    if (sample[token]) return sample[token];
+    throw new ApiError("not_found", "Không có dữ liệu mẫu cho yêu cầu này.", 404);
+  },
   getAnalysis: (_jobId: string, _sid: string) => loadMock<Analysis>(_sid.includes("lidar") ? "analysis-lidar" : "analysis"),
 };

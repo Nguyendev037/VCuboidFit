@@ -1,19 +1,19 @@
 {
- "datasetId": "08358b847856",
- "ok": true,
- "scenes": 3,
- "frames": 36,
- "imagesByCam": {
-  "CAM_FRONT": 36,
-  "CAM_FRONT_LEFT": 36,
-  "CAM_FRONT_RIGHT": 36,
-  "CAM_BACK": 24,
-  "CAM_BACK_LEFT": 36,
-  "CAM_BACK_RIGHT": 36
- },
- "hasLidar": true,
- "hasAnnotations": true,
- "version": "v1.0-mini",
- "errors": [],
- "warnings": []
+  "datasetId": "5b9ac5e4349d",
+  "ok": true,
+  "scenes": 4,
+  "frames": 121,
+  "imagesByCam": {
+    "CAM_FRONT": 121,
+    "CAM_FRONT_LEFT": 121,
+    "CAM_FRONT_RIGHT": 121,
+    "CAM_BACK": 121,
+    "CAM_BACK_LEFT": 121,
+    "CAM_BACK_RIGHT": 121
+  },
+  "hasLidar": true,
+  "hasAnnotations": true,
+  "version": "v1.0-mini",
+  "errors": [],
+  "warnings": []
 }
