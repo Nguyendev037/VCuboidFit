@@ -86,6 +86,8 @@ export function AdvancedParamsPanel({
   tierStatus,
   frozenEngine,
 }: AdvancedParamsPanelProps) {
+  if (frozenEngine) return null;
+
   const field = (key: string) => schema?.fields.find((f) => f.key === key);
   const numberField = (key: string, fallback: { min: number; max: number; step: number }) => {
     const f = field(key);
@@ -158,12 +160,7 @@ export function AdvancedParamsPanel({
               )}
             </div>
           )}
-      {frozenEngine ? (
-        <p className="text-xs text-slate-600 leading-relaxed">
-          Rare v2.4 dùng cấu hình đã đóng băng khi benchmark: λ = 0,7, mỗi cảnh một frame ở lượt đầu.
-        </p>
-      ) : (
-        <>
+      <>
           <div className="flex flex-col gap-1.5">
             <span className="flex flex-wrap items-center font-semibold text-slate-700">
               {labelOf("tier", "Tầng chọn")}
@@ -294,8 +291,7 @@ export function AdvancedParamsPanel({
               Về mặc định
             </button>
           </div>
-        </>
-      )}
+      </>
         </div>
   );
 }

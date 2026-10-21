@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { PRESETS } from "./api/types";
-import { reasonText, gtTagLabel, objectClassLabel, objectReasonText, predTagLabel, METRICS, PANEL_HELP, RARITY_COMPARISON, SETTINGS, UPLOAD_HELP } from "./glossary";
+import { reasonText, gtTagLabel, objectClassLabel, objectReasonText, predTagLabel, METRICS, PANEL_HELP, RARITY_COMPARISON, SETTINGS, TAG_SUMMARY_HELP, UPLOAD_HELP } from "./glossary";
 
 describe("glossary", () => {
   it("reasonText converts correctly", () => {
@@ -19,8 +19,15 @@ describe("glossary", () => {
     expect(objectReasonText("sem p80")).toBe("Lạ về ngữ nghĩa ảnh: 80/100");
     expect(objectReasonText("concept stroller")).toBe("Gần khái niệm: stroller");
     expect(objectReasonText("zzz p5")).toBe("Điểm thành phần: 5/100");
-    expect(predTagLabel("R2")).toBe("Lát cắt hiếm");
+    expect(predTagLabel("R2")).toBe("Tổ hợp hiếm");
     expect(predTagLabel("ZZ")).toBe("ZZ");
+  });
+
+  it("labels predicted tags and explains the rare summary", () => {
+    expect(predTagLabel("R1")).toBe("Loại vật hiếm");
+    expect(predTagLabel("R3")).toBe("Đang đi lúc đêm/mưa");
+    expect(predTagLabel("H")).toBe("Vật xa / ít điểm laser");
+    expect(TAG_SUMMARY_HELP.rare.tooltip).toContain("không từ nhãn gốc");
   });
 
   it("gtTagLabel converts correctly", () => {

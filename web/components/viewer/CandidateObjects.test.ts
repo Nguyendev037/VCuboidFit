@@ -22,8 +22,8 @@ describe("CandidateObjects · lời thường và xếp hạng", () => {
     expect(html).not.toContain("shape p91");
     expect(html).toContain("cách 26 m");
     expect(html).toContain("0.95");
-    expect(html).toContain("Lát cắt hiếm");
-    expect(html).toContain("Khó với model");
+    expect(html).toContain("Tổ hợp hiếm");
+    expect(html).toContain("Vật xa / ít điểm laser");
     expect(html).toContain("Tương tác");
     expect(html).toContain("Chưa xác nhận");
     expect(html).toContain("(dự đoán)");

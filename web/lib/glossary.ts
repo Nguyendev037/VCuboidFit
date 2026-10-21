@@ -357,7 +357,7 @@ export const objectClassLabel = (cls: string) => OBJECT_CLASS_LABELS[cls] ?? cls
 
 // Mã thành phần do c4/rare/object_score.py ghi vào `reasons` ("<mã> pNN" hoặc "concept <tên>").
 const OBJECT_REASON_LABELS: Record<string, string> = {
-  shape: "Hình dạng lạ", slice: "Lát cắt hiếm", vru: "Người/xe hai bánh", unc: "Model chưa chắc chắn",
+  shape: "Hình dạng lạ", slice: "Tổ hợp hiếm", vru: "Người/xe hai bánh", unc: "Model chưa chắc chắn",
   sem: "Lạ về ngữ nghĩa ảnh",
 };
 /** Lý do của một vật rare_v24, vd "vru p100" → "Người/xe hai bánh: 100/100". */
@@ -375,7 +375,17 @@ export function gtTagLabel(tag: string): string {
   return GT_GROUPS[tag]?.label ?? tag;
 }
 
-export const PRED_TAG_LABELS: Record<string, string> = { R: "Hiếm", R1: "Hình dạng hiếm", R2: "Lát cắt hiếm", R3: "VRU hiếm", H: "Khó với model", C: "Bối cảnh", I: "Tương tác", O: "Ngoại lệ" };
+export const PRED_TAG_LABELS: Record<string, string> = { R: "Hiếm", R1: "Loại vật hiếm", R2: "Tổ hợp hiếm", R3: "Đang đi lúc đêm/mưa", H: "Vật xa / ít điểm laser", C: "Bối cảnh", I: "Tương tác", O: "Ngoại lệ" };
+export const TAG_SUMMARY_HELP = {
+  rare: {
+    label: "Ứng viên hiếm (dự đoán)",
+    tooltip: "Số khung trong lô mang từng thẻ, suy từ dự đoán, không từ nhãn gốc. R1: loại người đi đường (đi bộ, xe đạp, xe máy) ít gặp so với dữ liệu tham chiếu, hoặc OpenCLIP gợi ý khái niệm hiếm như xe lăn, trẻ em hay shipper. R2: tổ hợp loại vật, khoảng cách và số điểm laser ít gặp, ví dụ xe đạp ở xa chỉ có vài điểm laser. R3: người đi đường đang di chuyển từ 0,5 m/s trong đêm, mưa hoặc sương mù, ví dụ người đi bộ đang sang đường ban đêm.",
+  },
+  interaction: {
+    label: "Tương tác (dự đoán)",
+    tooltip: "Người đi đường đang di chuyển trong hành lang trước đầu xe, tối đa 20 m phía trước và lệch ngang không quá 4 m, hoặc OpenCLIP gợi ý tình huống tương tác.",
+  },
+};
 export const CONTEXT_AXES: Record<string, string> = { illum: "Chiếu sáng", glare: "Chói", lens: "Ống kính", weather: "Thời tiết" };
 export const CONTEXT_CLASSES: Record<string, string> = { day: "Ban ngày", lowlight: "Ánh sáng yếu", night: "Ban đêm", none: "Không chói", headlight: "Đèn xe", sun: "Mặt trời", clean: "Sạch", droplets: "Giọt nước", blurred: "Mờ", dry: "Khô", rain: "Mưa", fog: "Sương" };
 export const WARNING_LABELS: Record<string, string> = {

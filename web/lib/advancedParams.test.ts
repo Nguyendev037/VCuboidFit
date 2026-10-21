@@ -138,6 +138,23 @@ describe("panel ngôn ngữ thường", () => {
       }),
     );
 
+  it("ẩn toàn bộ panel khi engine bị đóng băng, kể cả lỗi schema", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdvancedParamsPanel, {
+        open: true,
+        schema: mock,
+        draft: draftFromSchema(mock),
+        onDraftChange: () => {},
+        onApply: () => {},
+        onReset: () => {},
+        frozenEngine: true,
+        schemaError: "schema error",
+      }),
+    );
+    expect(html).toBe("");
+    expect(html).not.toContain("đóng băng");
+  });
+
   it("không còn ký hiệu toán trong DOM từ mock mới", () => {
     expect(render({ tier: 1 })).not.toMatch(/α|β|γ|λ|MMR|quota|Tier/);
     expect(render({ tier: 0 })).not.toMatch(/α|β|γ|λ|MMR|quota|Tier/);

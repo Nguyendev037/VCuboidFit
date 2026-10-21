@@ -3,7 +3,7 @@ import { recallRows, stageLabel } from "@/lib/constants";
 import { ExportImages } from "@/components/review/ExportImages";
 import { visibleWarnings, warningLabel } from "@/lib/glossary";
 import { DataError, LoadingState } from "@/components/ui/DataState";
-import { METRICS, PRED_TAG_LABELS, RARITY_COMPARISON, SETTINGS, gtTagLabel, predTagLabel, reasonText } from "@/lib/glossary";
+import { METRICS, PRED_TAG_LABELS, RARITY_COMPARISON, SETTINGS, TAG_SUMMARY_HELP, gtTagLabel, predTagLabel, reasonText } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { PRESET_LABELS, formatBytes, formatDuration, pct } from './dashboardState';
 import type { DashboardState } from './useDashboard';
@@ -110,11 +110,11 @@ export function SelectionTable(state: Pick<
         </div>
 
         {result&&<section className="space-y-3 text-sm"><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[
-          ["Ứng viên hiếm (dự đoán)", result.tagSummary? `R1: ${result.tagSummary.R1} · R2: ${result.tagSummary.R2} · R3: ${result.tagSummary.R3}`:"Chưa có"],
+          ["Ứng viên hiếm (dự đoán)", result.tagSummary? `${PRED_TAG_LABELS.R1}: ${result.tagSummary.R1}\n${PRED_TAG_LABELS.R2}: ${result.tagSummary.R2}\n${PRED_TAG_LABELS.R3}: ${result.tagSummary.R3}`:"Chưa có"],
           ["Tương tác (dự đoán)", result.tagSummary?.I??"Chưa có"],
           ["Bối cảnh (dự đoán)", result.contextSummary? `Đêm: ${result.contextSummary.night} · Chói: ${result.contextSummary.glare} · Mưa: ${result.contextSummary.rain}`:"Chưa có"],
           ["Cần xem lại", result.contextSummary?.review??"Chưa có"],
-        ].map(([label, value]) => <div key={label} className="rounded-xl border bg-slate-50 p-3"><p>{label}</p><strong>{value}</strong></div>)}</div>
+        ].map(([label, value]) => <div key={label} className="rounded-xl border bg-slate-50 p-3"><p className="flex items-start gap-1">{label}{label===TAG_SUMMARY_HELP.rare.label&&<Tooltip label={TAG_SUMMARY_HELP.rare.label} content={TAG_SUMMARY_HELP.rare.tooltip} />}{label==="Tương tác (dự đoán)"&&<Tooltip label={TAG_SUMMARY_HELP.interaction.label} content={TAG_SUMMARY_HELP.interaction.tooltip} />}</p><strong className={label===TAG_SUMMARY_HELP.rare.label?"whitespace-pre-line":""}>{value}</strong></div>)}</div>
           {result.gateSummary&&<p>Gate toàn pool: hợp lệ {result.gateSummary.valid} · đáng ngờ {result.gateSummary.suspect} · ngoại lệ {result.gateSummary.outlier}</p>}
           {visibleWarnings(result.warningCodes ?? []).map(code => <p key={code} role="status" className="text-amber-800">{warningLabel(code)}</p>)}
           <ExportImages jobId={jobId!} sid={result.selectionId} budget={debounced.budget} />
