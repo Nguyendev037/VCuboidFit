@@ -256,6 +256,40 @@ def run_stage(args_list: list[str], env: dict, cwd: Path) -> None:
         raise StageError((p.stderr or "")[-2000:] or f"exit {p.returncode}")
 
 
+CAMERA_FILES = (
+    "cache/context_frame.parquet", "cache/context_frame.parquet.manifest.json",
+    "cache/rare_crops.npy", "cache/rare_crops.parquet",
+    "cache/rare_crops.parquet.manifest.json", "cache/concepts_text.npy",
+    "cache/concepts_text.json",
+)
+
+
+def camera_archive(exp: Path, data: Path, work: Path, dry: bool) -> Path | None:
+    cam = exp.parent / "exp_cam"
+    (cam / "lidar").mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(exp / "index.parquet", cam / "lidar" / "index.parquet")
+    if dry:
+        for name in CAMERA_FILES:
+            target = cam / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b"dry-run camera fixture")
+    else:
+        env = dict(os.environ)
+        run_stage([sys.executable, "-m", "c4.cli.lidar_t0", "--job-dir", str(cam),
+                   "--data-root", str(data), "--profile", "cloud", "--resume"], env, work)
+        run_stage([sys.executable, "-m", "c4.cli.camera_context", "--job-dir", str(cam),
+                   "--data-root", str(data)], env, work)
+    if not all((cam / name).is_file() and not (cam / name).is_symlink()
+               for name in CAMERA_FILES):
+        log("camera: thiếu cache; vẫn gửi signals")
+        return None
+    out = exp.parent / "camera.tar"
+    with tarfile.open(out, "w") as tf:
+        for name in CAMERA_FILES:
+            tf.add(cam / name, arcname=name, recursive=False)
+    return out
+
+
 def process(c: Client, task: dict, a) -> None:
     tid = task["taskId"]
     lease = task.get("leaseId")
@@ -291,6 +325,13 @@ def process(c: Client, task: dict, a) -> None:
                        str(ba)], env, work)
             infer_s = time.monotonic() - t1
             sig = exp / "t1" / "signals.parquet"
+        camera = None
+        if getattr(a, "camera", True) and task.get("acceptsCamera") is True:
+            hb.stage, hb.progress = "camera", 0.95
+            try:
+                camera = camera_archive(exp, data, work, a.dry_run)
+            except Exception as exc:
+                log(f"camera: lỗi {type(exc).__name__}; vẫn gửi signals")
         hb.stop()
         hb = None
         man = sig.with_suffix(".manifest.json")
@@ -299,6 +340,8 @@ def process(c: Client, task: dict, a) -> None:
         files = {"signals": ("signals.parquet", open(sig, "rb"))}
         if man.is_file():
             files["manifest"] = ("signals.manifest.json", open(man, "rb"))
+        if camera is not None:
+            files["camera"] = ("camera.tar", open(camera, "rb"))
         try:
             c.call("POST", f"/remote/t1/{tid}/result", files=files,
                    data={"meta": json.dumps(meta)}, timeout=(30, 600), lease=lease)
@@ -394,6 +437,8 @@ def main(argv=None) -> int:
                     help="train lai seed tren Colab thay vi dung trong so co san (cham hon nhieu)")
     ap.add_argument("--dry-run", action="store_true",
                     help="bo train/infer, ghi signals.parquet gia (test khong GPU)")
+    ap.add_argument("--camera", action=argparse.BooleanOptionalAction, default=True,
+                    help="phân tích camera (mặc định bật; --no-camera để tắt)")
     ap.add_argument("--heartbeat-sec", type=float, default=60, help=argparse.SUPPRESS)
     ap.add_argument("--idle-exit-min", type=float,
                     default=float(os.environ.get("VCF_IDLE_MIN", "0")),

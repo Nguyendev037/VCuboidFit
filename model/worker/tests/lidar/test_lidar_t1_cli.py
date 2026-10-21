@@ -106,3 +106,37 @@ def test_t1_cli_pool_disjoint_from_seed_runs_and_checks_tokens(tmp_path, monkeyp
     job = _make_job(tmp_path, ["x", "y", "z"])
     _fake_docker(monkeypatch, job, ["x", "y"], "none", [])  # signals thiếu z ⇒ phải bị bắt
     assert _run(job, tmp_path) == 2
+
+
+def _make_exp(root, name, version):
+    exp = root / name
+    (exp / "t1" / "cfg").mkdir(parents=True)
+    (exp / "t1" / "ckpt").mkdir(parents=True)
+    (exp / "index.parquet").write_bytes(b"x")
+    (exp / "t1" / "ckpt" / "seed_latest.pth").write_bytes(b"x")
+    (exp / "t1" / "cfg" / "pp_seed.yaml").write_text(
+        f"DATA_CONFIG:\n  DATA_PATH: /x\n  VERSION: {version}\n", encoding="utf-8")
+    return exp
+
+
+def test_pick_experiment_matches_dataset_version(tmp_path):
+    import os
+    mini = _make_exp(tmp_path, "mini", "v1.0-mini")
+    tv = _make_exp(tmp_path, "tv", "v1.0-trainval")
+    data = tmp_path / "data"
+    (data / "v1.0-trainval").mkdir(parents=True)
+    spec = os.pathsep.join([str(mini), str(tv)])
+    assert lidar_t1.pick_experiment(spec, data) == (tv, "")
+    exp, why = lidar_t1.pick_experiment(str(mini), data)
+    assert exp is None and "v1.0-trainval" in why and "mini=v1.0-mini" in why
+
+
+def test_t1_cli_version_mismatch_skips_without_docker(tmp_path, monkeypatch, capsys):
+    mini = _make_exp(tmp_path, "mini", "v1.0-mini")
+    (tmp_path / "v1.0-trainval").mkdir()
+    job = _make_job(tmp_path, ["a"])
+    monkeypatch.setenv("VCF_T1_EXP", str(mini))
+    _no_docker(monkeypatch)
+    assert _run(job, tmp_path) == 0
+    assert "skip: không có model seed cho v1.0-trainval" in capsys.readouterr().out
+    assert not (job / "t1" / "signals.parquet").exists()

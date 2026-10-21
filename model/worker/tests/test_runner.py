@@ -316,9 +316,9 @@ def test_lidar_pipeline_runs_lidar_index_then_t0(tmp_path, ws, monkeypatch):
     job = _lidar_job(tmp_path)
     st = run_job(job, tmp_path, "local-4060", env=ws)
     assert st["state"] == "done" and st["error"] is None and st["pipeline"] == "lidar"
-    assert seen == ["lidar_index", "t0", "t1"]
+    assert seen == ["lidar_index", "t0", "t1", "camera"]
     names = [s["name"] for s in st["stages"]]
-    assert names == runner.PIPELINES["lidar"] == ["lidar_index", "t0", "t1"]
+    assert names == runner.PIPELINES["lidar"] == ["lidar_index", "t0", "t1", "camera"]
     assert (job / "progress" / "lidar_index.done.json").is_file()
     assert (job / "progress" / "t0.done.json").is_file()
     assert runner.MODULES["lidar_index"] == "lidar_index" and runner.MODULES["t0"] == "lidar_t0"
@@ -328,7 +328,13 @@ def test_lidar_pipeline_runs_lidar_index_then_t0(tmp_path, ws, monkeypatch):
 
 
 def test_lidar_rerun_skips_stages_with_outputs(tmp_path, ws, monkeypatch):
-    _patch_stages(monkeypatch, {}, default="pass")
+    def cmd(stage, job_dir, data_root, profile):
+        paths = [str(job_dir / rel) for rel in runner.OUTPUTS[stage]]
+        return _stub("from pathlib import Path; "
+                     f"paths = {paths!r}; "
+                     "[(Path(p).parent.mkdir(parents=True, exist_ok=True), Path(p).touch()) for p in paths]")
+
+    monkeypatch.setattr(runner, "stage_command", cmd)
     job = _lidar_job(tmp_path, "L2")
     assert run_job(job, tmp_path, "local-4060", env=ws)["state"] == "done"
     for rel in ("lidar/index.parquet", "lidar/z0.npy", "lidar/filter.parquet"):
@@ -407,10 +413,10 @@ def test_second_job_waits_for_gpu_lock(tmp_path, ws, monkeypatch):
 
 
 def test_lidar_pipeline_has_t1():
-    assert runner.PIPELINES["lidar"] == ["lidar_index", "t0", "t1"]
+    assert runner.PIPELINES["lidar"] == ["lidar_index", "t0", "t1", "camera"]
     assert runner.MODULES["t1"] == "lidar_t1"
     assert runner.OUTPUTS["t1"] == ["t1/signals.parquet"]
-    assert runner.OPTIONAL_STAGES == {"t1"}
+    assert runner.OPTIONAL_STAGES == {"t1", "camera"}
 
 
 def test_t1_nonfatal(tmp_path, ws, monkeypatch):

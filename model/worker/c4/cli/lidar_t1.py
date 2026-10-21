@@ -13,6 +13,39 @@ from c4.cli.build_index import make_parser
 from c4.contracts import ContractError, read_table
 
 WORKER = Path(__file__).resolve().parents[2]  # .../model/worker
+SEED_FILES = (("index.parquet",), ("t1", "cfg", "pp_seed.yaml"), ("t1", "ckpt", "seed_latest.pth"))
+
+
+def _cfg_version(exp: Path) -> str | None:
+    """VERSION nuScenes trong cấu hình pcdet của thí nghiệm (dòng `VERSION: v1.0-...`)."""
+    for line in (exp / "t1" / "cfg" / "pp_seed.yaml").read_text(encoding="utf-8").splitlines():
+        key, _, val = line.strip().partition(":")
+        if key == "VERSION":
+            return val.strip().strip("'\"")
+    return None
+
+
+def _data_version(data_root: Path) -> str | None:
+    found = sorted(p.name for p in data_root.glob("v1.0-*") if p.is_dir())
+    return found[0] if len(found) == 1 else None
+
+
+def pick_experiment(spec: str, data_root: Path) -> tuple[Path | None, str]:
+    """VCF_T1_EXP = một hoặc nhiều thư mục thí nghiệm (ngăn bởi os.pathsep). Chọn thí nghiệm đủ file
+    seed và cùng VERSION với dataset (infer_t1 từ chối lệch phiên bản); trả (None, lý do) nếu không có."""
+    exps = [Path(s) for s in spec.split(os.pathsep) if s.strip()]
+    complete = [e for e in exps if all(e.joinpath(*rel).is_file() for rel in SEED_FILES)]
+    if not complete:
+        return None, "thiếu " + ", ".join(str(e.joinpath(*r)) for e in exps for r in SEED_FILES
+                                          if not e.joinpath(*r).is_file())
+    want = _data_version(data_root)
+    if want is None:
+        return complete[0], ""  # không đọc được phiên bản: giữ hành vi cũ, infer_t1 tự kiểm
+    for e in complete:
+        if _cfg_version(e) == want:
+            return e, ""
+    return None, f"không có model seed cho {want} (đang có: " + \
+        ", ".join(f"{e.name}={_cfg_version(e)}" for e in complete) + ")"
 
 
 def main(argv=None) -> int:
@@ -28,13 +61,10 @@ def main(argv=None) -> int:
     if not exp_s:
         print("skip: VCF_T1_EXP chưa đặt")
         return 0
-    exp = Path(exp_s)
-    for rel in (("index.parquet",), ("t1", "cfg", "pp_seed.yaml"),
-                ("t1", "ckpt", "seed_latest.pth")):
-        p = exp.joinpath(*rel)
-        if not p.is_file():
-            print(f"skip: thiếu {p}")
-            return 0
+    exp, why = pick_experiment(exp_s, Path(args.data_root))
+    if exp is None:
+        print(f"skip: {why}")
+        return 0
     try:
         job_idx = read_table(job / "lidar" / "index.parquet", "lidar_index")
     except FileNotFoundError as e:

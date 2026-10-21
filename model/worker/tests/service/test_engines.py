@@ -170,3 +170,24 @@ def test_frame_reasons_name_the_top_object_and_vru_count():
     frames = pd.DataFrame(dict(sample_token=["a"], evidence=[json.dumps({"top_object": "o1", "n_vru": None})]))
     objects = pd.DataFrame(dict(sample_token=["a"], object_id=["o1"], cls_pred=["car"], dist_m=[float("nan")]))
     assert engines.frame_reasons(frames, objects) == {"a": "rare car 0m vru0"}
+
+
+
+@pytest.mark.parametrize("profile", ["multisensor", "lidar_only"])
+def test_rare_stale_crops_fallback(tmp_path, monkeypatch, profile):
+    from c4.rare.semantic import CropsStale
+    calls = []
+    def run(job, root, **kwargs):
+        calls.append(kwargs["profile"])
+        if len(calls) == 1:
+            raise CropsStale("cache candidates differ")
+        return {"fallback": True}
+    monkeypatch.setattr(engines, "run_rare_v24", run)
+    if profile == "lidar_only":
+        with pytest.raises(CropsStale):
+            engines._run_rare_with_fallback(tmp_path, tmp_path, profile, 0.05)
+        assert calls == ["lidar_only"]
+    else:
+        result, warnings = engines._run_rare_with_fallback(tmp_path, tmp_path, profile, 0.05)
+        assert calls == ["multisensor", "lidar_only"]
+        assert result == {"fallback": True} and warnings == ["CAMERA_CACHE_STALE"]

@@ -103,6 +103,10 @@ PYEOF
   touch "$VCF_HOME/OpenPCDet/.built"
 fi
 
+# Camera dependencies are checked independently of the runtime pip marker.
+"$PY" -c 'import open_clip' >/dev/null 2>&1 || "$PY" -m pip -q install open_clip_torch
+"$PY" -c 'import cv2' >/dev/null 2>&1 || "$PY" -m pip -q install opencv-python-headless
+
 echo "== [4/5] phu thuoc worker"
 # Step 2 already pinned c4's runtime deps; resolving [service,dev] on the Python 3.10 of the
 # pytorch 2.1.2 image ends in ResolutionTooDeep (c4 declares >=3.11). The agent needs neither.

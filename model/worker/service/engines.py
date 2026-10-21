@@ -194,9 +194,17 @@ def rare_select(job: Path, params: SelectParamsIn) -> SelectionResult:
 def _run_rare_with_fallback(
     job: Path, root: Path, profile: str, budget: float
 ) -> tuple[dict, list[str]]:
+    from c4.rare.semantic import CropsStale
+
     try:
         return (run_rare_v24(job, root, profile=profile, budget_frac=budget,
                              pool_split="all", ref_split="all"), [])
+    except CropsStale:
+        if profile != "multisensor":
+            raise
+        result = run_rare_v24(job, root, profile="lidar_only", budget_frac=budget,
+                              pool_split="all", ref_split="all")
+        return result, ["CAMERA_CACHE_STALE"]
     except FileNotFoundError as exc:
         message = str(exc).replace("\\", "/")
         if profile != "multisensor" or "cache/" not in message or "lidar/" in message:

@@ -389,6 +389,7 @@ export const TAG_SUMMARY_HELP = {
 export const CONTEXT_AXES: Record<string, string> = { illum: "Chiếu sáng", glare: "Chói", lens: "Ống kính", weather: "Thời tiết" };
 export const CONTEXT_CLASSES: Record<string, string> = { day: "Ban ngày", lowlight: "Ánh sáng yếu", night: "Ban đêm", none: "Không chói", headlight: "Đèn xe", sun: "Mặt trời", clean: "Sạch", droplets: "Giọt nước", blurred: "Mờ", dry: "Khô", rain: "Mưa", fog: "Sương" };
 export const WARNING_LABELS: Record<string, string> = {
+  CAMERA_CACHE_STALE: "Ảnh camera của lần phân tích không khớp dữ liệu hiện tại; đã dùng chế độ chỉ LiDAR.",
   ELIGIBLE_LT_B: "Frame đủ điều kiện ít hơn ngân sách; không trộn ứng viên đáng ngờ.",
   CONTEXT_NOT_FROZEN: "Ngưỡng bối cảnh chưa đóng băng; chưa xác nhận thẻ bối cảnh.",
   STRATEGY_NOT_IMPLEMENTED: "Chiến lược chưa hỗ trợ; engine dùng chiến lược cân bằng.",

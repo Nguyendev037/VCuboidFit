@@ -1,7 +1,7 @@
 """Job runner: chạy các stage của một pipeline, mỗi stage một tiến trình con `c4.cli.*`.
 
 Pipeline đọc từ `job.json` (`pipeline`): `camera` = index → dino → det → clip → merge (mặc định khi
-job.json không nói gì), `lidar` = lidar_index → t0 → t1 (01-CONTRACTS §4). Stage `t1` suy luận
+job.json không nói gì), `lidar` = lidar_index → t0 → t1 → camera. Stage `t1` suy luận
 seed đã train qua Docker khi `VCF_T1_EXP` được đặt; stage này không chặn job (`OPTIONAL_STAGES`).
 
 Một khoá `filelock` (`<workspace>/gpu.lock`) bao cả job: hai job cùng lúc thì job sau chờ
@@ -24,10 +24,11 @@ from filelock import FileLock, Timeout
 STAGES = ["index", "dino", "det", "clip", "merge"]
 PIPELINES = dict(  # thứ tự stage bắt buộc của từng pipeline (camera giữ nguyên như trước)
     camera=STAGES,
-    lidar=["lidar_index", "t0", "t1"])
-OPTIONAL_STAGES = {"t1"}  # stage lỗi không làm job failed (01-CONTRACTS §C6)
+    lidar=["lidar_index", "t0", "t1", "camera"])
+OPTIONAL_STAGES = {"t1", "camera"}  # stage lỗi không làm job failed
 MODULES = dict(index="build_index", dino="extract_dino", det="extract_det", clip="extract_clip",
-               merge="merge_features", lidar_index="lidar_index", t0="lidar_t0", t1="lidar_t1")
+               merge="merge_features", lidar_index="lidar_index", t0="lidar_t0", t1="lidar_t1",
+               camera="camera_context")
 OUTPUTS = dict(  # đường dẫn tương đối thư mục job; ghi nguyên tử nên có đủ = stage đã ghi xong
     index=["index/frames.parquet", "index/frames.parquet.manifest.json",
            "index/cam_poses.parquet", "index/cam_poses.parquet.manifest.json"],
@@ -37,7 +38,11 @@ OUTPUTS = dict(  # đường dẫn tương đối thư mục job; ghi nguyên t�
     merge=["cache/features_cache.parquet", "cache/features_cache.parquet.manifest.json"],
     lidar_index=["lidar/index.parquet"],
     t0=["lidar/z0.npy", "lidar/filter.parquet"],
-    t1=["t1/signals.parquet"])
+    t1=["t1/signals.parquet"],
+    camera=["cache/context_frame.parquet", "cache/context_frame.parquet.manifest.json",
+            "cache/rare_crops.npy", "cache/rare_crops.parquet",
+            "cache/rare_crops.parquet.manifest.json", "cache/concepts_text.npy",
+            "cache/concepts_text.json"])
 POLL_S = 1.0
 TERMINATE_WAIT_S = 10.0
 WORKER_DIR = Path(__file__).resolve().parents[2]
@@ -111,6 +116,23 @@ def tier1_reason(log: Path, rc: int | None = None) -> str | None:
     if rc not in (None, 0):
         return f"Tầng 1 lỗi (mã {rc}): {tail}" if tail else f"Tầng 1 lỗi (mã {rc})."
     return tail or None
+
+
+def camera_reason(log: Path, rc: int | None = None) -> str:
+    """Lý do camera skipped/failed từ log stage con."""
+    tail = _last_line(log)
+    if "máy không có GPU/torch" in tail:
+        return "Máy không có GPU — bỏ qua phân tích camera"
+    if "fetch_weights.py" in tail:
+        return "Thiếu trọng số OpenCLIP — chạy fetch_weights.py để tải trọng số."
+    tail = re.sub(r"([A-Za-z]:)?[\\/][^\s]+", "…", tail)[:160]
+    if rc not in (None, 0):
+        return f"Phân tích camera lỗi (mã {rc}): {tail}" if tail else f"Phân tích camera lỗi (mã {rc})."
+    return tail or "Phân tích camera chưa tạo đủ dữ liệu."
+
+
+def _optional_reason(stage: str, log: Path, rc: int | None = None) -> str | None:
+    return camera_reason(log, rc) if stage == "camera" else tier1_reason(log, rc)
 
 
 def _marker(job: Path, stage: str) -> Path:
@@ -245,7 +267,7 @@ def _run_stages(job: Path, data_root: Path, profile: str, st: _Status, env: dict
             s["state"] = "cancelled"
             return st.finish("cancelled")
         if rc != 0 and stage in OPTIONAL_STAGES:
-            s["reason"] = tier1_reason(job / "logs" / f"{stage}.log", rc)
+            s["reason"] = _optional_reason(stage, job / "logs" / f"{stage}.log", rc)
             s["state"] = "failed"  # không finish, không ghi marker: job vẫn done, lần sau thử lại
             st.write()
             continue
@@ -256,7 +278,7 @@ def _run_stages(job: Path, data_root: Path, profile: str, st: _Status, env: dict
         if stage in OPTIONAL_STAGES and not all((job / p).is_file() for p in OUTPUTS[stage]):
             # CLI thoát 0 nhưng không ra output = skip có lý do: KHÔNG im lặng, không ghi marker
             s["state"] = "skipped"
-            s["reason"] = tier1_reason(job / "logs" / f"{stage}.log")
+            s["reason"] = _optional_reason(stage, job / "logs" / f"{stage}.log")
             st.write()
             continue
         s["state"] = "done"

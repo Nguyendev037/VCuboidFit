@@ -44,6 +44,7 @@ export const STAGE_LABELS_CAMERA: Record<string, string> = {
 export const STAGE_LABELS_LIDAR: Record<string, string> = {
   index: "Lập chỉ mục",
   lidar_index: "Chỉ mục LiDAR",
+  camera: "Camera (OpenCV + OpenCLIP)",
   t0: "Descriptor Tầng 0",
   t1: "Tầng 1",
   merge: "Tổng hợp S",

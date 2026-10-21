@@ -10,7 +10,7 @@ from c4.params import SelectParams
 Cam = Literal["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT",
               "CAM_BACK", "CAM_BACK_LEFT", "CAM_BACK_RIGHT"]
 Pipeline = Literal["lidar", "camera"]
-Stage = Literal["index", "dino", "det", "clip", "merge", "lidar_index", "t0", "t1"]
+Stage = Literal["index", "dino", "det", "clip", "merge", "lidar_index", "t0", "t1", "camera"]
 Preset = Literal["balanced", "rare_first", "hard_for_model", "safety_scenarios"]
 Diversity = Literal["low", "medium", "high"]
 

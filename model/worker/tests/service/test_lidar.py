@@ -66,10 +66,11 @@ def client(env):
 def test_job_runs_lidar_stages_only(env):
     st = env["status"]
     assert st["pipeline"] == "lidar"
-    assert [s["name"] for s in st["stages"]] == ["lidar_index", "t0", "t1"]
-    for s in st["stages"]:  # plan 09 D3: t1 có thể `skipped` nhưng PHẢI kèm lý do, không im lặng
-        if s["name"] == "t1" and s["state"] == "skipped":
-            assert s.get("reason"), s
+    assert [s["name"] for s in st["stages"]] == ["lidar_index", "t0", "t1", "camera"]
+    for s in st["stages"]:  # plan 09 D3 / hồ sơ 26: t1, camera có thể `skipped` nhưng PHẢI kèm lý do
+        if s["name"] in ("t1", "camera") and s["state"] in ("skipped", "failed"):
+            # tuỳ chọn: dữ liệu giả có 0 VRU ⇒ camera dừng ở bước crops (PRED_REF_TOO_SMALL), job vẫn done
+            assert s.get("reason") or s["state"] == "failed", s
         else:
             assert s["state"] == "done", s
     job = env["settings"].jobs / env["jid"]

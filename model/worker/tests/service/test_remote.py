@@ -402,3 +402,177 @@ def test_18_agent_default_seed_from_github(tmp_path, monkeypatch):
     p = agent.fetch_seed(None, {"taskId": "t1_aaaaaaaaaaaa"}, tmp_path)  # worker không gửi
     assert p.read_bytes() == data and urls == [agent.DEFAULT_SEED["url"]]
     assert "media.githubusercontent.com" in urls[0] and urls[0].endswith(".pth")
+
+
+
+def _camera_tar(names=None, kind=None):
+    from service.remote import CAMERA_FILES
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tf:
+        for name in CAMERA_FILES if names is None else names:
+            member = tarfile.TarInfo(name)
+            if kind is not None:
+                member.type, member.linkname = kind, "outside"
+            else:
+                member.size = 3
+            tf.addfile(member, io.BytesIO(b"cam") if kind is None else None)
+    return buf.getvalue()
+
+
+def _post_camera(c, task, archive, signals=None):
+    return c.post(f"/remote/t1/{task['taskId']}/result", headers=_lease(task),
+                  files={"signals": ("s.parquet", _signals(TOKENS) if signals is None else signals),
+                         "camera": ("camera.tar", archive)})
+
+
+def test_camera_round_trip(env):
+    from service.remote import CAMERA_FILES
+    c, s, _ = env
+    _create(c)
+    task = c.get("/remote/t1/next", headers=AUTH).json()
+    assert task["acceptsCamera"] is True
+    response = _post_camera(c, task, _camera_tar())
+    assert response.status_code == 200, response.text
+    assert all((s.jobs / JOB / name).read_bytes() == b"cam" for name in CAMERA_FILES)
+    assert len(list((s.jobs / JOB / "cache").iterdir())) == 7
+
+
+@pytest.mark.parametrize("name,kind", [
+    ("cache/unknown", None), ("cache/../escape", None),
+    ("../escape", None), ("/cache/concepts_text.json", None),
+    ("cache/concepts_text.json", tarfile.SYMTYPE),
+    ("cache/concepts_text.json", tarfile.LNKTYPE),
+    ("cache/concepts_text.json", tarfile.DIRTYPE),
+])
+def test_camera_bad_member_does_not_write(env, name, kind):
+    c, s, _ = env
+    _create(c)
+    task = c.get("/remote/t1/next", headers=AUTH).json()
+    response = _post_camera(c, task, _camera_tar([name], kind))
+    assert response.status_code == 422 and response.json()["error"]["code"] == "bad_camera"
+    assert not (s.jobs / JOB / "t1").exists()
+    assert not (s.jobs / JOB / "cache").exists()
+
+
+@pytest.mark.parametrize("variant", ["duplicate", "missing", "corrupt", "late_bad"])
+def test_camera_invalid_archive_preserves_existing_cache(env, variant):
+    from service.remote import CAMERA_FILES
+    c, s, _ = env
+    cache = s.jobs / JOB / "cache"
+    cache.mkdir()
+    sentinel = cache / "concepts_text.json"
+    sentinel.write_bytes(b"original")
+    names = list(CAMERA_FILES)
+    if variant == "duplicate":
+        names.append(names[0])
+    elif variant == "missing":
+        names.pop()
+    elif variant == "late_bad":
+        names.append("cache/evil")
+    archive = b"broken" if variant == "corrupt" else _camera_tar(names)
+    _create(c)
+    task = c.get("/remote/t1/next", headers=AUTH).json()
+    response = _post_camera(c, task, archive)
+    assert response.status_code == 422 and response.json()["error"]["code"] == "bad_camera"
+    assert sentinel.read_bytes() == b"original" and len(list(cache.iterdir())) == 1
+    assert not (s.jobs / JOB / "t1").exists()
+
+
+def test_camera_valid_tar_bad_signals_no_write(env):
+    c, s, _ = env
+    _create(c)
+    task = c.get("/remote/t1/next", headers=AUTH).json()
+    response = _post_camera(c, task, _camera_tar(), signals=_signals(TOKENS[:1]))
+    assert response.status_code == 422 and response.json()["error"]["code"] == "bad_signals"
+    assert not (s.jobs / JOB / "cache").exists()
+
+
+def test_camera_unpacked_size_limit(env):
+    c, s, _ = env
+    s.remote_max_result_mb = 0.005
+    # Sparse archive header exceeds decompressed budget, without allocating payload.
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tf:
+        member = tarfile.TarInfo("cache/context_frame.parquet")
+        member.size = 6000
+        tf.addfile(member, io.BytesIO(b"x" * 6000))
+    _create(c)
+    task = c.get("/remote/t1/next", headers=AUTH).json()
+    response = _post_camera(c, task, buf.getvalue())
+    assert response.status_code == 413
+    assert not (s.jobs / JOB / "cache").exists()
+
+
+@pytest.mark.parametrize("accepts,enabled,fail", [
+    (True, True, False), (False, True, False), (None, True, False),
+    (True, False, False), (True, True, True),
+])
+def test_agent_camera_capability_and_optional_failure(tmp_path, monkeypatch, accepts, enabled, fail):
+    from types import SimpleNamespace
+    agent = _load_agent()
+    exp = tmp_path / "exp"
+    exp.mkdir()
+    pd.DataFrame(dict(sample_token=TOKENS)).to_parquet(exp / "index.parquet")
+    monkeypatch.setattr(agent, "fetch_bundle", lambda *args: (exp, tmp_path / "data"))
+    class HB:
+        def __init__(self, *args): pass
+        def start(self): pass
+        def stop(self): pass
+    monkeypatch.setattr(agent, "Heartbeat", HB)
+    original = agent.camera_archive
+    calls = []
+    def camera(*args):
+        calls.append(True)
+        if fail:
+            raise agent.StageError("camera failed")
+        return original(*args)
+    monkeypatch.setattr(agent, "camera_archive", camera)
+    sent = []
+    class Client:
+        def call(self, method, path, **kw):
+            assert path.endswith("/result")
+            sent.append({name: value[1].read() for name, value in kw["files"].items()})
+    task = dict(taskId="t1_aaaaaaaaaaaa", jobId=JOB, acceptsCamera=accepts)
+    agent.process(Client(), task, SimpleNamespace(work=str(tmp_path), dry_run=True,
+                  train=False, heartbeat_sec=60, camera=enabled))
+    assert bool(calls) == (accepts is True and enabled)
+    assert "signals" in sent[0]
+    assert ("camera" in sent[0]) == (accepts is True and enabled and not fail)
+    if "camera" in sent[0]:
+        with tarfile.open(fileobj=io.BytesIO(sent[0]["camera"])) as tf:
+            assert set(tf.getnames()) == set(agent.CAMERA_FILES)
+
+
+def test_agent_camera_real_commands_and_missing_output(tmp_path, monkeypatch):
+    agent = _load_agent()
+    exp = tmp_path / "exp"
+    exp.mkdir()
+    (exp / "index.parquet").write_bytes(b"index")
+    calls = []
+    monkeypatch.setattr(agent, "run_stage", lambda command, env, cwd: calls.append(command))
+    assert agent.camera_archive(exp, tmp_path / "data", tmp_path, False) is None
+    assert calls[0][2] == "c4.cli.lidar_t0" and "cloud" in calls[0]
+    assert calls[1][2] == "c4.cli.camera_context"
+    assert (tmp_path / "exp_cam/lidar/index.parquet").read_bytes() == b"index"
+
+
+
+def test_camera_unpacked_limit_and_three_multipart_files(env, tmp_path):
+    from service.remote import _unpack_camera
+    from service.errors import ApiError
+    archive = tmp_path / "camera.tar"
+    archive.write_bytes(_camera_tar())
+    dest = tmp_path / "staging"
+    with pytest.raises(ApiError) as error:
+        _unpack_camera(archive, dest, 20)  # 7 * 3 unpacked bytes
+    assert error.value.status == 413
+    assert not dest.exists()
+    c, s, _ = env
+    _create(c)
+    task = c.get("/remote/t1/next", headers=AUTH).json()
+    response = c.post(f"/remote/t1/{task['taskId']}/result", headers=_lease(task),
+                      files={"signals": ("s.parquet", _signals(TOKENS)),
+                             "manifest": ("m.json", b"{}"),
+                             "camera": ("camera.tar", archive.read_bytes())})
+    assert response.status_code == 200, response.text
+    assert (s.jobs / JOB / "t1/signals.parquet.manifest.json").read_bytes() == b"{}"

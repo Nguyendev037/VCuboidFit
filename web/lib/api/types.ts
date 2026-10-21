@@ -60,7 +60,7 @@ export interface DatasetProgress {
 
 // ---- Job ----
 export type JobState = "queued" | "running" | "done" | "failed" | "cancelled";
-export type JobStage = "index" | "dino" | "det" | "clip" | "merge" | "lidar_index" | "t0" | "t1";
+export type JobStage = "index" | "dino" | "det" | "clip" | "merge" | "lidar_index" | "t0" | "t1" | "camera";
 export interface StageInfo {
   name: string;
   state: string;

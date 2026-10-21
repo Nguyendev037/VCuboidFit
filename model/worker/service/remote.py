@@ -10,6 +10,8 @@ import os
 import re
 import tarfile
 import threading
+import tempfile
+import shutil
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -34,6 +36,41 @@ JSON_MAX = 64 * 1024  # body JSON của /remote/*
 MULTIPART_SLACK = 1 << 20  # biên cho boundary/field của multipart
 
 
+CAMERA_FILES = (
+    "cache/context_frame.parquet", "cache/context_frame.parquet.manifest.json",
+    "cache/rare_crops.npy", "cache/rare_crops.parquet",
+    "cache/rare_crops.parquet.manifest.json", "cache/concepts_text.npy",
+    "cache/concepts_text.json",
+)
+
+
+def _unpack_camera(archive: Path, dest: Path, limit: int) -> None:
+    """Validate the entire allowlist before writing any extracted file."""
+    try:
+        with tarfile.open(archive, mode="r:") as tf:
+            members = []
+            names = set()
+            total = 0
+            for member in tf:
+                if (member.name not in CAMERA_FILES or not member.isreg()
+                        or member.name in names or member.size < 0):
+                    raise ApiError(422, "bad_camera", "Tệp camera không hợp lệ.")
+                names.add(member.name)
+                total += member.size
+                if total > limit:
+                    raise ApiError(413, "too_large", "Cache camera vượt giới hạn kích thước.")
+                members.append(member)
+            if names != set(CAMERA_FILES):
+                raise ApiError(422, "bad_camera", "Cache camera thiếu tệp.")
+            for member in members:
+                target = dest / member.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with tf.extractfile(member) as src, target.open("wb") as dst:
+                    shutil.copyfileobj(src, dst, CHUNK)
+    except (tarfile.TarError, OSError, EOFError, ValueError) as exc:
+        raise ApiError(422, "bad_camera", "Tar camera không hợp lệ.") from exc
+
+
 class ResultTooLarge(MultiPartException):
     pass
 
@@ -42,7 +79,7 @@ class ResultParser(MultiPartParser):
     """Chặn byte vượt ngân sách trước khi parser ghi tệp spool."""
 
     def __init__(self, headers, stream, file_limit: int):
-        super().__init__(headers, stream, max_files=2, max_fields=1, max_part_size=JSON_MAX)
+        super().__init__(headers, stream, max_files=3, max_fields=1, max_part_size=JSON_MAX)
         self.file_limit = file_limit
         self.part_bytes = 0
 
@@ -254,7 +291,7 @@ class RemoteQueue:
             return self._save(r)
 
     def finish(self, task_id: str, signals_path: Path, manifest_path: Path | None,
-               meta: dict, lease_id: str | None) -> dict:
+               meta: dict, lease_id: str | None, camera_path: Path | None = None) -> dict:
         import pandas as pd
 
         from c4.contracts import read_table
@@ -270,14 +307,25 @@ class RemoteQueue:
             if missing:
                 raise ApiError(422, "bad_signals",
                                f"Kết quả Tầng 1 thiếu {len(missing)} sample_token của chỉ mục.")
-            t1 = job / "t1"
-            t1.mkdir(parents=True, exist_ok=True)
-            if manifest_path is not None:
-                os.replace(manifest_path, t1 / "signals.parquet.manifest.json")
-            os.replace(signals_path, t1 / "signals.parquet")  # sau cùng: tier_available mở khoá
-            _write_json(t1 / "remote_meta.json", meta)
-            r.update(state="done", leaseUntil=None, error=None, leaseId=None)
-            return self._save(r)
+            with tempfile.TemporaryDirectory(prefix=".remote-camera-", dir=job) as temp:
+                staged = Path(temp)
+                if camera_path is not None:
+                    _unpack_camera(camera_path, staged,
+                                   self.settings.remote_max_result_mb * 1024 * 1024)
+                    cache = job / "cache"
+                    if cache.is_symlink():
+                        raise ApiError(422, "bad_camera", "Đường dẫn cache không hợp lệ.")
+                    cache.mkdir(exist_ok=True)
+                    for name in CAMERA_FILES:
+                        os.replace(staged / name, job / name)
+                t1 = job / "t1"
+                t1.mkdir(parents=True, exist_ok=True)
+                if manifest_path is not None:
+                    os.replace(manifest_path, t1 / "signals.parquet.manifest.json")
+                os.replace(signals_path, t1 / "signals.parquet")  # sau cùng: tier_available mở khoá
+                _write_json(t1 / "remote_meta.json", meta)
+                r.update(state="done", leaseUntil=None, error=None, leaseId=None)
+                return self._save(r)
 
     def fail(self, task_id: str, error: str, lease_id: str | None) -> dict:
         with self._lock:
@@ -427,7 +475,7 @@ def next_task(request: Request):
     rec = _q(request).claim()
     if rec is None:
         return Response(status_code=204)
-    out = {**_public(rec), "leaseId": rec["leaseId"]}  # chỉ claim trả leaseId
+    out = {**_public(rec), "leaseId": rec["leaseId"], "acceptsCamera": True}  # chỉ claim trả leaseId
     if rec.get("seed"):  # có trọng số seed: agent tải /seed rồi bỏ train
         out["seed"] = {k: rec["seed"][k] for k in ("bytes", "sha256", "sweeps")}
     return out
@@ -494,6 +542,9 @@ async def result(task_id: str, request: Request):
         raise ApiError(422, "bad_request", "Body multipart không hợp lệ.") from None
     try:
         signals, manifest = form.get("signals"), form.get("manifest")
+        camera = form.get("camera")
+        if camera is not None and not isinstance(camera, UploadFile):
+            raise ApiError(422, "bad_camera", "camera phải là tệp.")
         if not isinstance(signals, UploadFile):
             raise ApiError(422, "bad_signals", "Thiếu tệp signals.")
         if manifest is not None and not isinstance(manifest, UploadFile):
@@ -519,14 +570,18 @@ async def result(task_id: str, request: Request):
             return p
 
         sig_p = await save(signals, ".parquet")
-        man_p = None
+        man_p = cam_p = None
         try:
             if manifest is not None:
                 man_p = await save(manifest, ".json")
-            return _public(q.finish(task_id, sig_p, man_p, meta_obj, lease_id))
+            if camera is not None:
+                cam_p = await save(camera, ".tar")
+            return _public(q.finish(task_id, sig_p, man_p, meta_obj, lease_id, cam_p))
         finally:
             sig_p.unlink(missing_ok=True)
             if man_p:
                 man_p.unlink(missing_ok=True)
+            if cam_p:
+                cam_p.unlink(missing_ok=True)
     finally:
         await form.close()
