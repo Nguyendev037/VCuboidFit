@@ -157,3 +157,16 @@ def test_rare_v24_fixture_and_context_api(tmp_path, monkeypatch):
         manifest = json.loads((job / "engines" / "rare_v24" / changed["selectionId"] /
                                "config_used.json").read_text(encoding="utf-8"))
         assert manifest["strategy"] == "diversity"
+
+
+def test_frame_reasons_name_the_top_object_and_vru_count():
+    import pandas as pd
+    frames = pd.DataFrame(dict(sample_token=["a", "b", "c"], evidence=[
+        json.dumps({"top_object": "o2", "n_vru": 5}), json.dumps({"top_object": "o9"}), None]))
+    objects = pd.DataFrame(dict(sample_token=["a", "a", "b"], object_id=["o1", "o2", "o1"],
+                                cls_pred=["other", "motorcycle", "pedestrian"], dist_m=[3.0, 25.6, 8.0]))
+    assert engines.frame_reasons(frames, objects) == {"a": "rare motorcycle 26m vru5", "b": "rare", "c": "rare"}
+    # Review H02: NaN distance and a null VRU count must not crash the selection response.
+    frames = pd.DataFrame(dict(sample_token=["a"], evidence=[json.dumps({"top_object": "o1", "n_vru": None})]))
+    objects = pd.DataFrame(dict(sample_token=["a"], object_id=["o1"], cls_pred=["car"], dist_m=[float("nan")]))
+    assert engines.frame_reasons(frames, objects) == {"a": "rare car 0m vru0"}

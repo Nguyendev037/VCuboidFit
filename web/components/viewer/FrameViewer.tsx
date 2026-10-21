@@ -9,7 +9,7 @@ import type { Cam, FrameDetail } from "@/lib/api/types";
 import { getFrame } from "@/lib/api/client";
 import { DEFAULT_LAYER_TOGGLES, LidarScene, type LayerToggles } from "./LidarScene";
 import { CameraImage, getCamFriendlyName } from "./CameraImage";
-import { FRAME_SCORES, GT_GROUPS, gtTagLabel, reasonText } from "@/lib/glossary";
+import { FRAME_SCORES, GT_GROUPS, gtTagLabel, predTagLabel, reasonText } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
 import {
   groupCamerasByPosition,
@@ -475,7 +475,7 @@ export function FrameViewer({
                   Chỉ số tổng hợp
                 </h3>
                 <span className="text-xs font-mono text-blue-400">
-                  {frame.tags.map((tag) => <span key={tag} className="ml-1 inline-flex items-center gap-1">{gtTagLabel(tag)}{GT_GROUPS[tag] && <Tooltip label={GT_GROUPS[tag].label} content={GT_GROUPS[tag].tooltip} dark />}</span>)}
+                  {frame.predTags?.length ? frame.predTags.map(predTagLabel).join(" · ") : frame.tags.map((tag) => <span key={tag} className="ml-1 inline-flex items-center gap-1">{gtTagLabel(tag)}{GT_GROUPS[tag] && <Tooltip label={GT_GROUPS[tag].label} content={GT_GROUPS[tag].tooltip} dark />}</span>)}
                 </span>
               </div>
               <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/10">
@@ -489,7 +489,7 @@ export function FrameViewer({
                 <div className="mt-3 space-y-2 text-xs">
                   <div>
                     <div className="flex justify-between text-[11px] text-slate-300">
-                      <span className="inline-flex items-center gap-1">{isLidarFrame ? "Hiếm:" : "Độ hiếm:"}<Tooltip label={FRAME_SCORES.rRar.label} content={FRAME_SCORES.rRar.tooltip} dark /></span>
+                      <span className="inline-flex items-center gap-1">{frame.predTags?.length || frame.objects?.length ? "Vật nổi bật:" : isLidarFrame ? "Hiếm:" : "Độ hiếm:"}<Tooltip label={FRAME_SCORES.rRar.label} content={FRAME_SCORES.rRar.tooltip} dark /></span>
                       <span className="font-mono">{(isLidarFrame ? frame.rRar ?? frame.rNov : frame.rNov).toFixed(2)}</span>
                     </div>
                     <div className="w-full h-1.5 bg-white/10 rounded-full mt-1 overflow-hidden">

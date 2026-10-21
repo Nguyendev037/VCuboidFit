@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { PRESETS } from "./api/types";
-import { reasonText, gtTagLabel, METRICS, PANEL_HELP, RARITY_COMPARISON, SETTINGS, UPLOAD_HELP } from "./glossary";
+import { reasonText, gtTagLabel, objectClassLabel, objectReasonText, predTagLabel, METRICS, PANEL_HELP, RARITY_COMPARISON, SETTINGS, UPLOAD_HELP } from "./glossary";
 
 describe("glossary", () => {
   it("reasonText converts correctly", () => {
@@ -8,6 +8,19 @@ describe("glossary", () => {
     expect(reasonText("novelty p90")).toBe("Lạ với model — top 10%");
     expect(reasonText("uncertainty p95")).toBe("Model chưa chắc chắn — top 5%");
     expect(reasonText("rarity p100")).toBe("Hiếm trong dữ liệu — top 1%");
+  });
+
+  it("rare_v24 reasons, object classes and tags read as plain words", () => {
+    expect(reasonText("rare motorcycle 26m vru47")).toBe("Xe máy cách 26 m · 47 VRU trong khung (dự đoán)");
+    expect(reasonText("rare_v24")).toBe("Điểm vật thể cao trong khung (dự đoán)");
+    expect(objectClassLabel("vru_unknown")).toBe("VRU chưa rõ loại");
+    expect(objectReasonText("shape p91")).toBe("Hình dạng lạ: 91/100");
+    expect(objectReasonText("unc p94")).toBe("Model chưa chắc chắn: 94/100");
+    expect(objectReasonText("sem p80")).toBe("Lạ về ngữ nghĩa ảnh: 80/100");
+    expect(objectReasonText("concept stroller")).toBe("Gần khái niệm: stroller");
+    expect(objectReasonText("zzz p5")).toBe("Điểm thành phần: 5/100");
+    expect(predTagLabel("R2")).toBe("Lát cắt hiếm");
+    expect(predTagLabel("ZZ")).toBe("ZZ");
   });
 
   it("gtTagLabel converts correctly", () => {

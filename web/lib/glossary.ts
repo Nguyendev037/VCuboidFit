@@ -341,8 +341,35 @@ export function reasonText(reason: string): string {
     const p = parseInt(reason.replace("uncertainty p", ""), 10);
     return `Model chưa chắc chắn — top ${Math.max(1, 100 - p)}%`;
   }
+  // rare_v24: "rare <lớp vật nổi bật> <khoảng cách>m vru<số VRU>" do service/engines.py ghi (hoặc "rare" nếu thiếu vật).
+  const rare = /^rare (\S+) (\d+)m vru(\d+)$/.exec(reason);
+  if (rare) return `${objectClassLabel(rare[1])} cách ${rare[2]} m · ${rare[3]} VRU trong khung (dự đoán)`;
+  if (reason === "rare" || reason === "rare_v24") return "Điểm vật thể cao trong khung (dự đoán)";
   return reason;
 }
+
+/** Lớp vật ứng viên LiDAR (`cls_pred` của rare_v24) bằng lời thường. */
+export const OBJECT_CLASS_LABELS: Record<string, string> = {
+  pedestrian: "Người đi bộ", bicycle: "Xe đạp", motorcycle: "Xe máy", vru_unknown: "VRU chưa rõ loại",
+  car: "Ô tô", truck: "Xe tải", bus: "Xe buýt", other: "Vật khác",
+};
+export const objectClassLabel = (cls: string) => OBJECT_CLASS_LABELS[cls] ?? cls;
+
+// Mã thành phần do c4/rare/object_score.py ghi vào `reasons` ("<mã> pNN" hoặc "concept <tên>").
+const OBJECT_REASON_LABELS: Record<string, string> = {
+  shape: "Hình dạng lạ", slice: "Lát cắt hiếm", vru: "Người/xe hai bánh", unc: "Model chưa chắc chắn",
+  sem: "Lạ về ngữ nghĩa ảnh",
+};
+/** Lý do của một vật rare_v24, vd "vru p100" → "Người/xe hai bánh: 100/100". */
+export function objectReasonText(reason: string): string {
+  const concept = /^concept (.+)$/.exec(reason);
+  if (concept) return `Gần khái niệm: ${concept[1]}`;
+  const m = /^(\w+) p(\d+)$/.exec(reason);
+  return m ? `${OBJECT_REASON_LABELS[m[1]] ?? "Điểm thành phần"}: ${m[2]}/100` : reason;
+}
+
+/** Thẻ dự đoán R1/R2/R3/H/C/I/O → lời thường; mã lạ giữ nguyên. */
+export const predTagLabel = (tag: string) => PRED_TAG_LABELS[tag] ?? tag;
 
 export function gtTagLabel(tag: string): string {
   return GT_GROUPS[tag]?.label ?? tag;

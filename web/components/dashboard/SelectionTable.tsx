@@ -3,7 +3,7 @@ import { recallRows, stageLabel } from "@/lib/constants";
 import { ExportImages } from "@/components/review/ExportImages";
 import { visibleWarnings, warningLabel } from "@/lib/glossary";
 import { DataError, LoadingState } from "@/components/ui/DataState";
-import { METRICS, RARITY_COMPARISON, SETTINGS, gtTagLabel, reasonText } from "@/lib/glossary";
+import { METRICS, PRED_TAG_LABELS, RARITY_COMPARISON, SETTINGS, gtTagLabel, predTagLabel, reasonText } from "@/lib/glossary";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { PRESET_LABELS, formatBytes, formatDuration, pct } from './dashboardState';
 import type { DashboardState } from './useDashboard';
@@ -234,7 +234,7 @@ export function SelectionTable(state: Pick<
                   <div className="flex items-center gap-1 flex-wrap">
                     {(activePipeline==="lidar"? f.tags??[]:["Hiếm", ...((f.tags?.includes("Khó")||(typeof f.rUnc==="number"&&f.rUnc>=0.8))? ["Khó"]:[])]).map((tag) => (
                       <span key={tag} className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">
-                        {activePipeline==="lidar"? gtTagLabel(tag):tag}
+                        {activePipeline==="lidar"? (tag in PRED_TAG_LABELS? predTagLabel(tag):gtTagLabel(tag)):tag}
                       </span>
                     ))}
                   </div>

@@ -1,6 +1,8 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import type { RareObject } from "@/lib/api/types";
-import { PRED_TAG_LABELS } from "@/lib/glossary";
+import { objectClassLabel, objectReasonText, predTagLabel } from "@/lib/glossary";
 
 /** Tham số box 3D của một vật ứng viên (hệ EGO nuScenes: x tiến, y trái, z lên). */
 export interface CandidateBoxParams {
@@ -30,9 +32,30 @@ export function candidateBoxCorners(o: CandidateBoxParams): number[] {
 }
 
 export function CandidateObjects({ objects = [], predTags = [] }: { objects?: RareObject[]; predTags?: string[] }) {
- if (!objects.length && !predTags.length) return null;
- return <section className="space-y-2 text-xs"><h4 className="font-semibold">Ứng viên LiDAR · Chưa xác nhận</h4>
- <p>{predTags.map(t=>`${PRED_TAG_LABELS[t] ?? t} (dự đoán)`).join(" · ")}</p>
- {objects.map(o=><article key={o.object_id} className="rounded border border-white/10 p-2"><strong>{o.cls_pred} · Chưa xác nhận</strong><p>{o.reasons}</p>{o.concept_top && <p>Khái niệm gần nhất: {o.concept_top}{o.concept_score != null ? ` (${o.concept_score.toFixed(2)})` : ""}</p>}</article>)}
- </section>;
+  const [expandedFrame, setExpandedFrame] = useState<string | null>(null);
+  const frameToken = objects[0]?.sample_token ?? "";
+  const expanded = expandedFrame === frameToken;
+  const sortedObjects = [...objects].sort((a, b) => (b.s_obj ?? 0) - (a.s_obj ?? 0));
+  const visibleObjects = expanded ? sortedObjects : sortedObjects.slice(0, 6);
+
+  if (!objects.length && !predTags.length) return null;
+  return (
+    <section className="space-y-2 text-xs">
+      <h4 className="font-semibold">Ứng viên LiDAR · Chưa xác nhận</h4>
+      <p>{predTags.map(t => `${predTagLabel(t)} (dự đoán)`).join(" · ")}</p>
+      {visibleObjects.map(o => (
+        <article key={o.object_id} className="rounded border border-white/10 p-2">
+          <strong>{objectClassLabel(o.cls_pred)} · Chưa xác nhận</strong>
+          <p>{Number.isFinite(o.dist_m) ? `cách ${Math.round(o.dist_m)} m · ` : ""}Điểm: {Number.isFinite(o.s_obj) ? o.s_obj.toFixed(2) : "—"} (dự đoán)</p>
+          <p>{objectReasonText(o.reasons)}</p>
+          {o.concept_top && <p>Khái niệm gần nhất: {o.concept_top}{o.concept_score != null ? ` (${o.concept_score.toFixed(2)})` : ""}</p>}
+        </article>
+      ))}
+      {!expanded && sortedObjects.length > 6 && (
+        <button type="button" className="text-blue-400 hover:underline" onClick={() => setExpandedFrame(frameToken)}>
+          Xem thêm ({sortedObjects.length - 6})
+        </button>
+      )}
+    </section>
+  );
 }

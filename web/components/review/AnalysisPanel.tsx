@@ -20,6 +20,8 @@ export function AnalysisPanel({
   className = "",
 }: AnalysisPanelProps) {
   const { pool, selected, histogram } = analysis;
+  // API rare_v24 không trả các thống kê pool của engine cũ.
+  const isRare = pipeline === "lidar" && pool.duplicates == null;
   const rawMetrics = selected.metrics as Metrics | MetricsBlock | null | undefined;
   const selectedMetrics = rawMetrics && "hybrid" in rawMetrics ? rawMetrics.hybrid : rawMetrics;
   const ci95 = rawMetrics && "hybrid" in rawMetrics
@@ -186,7 +188,11 @@ export function AnalysisPanel({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+          {isRare ? (
+            <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+              Engine rare_v24 chấm theo vật thể; các chỉ số này dành cho engine cũ.
+            </p>
+          ) : <div className="grid grid-cols-2 gap-2">
             {poolCards.map((card) => {
               const isActive = selectedFilter === card.id;
               return (
@@ -216,7 +222,7 @@ export function AnalysisPanel({
                 </button>
               );
             })}
-          </div>
+          </div>}
 
           {/* Biểu đồ Histogram */}
           {renderHistogram()}

@@ -1,5 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { candidateBoxCorners, type CandidateBoxParams } from "./CandidateObjects";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { RareObject } from "@/lib/api/types";
+import { CandidateObjects, candidateBoxCorners, type CandidateBoxParams } from "./CandidateObjects";
+
+const object = (id: string, score: number, cls = "other"): RareObject => ({
+  sample_token: "frame", object_id: id, cls_pred: cls,
+  cx: 0, cy: 0, cz: 0, l: 1, w: 1, h: 1, yaw: 0,
+  pts: 12, dist_m: 25.6, track_id: "", speed_mps: null,
+  score_shape: 0.91, score_slice: 0, score_vru: 0, score_unc: 0,
+  r_sem: null, concept_top: null, concept_score: null,
+  s_obj: score, missed_by_model: false, reasons: "shape p91",
+});
+
+describe("CandidateObjects · lời thường và xếp hạng", () => {
+  it("xếp theo s_obj giảm dần, dịch lớp/lý do/thẻ, giữ dữ liệu đầu vào", () => {
+    const objects = [object("low", 0.1), object("high", 0.95, "motorcycle")];
+    const html = renderToStaticMarkup(React.createElement(CandidateObjects, { objects, predTags: ["R2", "H", "I"] }));
+    expect(html.indexOf("Xe máy")).toBeLessThan(html.indexOf("Vật khác"));
+    expect(html).toContain("Hình dạng lạ: 91/100");
+    expect(html).not.toContain("shape p91");
+    expect(html).toContain("cách 26 m");
+    expect(html).toContain("0.95");
+    expect(html).toContain("Lát cắt hiếm");
+    expect(html).toContain("Khó với model");
+    expect(html).toContain("Tương tác");
+    expect(html).toContain("Chưa xác nhận");
+    expect(html).toContain("(dự đoán)");
+    expect(objects.map(o => o.object_id)).toEqual(["low", "high"]);
+  });
+
+  it("chỉ hiện sáu vật điểm cao nhất và số vật còn lại", () => {
+    const objects = Array.from({ length: 8 }, (_, i) => object(String(i), i / 10));
+    const html = renderToStaticMarkup(React.createElement(CandidateObjects, { objects }));
+    expect(html.match(/<article/g)).toHaveLength(6);
+    expect(html).toContain("Xem thêm (2)");
+    expect(html).not.toContain("0.10");
+    expect(html).toContain("0.70");
+  });
+
+  it("không tạo nút mở rộng khi chỉ có sáu vật và không render dữ liệu rỗng", () => {
+    const objects = Array.from({ length: 6 }, (_, i) => object(String(i), 0.5));
+    expect(renderToStaticMarkup(React.createElement(CandidateObjects, { objects }))).not.toContain("Xem thêm");
+    expect(renderToStaticMarkup(React.createElement(CandidateObjects))).toBe("");
+  });
+});
 
 /**
  * Bản sao ĐỘC LẬP của `c4/data/geometry.py::box_corners` — nguồn chân lý của box GT mà API trả về

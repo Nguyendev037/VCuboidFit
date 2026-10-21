@@ -27,6 +27,25 @@ def split_tags(value) -> list[str]:
     return str(value).split("|") if pd.notna(value) and value else []
 
 
+def frame_reasons(frames: pd.DataFrame, objects: pd.DataFrame) -> dict[str, str]:
+    """`rare <cls> <dist>m vru<n>` from each frame's evidence (top object); web/lib/glossary.ts reasonText renders it."""
+    obj = objects.drop_duplicates(["sample_token", "object_id"]).set_index(["sample_token", "object_id"])[["cls_pred", "dist_m"]]
+    out = {}
+    for r in frames.itertuples():
+        try:
+            ev = json.loads(r.evidence) if isinstance(r.evidence, str) and r.evidence else {}
+        except json.JSONDecodeError:
+            ev = {}
+        key = (r.sample_token, ev.get("top_object"))
+        if key in obj.index:
+            cls, dist = obj.loc[key]
+            dist_m = 0 if pd.isna(dist) else max(0, round(float(dist)))
+            out[r.sample_token] = f"rare {cls} {dist_m}m vru{int(ev.get('n_vru') or 0)}"
+        else:
+            out[r.sample_token] = "rare"
+    return out
+
+
 def context_table(job: Path) -> pd.DataFrame | None:
     path = job / "cache" / "context_frame.parquet"
     return read_table(path, "context_frame") if path.is_file() else None
@@ -108,25 +127,29 @@ def rare_select(job: Path, params: SelectParamsIn) -> SelectionResult:
     fs = frames.set_index("sample_token").loc[index["sample_token"]].reset_index()
     scores = index[["sample_token", "scene_token", "split", "frame_idx"]].copy()
     scores["keep"] = fs["gate"].to_numpy() == "valid"
-    for col in ("rar", "nov", "unc", "r_rar", "r_nov", "r_unc"):
+    for col in ("rar", "nov", "unc", "r_nov", "r_unc"):
         scores[col] = 0.0
+    # rRar of a rare_v24 frame = its strongest candidate object score (the viewer's score bar).
+    scores["r_rar"] = fs["s_objects"].fillna(0.0).astype(float).to_numpy()
     scores["s"] = fs["s_frame"].to_numpy()
     # Legacy frame pagination resolves B from len(scores); rare budgets use eligible frames.
     scores = scores[scores["keep"]].reset_index(drop=True)
     info = scores.set_index("sample_token")
     tags = {r.sample_token: split_tags(r.pred_tags) for r in frames.itertuples()}
+    reasons = frame_reasons(frames, objects)
     ranking = result["ranking"]
     selected = pd.DataFrame([
         dict(method="hybrid", seed=0, rank=i, sample_token=t, scene_token=info.loc[t, "scene_token"],
              s=float(info.loc[t, "s"]), max_sim=0.0, mmr_util=float(info.loc[t, "s"]),
-             reason="rare_v24", budget_B=result["B"])
+             reason=reasons.get(t, "rare"), budget_B=result["B"])
         for i, t in enumerate(ranking, 1)],
         columns=["method", "seed", "rank", "sample_token", "scene_token", "s", "max_sim",
                  "mmr_util", "reason", "budget_B"])
     preview = [dict(rank=i, sampleToken=t, sceneToken=str(info.loc[t, "scene_token"]),
                     frameIdx=int(info.loc[t, "frame_idx"]), bestCam="LIDAR_TOP",
                     S=float(info.loc[t, "s"]), rNov=0.0, rUnc=0.0, rQry=0.0,
-                    reason="rare_v24", tags=tags[t], camsAvailable=[])
+                    rRar=float(info.loc[t, "r_rar"]), reason=reasons.get(t, "rare"), tags=tags[t],
+                    camsAvailable=[])
                for i, t in enumerate(result["selected"][:12], 1)]
     counts, bins = np.histogram(scores["s"], bins=np.linspace(0, 1, 21))
     response = dict(selectionId=sid, pipeline="lidar", engineVersion="rare_v24",
