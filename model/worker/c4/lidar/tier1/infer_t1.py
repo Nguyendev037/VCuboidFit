@@ -125,6 +125,20 @@ def devkit_view(job: Path, nusc: Path, version: str) -> Path:
     return view
 
 
+def single_sweep_if_missing(infos: list[dict], root: Path, sweeps: int) -> int:
+    """Gói lite (vcf-pack mặc định bỏ sweeps/) không có file sweep: pcdet đọc MAX_SWEEPS-1 sweep mỗi
+    frame ⇒ FileNotFoundError. Thiếu bất kỳ file sweep nào ⇒ xoá sweeps khỏi info, trả 1 (suy luận
+    1 sweep, kênh thời gian = 0); đủ file ⇒ trả nguyên `sweeps`."""
+    if sweeps <= 1:
+        return sweeps
+    if all((root / s["lidar_path"]).is_file() for i in infos for s in i.get("sweeps", [])):
+        return sweeps
+    for i in infos:
+        i["sweeps"] = []
+    print(f"cảnh báo: dữ liệu thiếu file sweeps ⇒ suy luận 1 sweep (cấu hình {sweeps})", file=sys.stderr)
+    return 1
+
+
 def prepare_job_infos(a, cfg, pool: pd.DataFrame, seed_tokens: list[str]):
     """Dựng infos pcdet cho pool của job (+ seed nếu seed có lidar trong --nusc).
     Trả (đường dẫn infos, seed dùng được: list[str] — rỗng ⇒ nov_source = "none", root dữ liệu).
@@ -150,6 +164,7 @@ def prepare_job_infos(a, cfg, pool: pd.DataFrame, seed_tokens: list[str]):
     in_pool = set(pool_toks)
     extra = [t for t in use_seed if t not in in_pool]
     infos = [by_tok[t] for t in pool_toks + extra]
+    sweeps = cfg.DATA_CONFIG.MAX_SWEEPS = single_sweep_if_missing(infos, Path(root), sweeps)
     out = a.job / "t1" / "pcdet" / f"infos_job_{sweeps}sweeps.pkl"
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "wb") as f:

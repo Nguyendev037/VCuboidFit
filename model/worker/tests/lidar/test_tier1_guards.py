@@ -65,3 +65,16 @@ def test_run_train_does_not_pick_up_other_tag_checkpoints(tmp_path, monkeypatch)
     monkeypatch.setattr(ts.subprocess, "run", lambda *a, **k: R())
     ckpt, status, _ = ts.run_train(tmp_path / "pp_seed.yaml", "seed_new", 20, 2, 0, out)
     assert ckpt is None and "exit 1" in status
+
+
+def test_single_sweep_fallback_for_lite_pack(tmp_path):
+    """Gói lite không có sweeps/: infer phải lùi 1 sweep thay vì FileNotFoundError trong pcdet."""
+    from c4.lidar.tier1.infer_t1 import single_sweep_if_missing
+    (tmp_path / "sweeps").mkdir()
+    (tmp_path / "sweeps" / "a.bin").write_bytes(b"x")
+    full = [{"sweeps": [{"lidar_path": "sweeps/a.bin"}]}]
+    assert single_sweep_if_missing(full, tmp_path, 10) == 10 and full[0]["sweeps"]
+    lite = [{"sweeps": [{"lidar_path": "sweeps/a.bin"}, {"lidar_path": "sweeps/missing.bin"}]}, {"sweeps": []}]
+    assert single_sweep_if_missing(lite, tmp_path, 10) == 1
+    assert all(i["sweeps"] == [] for i in lite)
+    assert single_sweep_if_missing([{"sweeps": [{"lidar_path": "nope"}]}], tmp_path, 1) == 1
