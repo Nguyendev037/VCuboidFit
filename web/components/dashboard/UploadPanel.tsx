@@ -261,7 +261,7 @@ export function UploadPanel(state: Pick<
                   <div className="flex justify-between font-medium text-slate-700">
                     <span>{i.name}</span>
                     <span className="font-mono text-slate-500">
-                      {i.received} / {i.total} B ({pct(i.total? i.received/i.total:0)})
+                      {formatBytes(i.received)} / {formatBytes(i.total)} ({pct(i.total? i.received/i.total:0)})
                     </span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
