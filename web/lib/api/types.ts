@@ -197,6 +197,7 @@ export interface FrameSummary {
 }
 
 export interface SelectionResult {
+  rareAnalysis?: RareAnalysis | null;
   engineVersion?: "c4_legacy" | "rare_v24";
   gateSummary?: { valid: number; suspect: number; outlier: number } | null;
   tagSummary?: Record<"R1" | "R2" | "R3" | "H" | "C" | "I", number> | null;
@@ -395,4 +396,33 @@ export interface Analysis {
   pool: PoolAnalysis;
   selected: SelectedAnalysis;
   histogram: { bins: number[]; counts: number[]; budgetThreshold: number };
+}
+
+type PredTag = "R1" | "R2" | "R3" | "H" | "C" | "I";
+type ReasonCode = "slice" | "vru" | "shape" | "unc" | "sem" | "concept" | "none";
+type ObjClass = "pedestrian" | "bicycle" | "motorcycle" | "vru_unknown" | "other";
+type EvalAxis = "r1_class" | "r2_combo" | "r3_behavior" | "i_conflict" | "h_hard";
+
+export interface RareAnalysis {
+  version: 1;
+  pool:     { frames: number; eligible: number; scenes: number; objects: number; vru: number; taggedRare: number };
+  selected: { frames: number; scenes: number; objects: number; vru: number; taggedRare: number };
+  tagRates: { tag: PredTag; selected: number; selectedPct: number; poolPct: number; lift: number | null }[]; // đủ 6 tag, thứ tự PredTag
+  reasons:  { code: ReasonCode; frames: number }[];          // tổng frames = selected.frames; sắp giảm dần
+  classMix: { cls: ObjClass; selected: number; pool: number }[]; // đủ 5 lớp, thứ tự ObjClass
+  distance: { edges: number[]; selected: number[]; pool: number[] }; // edges = [0,10,20,30,40,50]; 6 bin, bin cuối = ≥50 m
+  scenes:   { scene: string; order: number; pool: number; selected: number }[]; // order 1..n theo thứ tự xuất hiện trong index
+  scoreHistogram: { edges: number[]; counts: number[]; threshold: number };   // 21 cạnh 0..1 bước 0,05, 20 đếm; = histogram `s_frame` eligible đang tính trong rare_select
+  evaluation: RareEvaluation | null;
+  evaluationReason: "ok" | "no_annotations" | "no_targets" | "too_large" | "error";
+}
+
+export interface RareEvaluation {
+  axis: "r2_combo";
+  inSample: true;
+  B: number;
+  nTargets: number;                 // số instance target trục r2_combo trong pool
+  rows: { key: "ours" | "score_only" | "crowd" | "random" | "oracle";
+          iy: number; iyStd: number | null; nInstances: number; irecall: number }[]; // đủ 5 key, thứ tự này
+  byAxis: { axis: EvalAxis; targets: number; ours: number; randomMean: number }[];  // đủ 5 trục, thứ tự EvalAxis
 }

@@ -31,6 +31,15 @@ describe("recallRows", () => {
   });
   it("camera giữ nhãn cũ gồm Khớp kịch bản", () => {
     const names = recallRows("camera", { hybrid: rec(0.4), ablation: { novelty: rec(0.2) } }).map((r) => r.name);
-    expect(names).toEqual(["VCuboidFIT Hybrid", "Độ hiếm", "Độ khó", "Khớp kịch bản", "Coreset", "Random"]);
+    expect(names).toEqual(["VCuboidFIT Hybrid", "Độ hiếm"]);
+  });
+  it("không dựng số khi chưa có metrics ở cả hai pipeline", () => {
+    expect(recallRows("lidar", null)).toEqual([]);
+    expect(recallRows("camera", null)).toEqual([]);
+    expect(recallRows("camera")).toEqual([]);
+  });
+  it("chỉ vẽ đối chứng và ablation khi có số thật", () => {
+    expect(recallRows("camera", { hybrid: rec(0), ablation: { query: rec(0) }, random: { mean: rec(0) } }))
+      .toEqual([{ name: "VCuboidFIT Hybrid", val: 0, isPrimary: true }, { name: "Khớp kịch bản", val: 0 }, { name: "Random", val: 0 }]);
   });
 });

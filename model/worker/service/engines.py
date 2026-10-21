@@ -1,6 +1,7 @@
 """Engine dispatch and additive adapters for the existing selection API."""
 import hashlib
 import json
+import logging
 import os
 from contextvars import ContextVar
 from pathlib import Path
@@ -14,8 +15,9 @@ from c4.contracts import read_table, write_table
 from c4.lidar.pipeline import run_selection_lidar, tier_available
 from c4.pipeline import run_selection
 from c4.rare.pipeline import run_rare_v24
+from service import rare_analysis
 from service.errors import ApiError
-from service.models import FrameContext, SelectParamsIn, SelectionResult
+from service.models import FrameContext, RareAnalysis, SelectionResult, SelectParamsIn
 
 # Request-local app resources keep route(job_id, params) safe across concurrent apps.
 APP: ContextVar = ContextVar("selection_app")
@@ -152,7 +154,16 @@ def rare_select(job: Path, params: SelectParamsIn) -> SelectionResult:
                     camsAvailable=[])
                for i, t in enumerate(result["selected"][:12], 1)]
     counts, bins = np.histogram(scores["s"], bins=np.linspace(0, 1, 21))
+    try:
+        analysis = rare_analysis.build(job, root, sid, index, frames, objects, result["selected"])
+        # Kiểm tra hợp đồng trước khi lưu, lỗi phân tích không làm hỏng lần chọn.
+        if analysis is not None:
+            analysis = RareAnalysis.model_validate(analysis).model_dump(by_alias=True)
+    except Exception:
+        logging.getLogger(__name__).exception("Không dựng được phân tích rare_v24")
+        analysis = None
     response = dict(selectionId=sid, pipeline="lidar", engineVersion="rare_v24",
+                    rareAnalysis=analysis,
                     params=params.model_dump(by_alias=True, exclude_none=True),
                     poolSize=int(scores["keep"].sum()), budgetB=result["B"],
                     tierAvailable=tier_available(job), warnings=warnings, warningCodes=warnings,
@@ -175,7 +186,9 @@ def rare_select(job: Path, params: SelectParamsIn) -> SelectionResult:
     write_table(scores, out / "scores.parquet", "lidar_scores", selection_id=sid)
     write_table(selected, out / "selected.csv", "lidar_selected", selection_id=sid)
     _save_json(out / "result.json", response)
-    return to_selection_result(job.name, job, response)
+    selection_result = to_selection_result(job.name, job, response)
+    selection_result.rare_analysis = RareAnalysis.model_validate(analysis) if analysis else None
+    return selection_result
 
 
 def _run_rare_with_fallback(

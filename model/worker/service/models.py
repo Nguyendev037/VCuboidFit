@@ -273,7 +273,102 @@ class RareObject(BaseModel):
     reasons: str
 
 
+PredTag = Literal["R1", "R2", "R3", "H", "C", "I"]
+ReasonCode = Literal["slice", "vru", "shape", "unc", "sem", "concept", "none"]
+ObjClass = Literal["pedestrian", "bicycle", "motorcycle", "vru_unknown", "other"]
+EvalAxis = Literal["r1_class", "r2_combo", "r3_behavior", "i_conflict", "h_hard"]
+
+
+class RareSelectedSummary(ApiModel):
+    frames: int
+    scenes: int
+    objects: int
+    vru: int
+    tagged_rare: int
+
+
+class RarePoolSummary(RareSelectedSummary):
+    eligible: int
+
+
+class RareTagRate(ApiModel):
+    tag: PredTag
+    selected: int
+    selected_pct: float
+    pool_pct: float
+    lift: float | None
+
+
+class RareReason(ApiModel):
+    code: ReasonCode
+    frames: int
+
+
+class RareClassMix(ApiModel):
+    cls: ObjClass
+    selected: int
+    pool: int
+
+
+class RareDistance(ApiModel):
+    edges: list[float]
+    selected: list[int]
+    pool: list[int]
+
+
+class RareScene(ApiModel):
+    scene: str
+    order: int
+    pool: int
+    selected: int
+
+
+class RareScoreHistogram(ApiModel):
+    edges: list[float]
+    counts: list[int]
+    threshold: float
+
+
+class RareEvaluationRow(ApiModel):
+    key: Literal["ours", "score_only", "crowd", "random", "oracle"]
+    iy: float
+    iy_std: float | None
+    n_instances: float
+    irecall: float
+
+
+class RareEvaluationAxis(ApiModel):
+    axis: EvalAxis
+    targets: int
+    ours: int
+    random_mean: float
+
+
+class RareEvaluation(ApiModel):
+    axis: Literal["r2_combo"]
+    in_sample: Literal[True]
+    B: int = Field(alias="B")
+    n_targets: int
+    rows: list[RareEvaluationRow]
+    by_axis: list[RareEvaluationAxis]
+
+
+class RareAnalysis(ApiModel):
+    version: Literal[1]
+    pool: RarePoolSummary
+    selected: RareSelectedSummary
+    tag_rates: list[RareTagRate]
+    reasons: list[RareReason]
+    class_mix: list[RareClassMix]
+    distance: RareDistance
+    scenes: list[RareScene]
+    score_histogram: RareScoreHistogram
+    evaluation: RareEvaluation | None
+    evaluation_reason: Literal["ok", "no_annotations", "no_targets", "too_large", "error"]
+
+
 class SelectionResult(ApiModel):
+    rare_analysis: RareAnalysis | None = None
     engine_version: Literal["c4_legacy", "rare_v24"] = "c4_legacy"
     gate_summary: GateSummary | None = None
     tag_summary: TagSummary | None = None

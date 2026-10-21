@@ -86,17 +86,18 @@ export function recallRows(
     random?: { mean: { recall: number } } | null;
   } | null,
 ): RecallRow[] {
-  const abl = m?.ablation ?? {};
-  const rows: RecallRow[] = [{ name: "VCuboidFIT Hybrid", val: m ? m.hybrid.recall : 0.38, isPrimary: true }];
+  if (!m) return [];
+  const abl = m.ablation ?? {};
+  const rows: RecallRow[] = [{ name: "VCuboidFIT Hybrid", val: m.hybrid.recall, isPrimary: true }];
   if (pipeline === "lidar") {
     for (const [key, v] of Object.entries(abl)) {
       rows.push({ name: LIDAR_ABLATION_LABELS[key] ?? key, val: v.recall });
     }
   } else {
-    for (const [key, fallback] of [["novelty", 0.24], ["uncertainty", 0.21], ["query", 0.17], ["hybrid_nodiv", 0.11]] as const) {
-      rows.push({ name: CAMERA_ABLATION_LABELS[key], val: abl[key]?.recall ?? fallback });
+    for (const key of Object.keys(CAMERA_ABLATION_LABELS)) {
+      if (abl[key]) rows.push({ name: CAMERA_ABLATION_LABELS[key], val: abl[key].recall });
     }
   }
-  rows.push({ name: "Random", val: m?.random?.mean.recall ?? 0.05 });
+  if (m.random) rows.push({ name: "Random", val: m.random.mean.recall });
   return rows;
 }

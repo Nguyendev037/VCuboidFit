@@ -398,3 +398,43 @@ const HIDDEN_WARNINGS = new Set(["CAMERA_CACHE_MISSING"]);
 export const visibleWarnings = (codes: readonly string[]) => codes.filter((code) => !HIDDEN_WARNINGS.has(code));
 export const warningLabel = (code: string) => WARNING_LABELS[code] ?? `Cảnh báo chưa có diễn giải: ${code}`;
 export const CV_FLAG_LABELS: Record<string, string> = { NIGHT_CV: "Ảnh tối", GLARE_CV: "Vùng chói", BLUR_CV: "Ảnh mờ", VEIL_CV: "Màn sương / loá" };
+
+
+/** Nội dung khu phân tích kết quả; mã API chỉ dùng làm khoá tra cứu. */
+export const RARE_PANELS = {
+  tags: { title: "Lô đã chọn so với chọn ngẫu nhiên", tooltip: "Tỉ lệ khung có từng thẻ trong lô và cả pool hợp lệ. Tỉ lệ cả pool xấp xỉ kỳ vọng khi chọn ngẫu nhiên." },
+  reasons: { title: "Vì sao các khung được chọn", tooltip: "Mỗi khung tính một lý do từ vật tiêu biểu, tổng bằng số khung trong lô." },
+  classes: { title: "Loại vật: lô so với cả pool", tooltip: "Tỉ trọng các loại vật dự đoán, chuẩn hoá riêng trong lô và pool hợp lệ." },
+  distance: { title: "Khoảng cách người đi đường", tooltip: "Khoảng cách của người đi bộ và xe hai bánh; tỉ lệ chuẩn hoá riêng theo từng nhóm." },
+  scenes: { title: "Phủ từng cảnh", tooltip: "Số khung được chọn trên tổng khung hợp lệ của từng cảnh, theo thứ tự xuất hiện." },
+  scores: { title: "Phân bố điểm khung", tooltip: "Phân bố điểm trên pool hợp lệ, không biểu thị khung nào đã được chọn." },
+  evaluation: { title: "Đánh giá theo nhãn (trên chính dữ liệu này)", tooltip: "Đánh giá trên chính dữ liệu đã tải có nhãn, theo cùng ngân sách chọn." },
+  selected: "Đã chọn", covered: "Cảnh phủ", rare: "Khung có thẻ hiếm", vru: "Người đi đường trong lô",
+  batch: "Lô", pool: "Cả pool", randomApprox: "≈ chọn ngẫu nhiên", poolShare: "của pool",
+  frame: "khung", object: "vật", scene: "Cảnh", poolPrefix: "cả pool:",
+  threshold: "Vạch = điểm thấp nhất trong lô. Vì chọn có đa dạng, không phải mọi khung trên vạch đều vào lô",
+  inSample: "Chấm in-sample trên dữ liệu bạn tải; benchmark độc lập xem tại Vì sao",
+  why: "Vì sao", ceiling: "trần lý thuyết, không phải phương pháp",
+  yield: "Vật hiếm mới trên mỗi khung (IY)", captured: "Bắt được", rareObjects: "vật hiếm",
+  axis: "Trục", targets: "Có trong dữ liệu", caught: "Lô bắt được", randomMean: "Ngẫu nhiên trung bình",
+  valid: "hợp lệ", suspect: "đáng ngờ", outlier: "ngoại lệ", queue: "Hàng đợi duyệt bối cảnh",
+  noNovelty: "Lạ với model chưa khả dụng nên tỉ lệ được chia lại",
+} as const;
+export const REASON_CODE_LABELS: Record<string, string> = {
+  ...OBJECT_REASON_LABELS, none: "Không có vật", concept: "Khái niệm ảnh (OpenCLIP)",
+};
+export const EVAL_ROW_LABELS = {
+  ours: "VCuboidFIT", score_only: "Chỉ điểm, không đa dạng", crowd: "Đông người đi đường nhất",
+  random: "Chọn ngẫu nhiên (100 lần)", oracle: "Trần lý thuyết",
+} as const;
+export const EVAL_AXIS_LABELS = {
+  r1_class: "Loại vật hiếm", r2_combo: "Tổ hợp hiếm", r3_behavior: "Hành vi hiếm",
+  i_conflict: "Tương tác xung đột", h_hard: "Vật khó quan sát",
+} as const;
+export const EVAL_REASON_TEXT = {
+  ok: "Đã chấm theo nhãn",
+  no_annotations: "Dữ liệu không có nhãn — chỉ hiện phân tích không cần nhãn",
+  no_targets: "Không có vật hiếm nào trong nhãn của dữ liệu này để chấm",
+  too_large: "Dữ liệu quá lớn để chấm trong app; xem benchmark ở Vì sao",
+  error: "Chưa chấm được lần này",
+} as const;

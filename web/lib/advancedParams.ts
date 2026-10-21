@@ -180,3 +180,12 @@ export function sanitizeSelectParams<T extends { tier?: 0 | 1 | null; alpha?: nu
   if (params.beta || params.gamma) Object.assign(out, { alpha: 1, beta: 0, gamma: 0 });
   return out;
 }
+
+/** Trọng số thực khi Tầng 1 đã xong nhưng không có tín hiệu novelty từ seed. */
+export function effectiveWeights(w: { alpha: number; beta: number; gamma: number }, noNovelty: boolean) {
+  if (!noNovelty) return w;
+  const sum = w.alpha + w.gamma;
+  return sum > 0
+    ? { alpha: w.alpha / sum, beta: 0, gamma: w.gamma / sum }
+    : { alpha: 1, beta: 0, gamma: 0 };
+}

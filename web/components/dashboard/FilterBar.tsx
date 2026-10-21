@@ -5,7 +5,9 @@ import { AdvancedParamsPanel, ColabBox } from "@/components/AdvancedParamsPanel"
 import { TierStatus } from "@/components/TierStatus";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { PANEL_HELP, WARNING_LABELS, visibleWarnings } from "@/lib/glossary";
-import { effectiveWeights, minScenes } from "@/lib/panelParams";
+import { effectiveWeights as presetWeights, minScenes } from "@/lib/panelParams";
+import { effectiveWeights } from "@/lib/advancedParams";
+import { RARE_PANELS } from "@/lib/glossary";
 import { pct, setAdvancedPanelOpen } from "./dashboardState";
 import type { DashboardState } from "./useDashboard";
 
@@ -79,12 +81,16 @@ export function FilterBar(state: Pick<
     uiSchema,
   } = state;
 
-  const weights = effectiveWeights({
+  const baseWeights = presetWeights({
     preset,
     presets: uiSchema?.presets ?? paramsSchema.data?.presets,
     tier1Available: !noTier1,
     expert: advancedParams ? { alpha: advancedParams.alpha, beta: advancedParams.beta, gamma: advancedParams.gamma } : null,
   });
+
+  const noNovelty = job.data?.tier1?.state === "done" && job.data.tier1.novSource === "none";
+  const adjusted = baseWeights && effectiveWeights({ alpha: baseWeights.rare, beta: baseWeights.novel, gamma: baseWeights.unsure }, noNovelty);
+  const weights = adjusted && { rare: adjusted.alpha, novel: adjusted.beta, unsure: adjusted.gamma };
 
   const wRarePct = weights ? Math.round(weights.rare * 100) : 0;
   const wNovelPct = weights ? Math.round(weights.novel * 100) : 0;
@@ -240,6 +246,7 @@ export function FilterBar(state: Pick<
           {activePipeline === "lidar" && colabProps && <ColabBox colab={colabProps} />}
 
           {/* Thanh Công thức đang dùng */}
+          {noNovelty && <p className="text-xs text-slate-500">{RARE_PANELS.noNovelty}</p>}
           {weights && (
             <div className="flex flex-col gap-1.5 mt-2 rounded-lg border border-slate-100 bg-slate-50/80 p-2.5">
               <div className="flex items-center justify-between text-xs">

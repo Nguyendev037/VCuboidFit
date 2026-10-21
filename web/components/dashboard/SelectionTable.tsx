@@ -8,6 +8,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { PRESET_LABELS, formatBytes, formatDuration, pct } from './dashboardState';
 import type { DashboardState } from './useDashboard';
 import { ExportPanel } from './ExportPanel';
+import { RareResultPanels, ResultActions } from './rare/RareResultPanels';
 
 export function SelectionTable(state: Pick<
   DashboardState,
@@ -40,6 +41,8 @@ export function SelectionTable(state: Pick<
     result,
     selection,
   }=state;
+  const hasRareAnalysis = result?.engineVersion === "rare_v24" && result.rareAnalysis != null;
+  const rows = recallRows(activePipeline, m);
   return (
     <>
       {/* Tóm tắt Bước 1 & Bước 2 */}
@@ -109,6 +112,10 @@ export function SelectionTable(state: Pick<
           <ExportPanel {...{ dataset, debounced, handleStartNew, jobId, result }} />
         </div>
 
+        {hasRareAnalysis ? <>
+          <RareResultPanels analysis={result.rareAnalysis!} />
+          <ResultActions result={result} jobId={jobId!} budget={debounced.budget} />
+        </> : <>
         {result&&<section className="space-y-3 text-sm"><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[
           ["Ứng viên hiếm (dự đoán)", result.tagSummary? `${PRED_TAG_LABELS.R1}: ${result.tagSummary.R1}\n${PRED_TAG_LABELS.R2}: ${result.tagSummary.R2}\n${PRED_TAG_LABELS.R3}: ${result.tagSummary.R3}`:"Chưa có"],
           ["Tương tác (dự đoán)", result.tagSummary?.I??"Chưa có"],
@@ -175,15 +182,15 @@ export function SelectionTable(state: Pick<
         </div>
 
         {/* Biểu đồ Recall theo Method (Figma 02) */}
-        <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-200 flex flex-col gap-3">
+        {rows.length > 0 && <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-200 flex flex-col gap-3">
           {selection.isPending&&<LoadingState />}
           {selection.isError&&<DataError error={selection.error} onRetry={() => void selection.refetch()} />}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-800">
             <span className="inline-flex items-center gap-1">Tỉ lệ bắt frame đáng giá theo cách chọn <Tooltip label={METRICS.recall.label} content={METRICS.recall.tooltip} /></span>
-            <span className="text-slate-400 font-normal">Random trung bình 5 % ± 2</span>
+            {m?.random && <span className="text-slate-400 font-normal">Random trung bình {pct(m.random.mean.recall)} ± {pct(m.random.std.recall)}</span>}
           </div>
           <div className="space-y-2 text-xs">
-            {recallRows(activePipeline, m).map((row) => (
+            {rows.map((row) => (
               <div key={row.name} className="flex items-center gap-3">
                 <span className="w-32 text-slate-600 truncate font-medium text-[11px]">{row.name}</span>
                 <div className="flex-1 h-3 bg-slate-200/80 rounded-full overflow-hidden">
@@ -199,7 +206,8 @@ export function SelectionTable(state: Pick<
               </div>
             ))}
           </div>
-        </div>
+        </div>}
+        </>}
 
         {/* Lưới 12 Thumbnail theo Figma 02 */}
         <div>

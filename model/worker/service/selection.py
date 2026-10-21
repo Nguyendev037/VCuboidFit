@@ -114,7 +114,8 @@ def to_selection_result(job_id: str, job_dir: Path, result: dict) -> SelectionRe
         engine_version=result.get("engineVersion", "c4_legacy"),
         gate_summary=result.get("gateSummary"), tag_summary=result.get("tagSummary"),
         evaluation_available=result.get("evaluationAvailable", result.get("metrics") is not None),
-        warning_codes=result.get("warningCodes", []), context_summary=result.get("contextSummary"))
+        warning_codes=result.get("warningCodes", []), context_summary=result.get("contextSummary"),
+        rare_analysis=result.get("rareAnalysis"))
 
 
 def load_selection(settings: Settings, job_id: str, sid: str) -> dict:

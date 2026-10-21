@@ -6,6 +6,7 @@ import mockSchema from "@/mocks/params-schema.json";
 import type { ParamsSchema } from "@/lib/api/types";
 import {
   type AdvancedDraft,
+  effectiveWeights,
   weightPercents,
   draftFromSchema,
   gateTier1,
@@ -290,5 +291,21 @@ describe("draftFromSchema Tầng 1 khi worker trả mặc định 1/0/0 (plan 09
     expect(d.tier).toBe(1);
     expect([d.alpha, d.beta, d.gamma]).toEqual([0.5, 0.25, 0.25]);
     expect(weightPercents(d)).toEqual({ alpha: 50, beta: 25, gamma: 25 });
+  });
+});
+
+describe("effectiveWeights thiếu seed", () => {
+  it("chia lại 20/30/50 thành 29/0/71 khi novelty không khả dụng", () => {
+    const result = effectiveWeights({ alpha: 0.2, beta: 0.3, gamma: 0.5 }, true);
+    expect(result.alpha).toBeCloseTo(0.2857, 4);
+    expect(result.beta).toBe(0);
+    expect(result.gamma).toBeCloseTo(0.7143, 4);
+  });
+  it("giữ nguyên khi có novelty", () => {
+    const weights = { alpha: 0.2, beta: 0.3, gamma: 0.5 };
+    expect(effectiveWeights(weights, false)).toBe(weights);
+  });
+  it("trọng số còn lại bằng 0 dùng hiếm để tránh chia 0", () => {
+    expect(effectiveWeights({ alpha: 0, beta: 1, gamma: 0 }, true)).toEqual({ alpha: 1, beta: 0, gamma: 0 });
   });
 });
