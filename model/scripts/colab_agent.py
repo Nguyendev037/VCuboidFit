@@ -149,7 +149,33 @@ def fetch_bundle(c: Client, task: dict, work: Path) -> tuple[Path, Path]:
             data.mkdir(parents=True, exist_ok=True)
         shutil.rmtree(tmp_data, ignore_errors=True)
         log(f"cache miss: da tai data/ cho dataset {ds}")
+    n = ensure_map_masks(data)
+    if n:
+        log(f"goi lite thieu {n} anh ban do: tao anh giu cho 1x1 (PointPillars khong doc ban do)")
     return exp, data
+
+
+# PNG 1x1 den. NuScenes() cua devkit chi kiem file ban do TON TAI khi khoi tao (doc anh luoi);
+# goi lite (vcf-pack mac dinh bo maps/) lam train_seed chet o MapMask (do 2026-10-22, may vast).
+BLANK_PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108000000003a7e9b55"
+    "0000000a49444154789c636000000002000148afa4710000000049454e44ae426082")
+
+
+def ensure_map_masks(data: Path) -> int:
+    """Tao anh giu cho cho moi ban do trong v1.0-*/map.json con thieu. Tra so file da tao."""
+    root = data.resolve()
+    made = 0
+    for table in data.glob("v1.0-*/map.json"):
+        for rec in json.loads(table.read_text(encoding="utf-8")):
+            name = rec.get("filename") or ""
+            target = (data / name).resolve()
+            if not name or root not in target.parents or target.exists():
+                continue  # bo qua ten rong, ten thoat khoi data/, file da co
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(BLANK_PNG)
+            made += 1
+    return made
 
 
 # Trong so seed mac dinh (PointPillars 80 epoch tren seed nuScenes-mini, sweeps 10) luu tren

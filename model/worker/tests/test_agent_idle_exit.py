@@ -85,3 +85,24 @@ def test_zero_idle_limit_keeps_polling(monkeypatch):
                            idle_exit_min=0)
     assert agent.loop(args, sleep=lambda _: None, clock=lambda: 9999) == 7
     assert len(calls) == 3
+
+
+def test_lite_bundle_gets_placeholder_map_masks(tmp_path):
+    """Gói lite không có maps/: devkit NuScenes() đòi file bản đồ tồn tại ⇒ agent tạo ảnh giữ chỗ."""
+    import json
+    agent = load_agent()
+    data = tmp_path / "data"
+    (data / "v1.0-mini").mkdir(parents=True)
+    (data / "maps").mkdir()
+    (data / "maps" / "have.png").write_bytes(b"real")
+    (data / "v1.0-mini" / "map.json").write_text(json.dumps([
+        {"token": "a", "filename": "maps/missing.png"},
+        {"token": "b", "filename": "maps/have.png"},
+        {"token": "c", "filename": "../escape.png"},
+        {"token": "d", "filename": ""},
+    ]), encoding="utf-8")
+    assert agent.ensure_map_masks(data) == 1
+    assert (data / "maps" / "missing.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    assert (data / "maps" / "have.png").read_bytes() == b"real"
+    assert not (tmp_path / "escape.png").exists()
+    assert agent.ensure_map_masks(data) == 0
