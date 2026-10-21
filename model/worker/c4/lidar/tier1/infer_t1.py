@@ -164,7 +164,7 @@ def prepare_job_infos(a, cfg, pool: pd.DataFrame, seed_tokens: list[str]):
     in_pool = set(pool_toks)
     extra = [t for t in use_seed if t not in in_pool]
     infos = [by_tok[t] for t in pool_toks + extra]
-    sweeps = cfg.DATA_CONFIG.MAX_SWEEPS = single_sweep_if_missing(infos, Path(root), sweeps)
+    sweeps = cfg.DATA_CONFIG.MAX_SWEEPS = single_sweep_if_missing(infos, Path(root) / version, sweeps)
     out = a.job / "t1" / "pcdet" / f"infos_job_{sweeps}sweeps.pkl"
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "wb") as f:
@@ -306,7 +306,17 @@ def main(argv=None) -> int:
     finally:
         os.chdir(cwd)
     sweeps = cfg.DATA_CONFIG.MAX_SWEEPS
-    cfg.DATA_CONFIG.INFO_PATH["test"] = [str(t1 / "pcdet" / f"infos_index_{sweeps}sweeps.pkl")]
+    p_infos = t1 / "pcdet" / f"infos_index_{sweeps}sweeps.pkl"
+    if sweeps > 1 and p_infos.is_file():  # gói lite (agent vast): thiếu sweeps ⇒ lùi 1 sweep như main_job
+        with open(p_infos, "rb") as f:
+            infos = pickle.load(f)
+        root = Path(cfg.DATA_CONFIG.DATA_PATH) / str(cfg.DATA_CONFIG.VERSION)
+        if single_sweep_if_missing(infos, root, sweeps) == 1:
+            sweeps = cfg.DATA_CONFIG.MAX_SWEEPS = 1
+            p_infos = t1 / "pcdet" / "infos_index_1sweeps_lite.pkl"
+            with open(p_infos, "wb") as f:
+                pickle.dump(infos, f)
+    cfg.DATA_CONFIG.INFO_PATH["test"] = [str(p_infos)]
     index = pd.read_parquet(a.exp / "index.parquet")
     tokens = index["sample_token"].tolist()
     dataset, loader, _ = build_dataloader(
