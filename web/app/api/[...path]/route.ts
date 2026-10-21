@@ -32,10 +32,12 @@ async function handle(req: Request, ctx: Ctx): Promise<Response> {
   const target = `/${path.map(encodeURIComponent).join("/")}${new URL(req.url).search}`;
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
   const contentType = req.headers.get("content-type") ?? "";
+  // Buffer non-JSON bodies (GPU agent multipart result): a streamed body goes out chunked without
+  // Content-Length and the worker's body_guard answers 411, so Tier 1 results never landed (2026-10-22).
   const body = hasBody
     ? contentType.includes("application/json")
       ? await req.text()
-      : req.body
+      : await req.arrayBuffer()
     : undefined;
   const headers: Record<string, string> = {};
   const sid = req.headers.get("cookie")?.match(/(?:^|;\s*)vcf_sid=([0-9a-f]{32})(?:;|$)/)?.[1];
@@ -45,10 +47,7 @@ async function handle(req: Request, ctx: Ctx): Promise<Response> {
     if (value) headers[name] = value;
   }
 
-  // Node fetch needs duplex for a streamed body (agent result upload is multipart).
-  const init: RequestInit & { duplex?: "half" } = { method: req.method, headers, body };
-  if (body && typeof body !== "string") init.duplex = "half";
-  const res = await workerFetch(target, init);
+  const res = await workerFetch(target, { method: req.method, headers, body });
 
   const out = new Headers();
   for (const h of FORWARD_HEADERS) {

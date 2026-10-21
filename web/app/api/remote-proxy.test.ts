@@ -26,7 +26,7 @@ describe("GPU agent queue through the API proxy", () => {
     expect(init.headers.authorization).toBe("Bearer t");
   });
 
-  it("streams a multipart result upload with duplex half", async () => {
+  it("buffers a multipart result upload so the worker gets a Content-Length", async () => {
     const form = new FormData();
     form.append("signals", new Blob([new Uint8Array([1, 2, 3])]), "signals.parquet");
     await POST(
@@ -34,7 +34,9 @@ describe("GPU agent queue through the API proxy", () => {
       ctx(["remote", "t1", "abc", "result"]));
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("http://worker.test:8001/remote/t1/abc/result");
-    expect(init.duplex).toBe("half");
+    expect(init.duplex).toBeUndefined();
+    expect(init.body).toBeInstanceOf(ArrayBuffer);
+    expect((init.body as ArrayBuffer).byteLength).toBeGreaterThan(3);
     expect(init.headers["x-lease-id"]).toBe("L");
     expect(init.headers["content-type"]).toMatch(/^multipart\/form-data; boundary=/);
   });

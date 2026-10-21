@@ -357,7 +357,7 @@ def process(c: Client, task: dict, a) -> None:
             try:
                 camera = camera_archive(exp, data, work, a.dry_run)
             except Exception as exc:
-                log(f"camera: lỗi {type(exc).__name__}; vẫn gửi signals")
+                log(f"camera: lỗi {type(exc).__name__}: {str(exc)[-1500:]}; vẫn gửi signals")
         hb.stop()
         hb = None
         man = sig.with_suffix(".manifest.json")
